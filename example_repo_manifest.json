@@ -1,0 +1,22 @@
+{
+    "id": "io.github.kindlemodding_repo",
+    "packages": {
+        "rocks.koreader.koreader": {
+            "manifest_path": "/manifests/rocks.koreader.koreader.kpkginfo",
+            "versions": [
+                {
+                    "version_name": "2024.11",
+                    "version_number": 2
+                },
+                {
+                    "version_name": "2023.11",
+                    "version_number": 1
+                }
+            ],
+            "supported_arch": [
+                "armel",
+                "armhf"
+            ]
+        }
+    }
+}

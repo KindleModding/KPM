@@ -1,0 +1,48 @@
+{
+    "id": "rocks.koreader.koreader",
+    "name": "KOReader",
+    "description": "KOReader is good for reading books",
+    "source": "https://github.com/koreader/koreader",
+    "author": "KOReader Team",
+    "icon": "/icons/rocks.koreader.koreader.png",
+    "screenshots": [
+        "/screenshots/rocks.koreader.koreader/s1.png",
+        "/screenshots/rocks.koreader.koreader/s2.png"
+    ],
+    "versions": {
+        "2024.11": {
+            "version_number": 2,
+            "artifacts": {
+                "armhf": {
+                    "depends": {
+                        "io.github.kindlemodding.fbink": ">=1.0.0"
+                    },
+                    "url": "/packages/armhf/rocks.koreader.koreader/2024.11-koreader.kpkg",
+                    "package_type": "kpkg",
+
+                    "min_firmware": 394834,
+                    "max_firmware": -1,
+
+                    "hash": "sfduhsiuosjiojifj23rweoj90j3"
+                }
+            }
+        },
+        "2023.10": {
+            "version_number": 1,
+            "artifacts": {
+                "armel": {
+                    "depends": {
+                        "io.github.kindlemodding.fbink": ">=0.5.0"
+                    },
+                    "url": "/packages/armhf/rocks.koreader.koreader/2023.10-koreader.bin",
+                    "package_type": "mrp",
+
+                    "min_firmware": 394834,
+                    "max_firmware": -1,
+
+                    "hash": "sejew98fjwe89j8weur23j38389rj"
+                }
+            }
+        }
+    }
+}
