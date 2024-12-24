@@ -4,25 +4,18 @@
     "description": "KOReader is good for reading books",
     "source": "https://github.com/koreader/koreader",
     "author": "KOReader Team",
-    "icon": "/var/local/kpkg/icons/rocks.koreader.koreader.png",
     "screenshots": [
         "/var/local/kpkg/screenshots/rocks.koreader.koreader/s1.png",
         "/var/local/kpkg/screenshots/rocks.koreader.koreader/s2.png"
     ],
-    "version": {
-        "versoin_name": "2024.11",
-        "version_number": 2,
-        "artifacts": {
-            "armhf": {
-                "depends": {
-                    "io.github.kindlemodding.fbink": ">=1.0.0"
-                },
-                
-                "min_firmware": 394834,
-                "max_firmware": -1,
-
-                "hash": "sfduhsiuosjiojifj23rweoj90j3"
-            }
-        }
+    "version_name": "2024.11",
+    "artifact": {
+        "arch": "armhf",
+        "depends": {
+            "io.github.kindlemodding.fbink": ">=1.0.0:armhf"
+        },
+        
+        "min_firmware": 394834,
+        "max_firmware": -1
     }
 }
