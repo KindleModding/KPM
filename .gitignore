@@ -31,4 +31,4 @@
 *.out
 *.app
 
-compile_commands.json
+builddir/
