@@ -1,8 +1,10 @@
+#include <filesystem>
 #include <cstdio>
 #include <cstring>
 #include <curl/curl.h>
 #include <vector>
 
+#include "database.h"
 #include "flags.h"
 
 int main(int argc, char* argv[]) {
@@ -62,6 +64,8 @@ int main(int argc, char* argv[]) {
         printf("verbose: [%d]\n", flags.verbose);
         printf("operation: [%s]\n", operation.c_str());
     }
+
+    const Database database(flags.kpkg_dir + "kpm.db");
 
     if (operation == "update") {
         printf("Running UPDATE operation\n");

@@ -32,3 +32,6 @@
 *.app
 
 builddir/
+subprojects/*/
+kindlehf.txt
+kindlepw2.txt
