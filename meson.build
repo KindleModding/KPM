@@ -10,4 +10,4 @@ sources = files(
 )
 include_dir = include_directories('./src/includes')
 
-executable('kpm', sources, include_directories: include_dir, dependencies: [curl_dep, nlohmann_json_dep, sqlite3_dep])
+executable('kpm', sources, include_directories: include_dir, dependencies: [curl_dep, nlohmann_json_dep, sqlite3_dep], cpp_args: ['-static-libstdc++'], link_args: ['-static-libstdc++'])
