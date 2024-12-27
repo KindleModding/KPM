@@ -65,7 +65,7 @@ int main(int argc, char* argv[]) {
         printf("operation: [%s]\n", operation.c_str());
     }
 
-    const Database database(flags.kpkg_dir + "kpm.db");
+    const Database database(flags.kpkg_dir + "/kpm.db");
 
     if (operation == "update") {
         printf("Running UPDATE operation\n");
