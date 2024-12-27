@@ -1,6 +1,8 @@
 #pragma once
+#include "SQLiteCpp/Database.h"
 #include <string>
 #include <sqlite3.h>
+#include <vector>
 
 struct Repository {
     std::string id;
@@ -21,15 +23,12 @@ struct Package {
 class Database {
     public:
         Database(std::string path);
-        ~Database();
 
-        void mustRunQuery(const std::string& query);
-
-        std::string* GetRepositories();
+        std::vector<Repository> GetRepositories();
     private:
     const std::string repoTableName = "repos";
     const std::string packageIndexTableName = "package_index";
-    const std::string installedPackageTableName = "installed_packages";
+    const std::string packagesInstalledTableName = "installed_packages";
 
-    sqlite3* database;
+    SQLite::Database db;
 };
