@@ -66,7 +66,17 @@ int Repositories::updateRepository(Database& db, const std::string& id) {
             .screenshots = package["screenshots"].dump()
         });
         for (nlohmann::json version : package["versions"]) {
-             
+            for (std::string architecture : version["supported_arch"]) {
+                db.AddPackageVersion({
+                .package_id = package["id"].get<std::string>(),
+                .repo_id = repo.id,
+                .version_number = version["version_number"].get<uint>(),
+                .version_name = version["version_name"].get<std::string>(),
+                .architecture = architecture,
+                .min_firmware = version["min_firmware"].get<std::string>(),
+                .max_firmware = version["max_firmware"].get<std::string>()
+            });
+            }
         }
     }
 

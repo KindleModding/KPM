@@ -23,8 +23,8 @@ struct PackageVersion {
     uint version_number;
     std::string version_name;
     std::string architecture;
-    uint min_firmware;
-    uint max_firmware;
+    std::string min_firmware;
+    std::string max_firmware;
 };
 
 struct InstalledPackage {
@@ -35,8 +35,8 @@ struct InstalledPackage {
     std::string screenshots;
     std::string version_name;
     uint version_number;
-    uint min_firmware;
-    uint max_firmware;
+    std::string min_firmware;
+    std::string max_firmware;
 };
 
 class Database {

@@ -71,6 +71,10 @@ int main(int argc, char* argv[]) {
     curl_global_init(CURL_GLOBAL_ALL);
 
     if (operation == "update") {
+        if (targets.size() != 0) {
+            Log::E("UPDATE operation MUST not specify TARGETS");
+            return 1;
+        }
         const int updateResult = Repositories::updateRepositories(database);
         Log::I("Update complete - [%d] package(s) pulled!", updateResult);
     } else if (operation == "install") {

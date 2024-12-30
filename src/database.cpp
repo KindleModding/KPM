@@ -27,8 +27,8 @@ Database::Database(std::string path): db(path, SQLite::OPEN_READWRITE|SQLite::OP
                                             "version_number INTEGER NOT NULL,"
                                             "version_name TEXT NOT NULL,"
                                             "architecture TEXT NOT NULL,"
-                                            "min_firmware INTEGER NOT NULL,"
-                                            "max_firmware INTEGER NOT NULL,"
+                                            "min_firmware TEXT NOT NULL,"
+                                            "max_firmware TEXT NOT NULL,"
                                             "PRIMARY KEY(package_id, repo_id, version_number, architecture)"
                                             ") STRICT;");
     createVersionIndexTable.exec();
@@ -41,8 +41,8 @@ Database::Database(std::string path): db(path, SQLite::OPEN_READWRITE|SQLite::OP
                                             "screenshots TEXT NOT NULL,"
                                             "version_name TEXT NOT NULL,"
                                             "version_number INTEGER NOT NULL,"
-                                            "min_firmware INTEGER NOT NULL,"
-                                            "max_firmware INTEGER NOT NULL"
+                                            "min_firmware TEXT NOT NULL,"
+                                            "max_firmware TEXT NOT NULL"
                                             ") STRICT;");
     createInstalledPackagesTable.exec();
 }

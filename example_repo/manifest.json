@@ -10,6 +10,9 @@
             "versions": [
                 {
                     "version_name": "2024.11",
+                    "version_number": 2,
+                    "min_firmware": "12",
+                    "max_firmware": "13232",
                     "supported_arch": [
                         "armel",
                         "armhf"
@@ -17,6 +20,9 @@
                 },
                 {
                     "version_name": "2023.11",
+                    "version_number": 1,
+                    "min_firmware": "12",
+                    "max_firmware": "13232",
                     "supported_arch": [
                         "armhf"
                     ]
