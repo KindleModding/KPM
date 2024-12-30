@@ -2,20 +2,21 @@
 #include "request.h"
 #include <curl/curl.h>
 #include <nlohmann/json.hpp>
+#include "log.h"
 
 std::string Repositories::add(Database& db, const std::string& url) {
-    printf("* Adding repository [%s]\n", url.c_str());
+    Log::I("* Adding repository [%s]", url.c_str());
 
     const std::string repoID = updateRepository(db, url);
     if (repoID != "") {
-        printf("* Registering repository with DB");
+        Log::D("* Registering repository with DB");
         try {
             db.AddRepository({
                 .id = repoID,
                 .url = url
             });
         } catch (std::exception& e) {
-            printf("SQLite error: %s\n", e.what());
+            Log::E("SQLite error: %s", e.what());
             return "";
         }
     }
@@ -24,18 +25,21 @@ std::string Repositories::add(Database& db, const std::string& url) {
 }
 
 std::string Repositories::updateRepository(Database& db, const std::string& url) {
-    printf("* Updating repository [%s]\n", url.c_str());
-    printf("* Fetching repository manifest...\n");
+    Log::I("* Updating repository [%s]", url.c_str());
+    Log::D("* Fetching repository manifest...");
     SimpleGET manifestRequest(url);
     const CURLcode error = manifestRequest.execute();
     if (error != 0) {
-        printf("* CURL error: %s\n", curl_easy_strerror(error));
+        Log::E("* CURL error: %s", curl_easy_strerror(error));
         return "";
     }
 
     nlohmann::json jsonData = nlohmann::json::parse(manifestRequest.get_buffer());
     // Add packages to DB
-    printf("* Adding packages to DB");
+    Log::D("* Adding packages to DB");
+    for (nlohmann::json package : jsonData["packages"]) {
+        Log::D("Package found: %s", package["package_name"].get<std::string>().c_str());
+    }
 
 
     return jsonData["id"].get<std::string>().c_str();

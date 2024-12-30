@@ -1,8 +1,14 @@
 #pragma once
 #include <string>
 
-struct Flags {
-    std::string kpkg_dir = "/var/local/kpkg/";
-    bool dry = false;
-    bool verbose = false;
+class Flags {
+    public:
+        static Flags* GetInstance();
+
+        std::string kpkg_dir = "/var/local/kpkg/";
+        bool dry = false;
+        bool verbose = false;
+    private:
+        Flags() {}
+        static Flags* instance;
 };

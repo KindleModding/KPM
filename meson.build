@@ -5,6 +5,7 @@ nlohmann_json_dep = dependency('nlohmann_json')
 sqlitecpp_dep = dependency('sqlitecpp')
 
 sources = files(
+    './src/flags.cpp',
     './src/request.cpp',
     './src/repositories.cpp',
     './src/kpm.cpp',

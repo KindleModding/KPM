@@ -3,6 +3,7 @@
 #include "SQLiteCpp/Statement.h"
 #include <cstring>
 #include <vector>
+#include "log.h"
 
 Database::Database(std::string path): db(path, SQLite::OPEN_READWRITE|SQLite::OPEN_CREATE) {
     // Check what tables the database has
@@ -22,7 +23,7 @@ Database::Database(std::string path): db(path, SQLite::OPEN_READWRITE|SQLite::OP
     }
 
     if (shouldCreateReposTable) {
-        printf("Repos table not found - creating\n");
+        Log::D("Repos table not found - creating");
         SQLite::Statement query(db, "CREATE TABLE " + repoTableName + " ("
                                                 "id TEXT NOT NULL PRIMARY KEY,"
                                                 "url TEXT NOT NULL"
@@ -34,7 +35,7 @@ Database::Database(std::string path): db(path, SQLite::OPEN_READWRITE|SQLite::OP
     }
 
     if (shouldCreatePackageIndexTable) {
-        printf("Package index not found - creating\n");
+        Log::D("Package index not found - creating");
         SQLite::Statement query(db, "CREATE TABLE " + packageIndexTableName + " ("
                                                 "id TEXT NOT NULL,"
                                                 "repo_id TEXT NOT NULL,"
@@ -50,7 +51,7 @@ Database::Database(std::string path): db(path, SQLite::OPEN_READWRITE|SQLite::OP
     }
 
     if (shouldCreatePackagesInstalledTable) {
-        printf("Installed package index not found - creating\n");
+        Log::D("Installed package index not found - creating");
         SQLite::Statement query(db, "CREATE TABLE " + packagesInstalledTableName + " ("
                                                 "id TEXT NOT NULL,"
                                                 "repo_id TEXT NOT NULL,"
