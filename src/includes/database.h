@@ -1,7 +1,6 @@
 #pragma once
 #include "SQLiteCpp/Database.h"
 #include <string>
-#include <sqlite3.h>
 #include <vector>
 
 struct Repository {

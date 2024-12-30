@@ -59,6 +59,7 @@ int main(int argc, char* argv[]) {
 
 
     Log::D("Running with flags:");
+    Log::D("firmware_version: [%s]", Flags::GetInstance()->firmware_version.c_str());
     Log::D("kpkg_dir: [%s]", Flags::GetInstance()->kpkg_dir.c_str());
     Log::D("dry: [%d]", Flags::GetInstance()->dry);
     Log::D("verbose: [%d]", Flags::GetInstance()->verbose);
@@ -77,14 +78,6 @@ int main(int argc, char* argv[]) {
         }
         const int updateResult = Repositories::updateRepositories(database);
         Log::I("Update complete - [%d] package(s) pulled!", updateResult);
-    } else if (operation == "install") {
-
-    } else if (operation == "remove") {
-
-    } else if (operation == "upgrade") {
-
-    } else if (operation == "search") {
-
     } else if (operation == "add-repo") {
         if (targets.size() == 0) {
             Log::E("Error: No targets specified for [add-repo]");
@@ -100,6 +93,9 @@ int main(int argc, char* argv[]) {
                 Log::I("* Succesfully added repository - %s", result.c_str());
             }
         }
+
+        const int updateResult = Repositories::updateRepositories(database);
+        Log::I("Update complete - [%d] package(s) pulled!", updateResult);
     } else if (operation == "remove-repo") {
         if (targets.size() == 0) {
             Log::E("Error: No targets specified for [remove-repo]");
@@ -116,6 +112,8 @@ int main(int argc, char* argv[]) {
                 Log::I("* Succesfully removed repository");
             }
         }
+    } else if (operation == "search") {
+        
     } else {
         Log::E("No such operation [%s].", operation.c_str());
         return 1;

@@ -5,6 +5,10 @@
 class SimpleGET {
     public:
         SimpleGET(const std::string& url);
+        
+        SimpleGET(SimpleGET& simpleGET) = delete;
+        SimpleGET operator = (const SimpleGET&) = delete;
+
         CURLcode execute(void);
         std::string& get_buffer() { return this->buffer; };
         long get_response_code();
