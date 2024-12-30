@@ -8,7 +8,13 @@ std::string Repositories::add(Database& db, const std::string& url) {
 
     const std::string repoID = updateRepository(db, url);
     if (repoID != "") {
-        db.AddRepository(repoID, url);
+        printf("* Registering repository with DB");
+        try {
+            db.AddRepository(repoID, url);
+        } catch (std::exception& e) {
+            printf("SQLite error: %s\n", e.what());
+            return "";
+        }
     }
 
     return repoID;
