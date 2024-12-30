@@ -33,7 +33,6 @@ bool compareSemverGTOE(const std::string& a, const std::string& b) { // Will ret
     for (size_t i=0; i < semverComponentsB.size(); i++) {
         if (i == semverComponentsA.size() || // If we reach the end of A but there are more elements in B, it means A was the same up to those extra elements, and since there are more, A is smaller
             semverComponentsA[i] < semverComponentsB[i]) { // If any component of A is smaller than B since LTR, all previous were the same that means A is smaller
-            Log::D("%i LESS THAN %i", semverComponentsA[i], semverComponentsB[i]);
             return false;
         }
 
@@ -44,4 +43,8 @@ bool compareSemverGTOE(const std::string& a, const std::string& b) { // Will ret
     }
 
     return true; // They are the same OR b is empty
+}
+
+bool firmwareWithinRange(const std::string &current, const std::string &min, const std::string &max) {
+    return (min.size() == 0 || compareSemverGTOE(current, min)) && (max.size() == 0 || compareSemverGTOE(max, Flags::GetInstance()->firmware_version));
 }

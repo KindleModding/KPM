@@ -31,6 +31,9 @@ int main(int argc, char* argv[]) {
                 } else if (strcmp(argv[i], "--force_architecture") == 0) {
                     Flags::GetInstance()->architecture = std::string(argv[i+1]);
                     i++;
+                } else if (strcmp(argv[i], "--force_firmware") == 0) {
+                    Flags::GetInstance()->firmware_version = std::string(argv[i+1]);
+                    i++;
                 } else {
                     Log::E("Invalid flags specified.");
                     return 1; // For now we don't have any of these
@@ -130,11 +133,7 @@ int main(int argc, char* argv[]) {
         }
 
         for (PackageWithVersion package : packages) {
-            if (
-                (package.min_firmware.size() == 0 || compareSemverGTOE(Flags::GetInstance()->firmware_version, package.min_firmware))
-                &&
-                (package.max_firmware.size() == 0 || compareSemverGTOE(package.max_firmware, Flags::GetInstance()->firmware_version))
-                ) {
+            if (firmwareWithinRange(Flags::GetInstance()->firmware_version, package.min_firmware, package.max_firmware)) {
                 Log::I("%s - %s @ %s", package.id.c_str(), package.name.c_str(), package.version_name.c_str());
             }
         }
