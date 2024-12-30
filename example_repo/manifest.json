@@ -11,7 +11,7 @@
                 {
                     "version_name": "2024.11",
                     "version_number": 2,
-                    "min_firmware": "",
+                    "min_firmware": "5.16.4",
                     "max_firmware": "",
                     "supported_arch": [
                         "armhf"

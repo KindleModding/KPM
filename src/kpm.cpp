@@ -8,6 +8,7 @@
 #include "database.hpp"
 #include "flags.hpp"
 #include "log.hpp"
+#include "utils.hpp"
 
 int main(int argc, char* argv[]) {
     std::vector<char*> targets;
@@ -129,7 +130,13 @@ int main(int argc, char* argv[]) {
         }
 
         for (PackageWithVersion package : packages) {
-            Log::I("%s - %s @ %s", package.id.c_str(), package.name.c_str(), package.version_name.c_str());
+            if (
+                (package.min_firmware.size() == 0 || compareSemverGTOE(Flags::GetInstance()->firmware_version, package.min_firmware))
+                &&
+                (package.max_firmware.size() == 0 || compareSemverGTOE(package.max_firmware, Flags::GetInstance()->firmware_version))
+                ) {
+                Log::I("%s - %s @ %s", package.id.c_str(), package.name.c_str(), package.version_name.c_str());
+            }
         }
     } else {
         Log::E("No such operation [%s].", operation.c_str());

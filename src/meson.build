@@ -1,6 +1,7 @@
 sources = files(
     './flags.cpp',
     './request.cpp',
+    './utils.cpp',
     './repositories.cpp',
     './kpm.cpp',
     './database.cpp'
