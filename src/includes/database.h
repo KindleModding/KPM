@@ -38,6 +38,20 @@ struct InstalledPackage {
     std::string max_firmware;
 };
 
+struct PackageWithVersion {
+    std::string id;
+    std::string repo_id;
+    std::string name;
+    std::string description;
+    std::string screenshots;
+    std::string package_id;
+    uint version_number;
+    std::string version_name;
+    std::string architecture;
+    std::string min_firmware;
+    std::string max_firmware;
+};
+
 class Database {
     public:
         Database(std::string path);
@@ -49,7 +63,8 @@ class Database {
 
         int DeleteRepositoryPackages(const std::string& id);
         std::vector<Package> GetRepositoryPackages(const std::string& id);
-        
+
+        std::vector<PackageWithVersion> FindPackage(const std::string& queryString);
         Package GetPackage(const std::string& id);
         int AddPackage(Package package);
         int DeletePackage(const std::string& id);

@@ -1,6 +1,7 @@
 #include <cstdio>
 #include <cstring>
 #include <curl/curl.h>
+#include <filesystem>
 #include <vector>
 
 #include "repositories.h"
@@ -25,6 +26,9 @@ int main(int argc, char* argv[]) {
                 // It's not a single-letter flag
                 if (strcmp(argv[i], "--kpkg_dir") == 0) {
                     Flags::GetInstance()->kpkg_dir = std::string(argv[i+1]);
+                    i++;
+                } else if (strcmp(argv[i], "--force_architecture") == 0) {
+                    Flags::GetInstance()->architecture = std::string(argv[i+1]);
                     i++;
                 } else {
                     Log::E("Invalid flags specified.");
@@ -51,7 +55,7 @@ int main(int argc, char* argv[]) {
 
 
     Log::D("Running with flags:");
-    Log::D("arch: [%s]", Flags::GetInstance()->arch.c_str());
+    Log::D("architecture: [%s]", Flags::GetInstance()->architecture.c_str());
     Log::D("firmware_version: [%s]", Flags::GetInstance()->firmware_version.c_str());
     Log::D("kpkg_dir: [%s]", Flags::GetInstance()->kpkg_dir.c_str());
     Log::D("verbose: [%d]", Flags::GetInstance()->verbose);
@@ -60,7 +64,10 @@ int main(int argc, char* argv[]) {
     if (operation == "") {
         Log::E("No operator specified.");
         return 1;
-    }    
+    }
+
+    // Try to create the kpkg directory if it doesn't already exist
+    std::filesystem::create_directories(Flags::GetInstance()->kpkg_dir);
     
     Database database(Flags::GetInstance()->kpkg_dir + "/kpm.db");
 
@@ -109,7 +116,21 @@ int main(int argc, char* argv[]) {
             }
         }
     } else if (operation == "search") {
-        
+        std::string searchTerm;
+        for (const std::string target : targets) {
+            searchTerm += target + ' ';
+        }
+        Log::I("* Searching for [%s]", searchTerm.substr(0, searchTerm.length()-1).c_str());
+
+        const std::vector<PackageWithVersion> packages = database.FindPackage('%' + searchTerm.substr(0, searchTerm.length()-1) + '%');
+        if (packages.size() == 0) {
+            Log::E("No packages found.");
+            return 1;
+        }
+
+        for (PackageWithVersion package : packages) {
+            Log::I("%s - %s @ %s", package.id.c_str(), package.name.c_str(), package.version_name.c_str());
+        }
     } else {
         Log::E("No such operation [%s].", operation.c_str());
         return 1;

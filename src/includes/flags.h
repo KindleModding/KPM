@@ -5,7 +5,7 @@ class Flags {
     public:
         static Flags* GetInstance();
 
-        const std::string arch = KPM_ARCH;
+        std::string architecture = KPM_ARCH;
         std::string kpkg_dir = "/mnt/us/kpkg";
         bool verbose = false;
         std::string firmware_version;

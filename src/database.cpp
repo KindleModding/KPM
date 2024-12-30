@@ -1,6 +1,7 @@
 #include "database.h"
 #include "SQLiteCpp/Database.h"
 #include "SQLiteCpp/Statement.h"
+#include "flags.h"
 #include <cstring>
 #include <vector>
 
@@ -140,6 +141,30 @@ Package Database::GetPackage(const std::string& id) {
             .screenshots = ""
         };
     }
+}
+
+std::vector<PackageWithVersion> Database::FindPackage(const std::string& queryString) {
+    SQLite::Statement query(db, "SELECT * FROM (SELECT *, MAX(version_number) latest_version FROM package_index LEFT JOIN version_index ON package_id=id WHERE name LIKE ?1 AND architecture = ?2 ORDER BY ABS(LENGTH(?1) - LENGTH(name)) ASC) WHERE version_number = latest_version;");
+    query.bind(1, queryString);
+    query.bind(2, Flags::GetInstance()->architecture);
+    std::vector<PackageWithVersion> packages;
+    while (query.executeStep()) {
+        packages.push_back({
+            .id = query.getColumn(0),
+            .repo_id = query.getColumn(1),
+            .name = query.getColumn(2),
+            .description = query.getColumn(3),
+            .screenshots = query.getColumn(4),
+            .package_id = query.getColumn(5),
+            .version_number = query.getColumn(7),
+            .version_name = query.getColumn(8),
+            .architecture = query.getColumn(9),
+            .min_firmware = query.getColumn(10),
+            .max_firmware = query.getColumn(11)
+        });
+    }
+
+    return packages;
 }
 
 int Database::AddPackage(Package package) {
