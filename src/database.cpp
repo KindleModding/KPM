@@ -5,6 +5,9 @@
 #include <vector>
 
 Database::Database(std::string path): db(path, SQLite::OPEN_READWRITE|SQLite::OPEN_CREATE) {
+    SQLite::Statement setup(db, "PRAGMA foreign_keys = ON;");
+    setup.exec();
+
     SQLite::Statement createReposTable(db, "CREATE TABLE IF NOT EXISTS repos ("
                                             "id TEXT NOT NULL PRIMARY KEY,"
                                             "url TEXT NOT NULL"
@@ -22,14 +25,15 @@ Database::Database(std::string path): db(path, SQLite::OPEN_READWRITE|SQLite::OP
     createPackageIndexTable.exec();
 
     SQLite::Statement createVersionIndexTable(db, "CREATE TABLE IF NOT EXISTS version_index ("
-                                            "package_id TEXT REFERENCES package_index(id) ON DELETE CASCADE,"
-                                            "repo_id TEXT REFERENCES repos(id) ON DELETE CASCADE,"
+                                            "package_id TEXT,"
+                                            "repo_id TEXT,"
                                             "version_number INTEGER NOT NULL,"
                                             "version_name TEXT NOT NULL,"
                                             "architecture TEXT NOT NULL,"
                                             "min_firmware TEXT NOT NULL,"
                                             "max_firmware TEXT NOT NULL,"
-                                            "PRIMARY KEY(package_id, repo_id, version_number, architecture)"
+                                            "PRIMARY KEY(package_id, repo_id, version_number, architecture),"
+                                            "FOREIGN KEY (package_id, repo_id) REFERENCES package_index(id, repo_id) ON DELETE CASCADE"
                                             ") STRICT;");
     createVersionIndexTable.exec();
 

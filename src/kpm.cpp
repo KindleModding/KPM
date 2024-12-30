@@ -100,6 +100,22 @@ int main(int argc, char* argv[]) {
                 Log::I("* Succesfully added repository - %s", result.c_str());
             }
         }
+    } else if (operation == "remove-repo") {
+        if (targets.size() == 0) {
+            Log::E("Error: No targets specified for [remove-repo]");
+            return 1;
+        }
+
+        for (const std::string target : targets) {
+            Log::I("* Removing repository - %s", target.c_str());
+            const int changed = database.DeleteRepository(target);
+            if (changed == 0) {
+                Log::E("* Failed to remove repository.");
+            } else {
+                Log::D("[%d] rows affected.", changed);
+                Log::I("* Succesfully removed repository");
+            }
+        }
     } else {
         Log::E("No such operation [%s].", operation.c_str());
         return 1;
