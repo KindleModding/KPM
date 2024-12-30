@@ -1,7 +1,9 @@
 #include "repositories.h"
+#include "database.h"
 #include "request.h"
 #include <curl/curl.h>
 #include <nlohmann/json.hpp>
+#include <vector>
 #include "log.h"
 
 std::string Repositories::add(Database& db, const std::string& url) {
@@ -33,28 +35,48 @@ std::string Repositories::add(Database& db, const std::string& url) {
     return jsonData["id"].get<std::string>();
 }
 
-std::string Repositories::updateRepository(Database& db, const std::string& url) {
-    Log::I("* Updating repository [%s]", url.c_str());
+int Repositories::updateRepository(Database& db, const std::string& id) {
+    Log::I("* Updating repository [%s]", id.c_str());
     Log::D("* Fetching repository manifest...");
-    SimpleGET manifestRequest(url);
+
+    const Repository repo = db.GetRepository(id);
+
+    SimpleGET manifestRequest(repo.url + "/manifest.json");
     const CURLcode error = manifestRequest.execute();
     if (error != 0) {
         Log::E("* CURL error: %s", curl_easy_strerror(error));
-        return "";
+        return 0;
     }
+
+    Log::D("Clearing package index for this repo");
+    db.DeleteRepositoryPackages(id);
 
     nlohmann::json jsonData = nlohmann::json::parse(manifestRequest.get_buffer());
     // Add packages to DB
     Log::D("* Adding packages to DB");
+    int packages = 0;
     for (nlohmann::json package : jsonData["packages"]) {
+        packages++;
         Log::D("Package found: %s", package["id"].get<std::string>().c_str());
+        db.AddPackage({
+            .id = package["id"].get<std::string>(),
+            .repo_id = repo.id,
+            .name = package["name"],
+            .description = package["description"],
+            .screenshots = package["screenshots"].dump()
+        });
         for (nlohmann::json version : package["versions"]) {
-            db.AddPackage({
-                .id = package["id"].get<std::string>(),
-            });
+             
         }
     }
 
+    return packages;
+}
 
-    return jsonData["id"].get<std::string>().c_str();
+int Repositories::updateRepositories(Database &db) {
+    const std::vector<Repository> repos = db.GetRepositories();
+    for (Repository repo : repos) {
+        updateRepository(db, repo.id);
+    }
+    return repos.size();
 }

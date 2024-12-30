@@ -4,5 +4,6 @@
 
 namespace Repositories {
     std::string add(Database& db, const std::string& url);
-    std::string updateRepository(Database& db, const std::string& url);
+    int updateRepository(Database& db, const std::string& url);
+    int updateRepositories(Database& db);
 }

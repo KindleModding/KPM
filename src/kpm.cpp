@@ -71,8 +71,8 @@ int main(int argc, char* argv[]) {
     curl_global_init(CURL_GLOBAL_ALL);
 
     if (operation == "update") {
-        Log::I("Running UPDATE operation");
-        Log::D("* Retreiving repositories from db");
+        const int updateResult = Repositories::updateRepositories(database);
+        Log::I("Update complete - [%d] package(s) pulled!", updateResult);
     } else if (operation == "install") {
 
     } else if (operation == "remove") {

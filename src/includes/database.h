@@ -50,9 +50,14 @@ class Database {
 
         int DeleteRepositoryPackages(const std::string& id);
         std::vector<Package> GetRepositoryPackages(const std::string& id);
+        
         Package GetPackage(const std::string& id);
         int AddPackage(Package package);
         int DeletePackage(const std::string& id);
+
+        PackageVersion GetPackageVersion(const std::string& package_id);
+        int AddPackageVersion(PackageVersion version);
+        int DeletePackageVersions(const std::string& package_id, const std::string& repo_id);
     private:
         SQLite::Database db;
 };
