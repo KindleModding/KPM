@@ -1,10 +1,9 @@
-#include "repositories.h"
-#include "database.h"
-#include "request.h"
+#include "repositories.hpp"
+#include "database.hpp"
+#include "request.hpp"
 #include <curl/curl.h>
 #include <nlohmann/json.hpp>
-#include <vector>
-#include "log.h"
+#include "log.hpp"
 
 std::string Repositories::add(Database& db, const std::string& url) {
     Log::I("* Adding repository [%s]", url.c_str());

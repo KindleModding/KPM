@@ -1,5 +1,5 @@
 #pragma once
-#include "database.h"
+#include "database.hpp"
 #include <string>
 
 namespace Repositories {

@@ -4,10 +4,10 @@
 #include <filesystem>
 #include <vector>
 
-#include "repositories.h"
-#include "database.h"
-#include "flags.h"
-#include "log.h"
+#include "repositories.hpp"
+#include "database.hpp"
+#include "flags.hpp"
+#include "log.hpp"
 
 int main(int argc, char* argv[]) {
     std::vector<char*> targets;

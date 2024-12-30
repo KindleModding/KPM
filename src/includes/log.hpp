@@ -1,7 +1,7 @@
 #pragma once
 #include <cstdarg>
 #include <cstdio>
-#include "flags.h"
+#include "flags.hpp"
 
 namespace Log {
     inline void D(const char* format, ...) {

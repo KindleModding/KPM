@@ -1,5 +1,4 @@
-#include "flags.h"
-#include "log.h"
+#include "flags.hpp"
 #include <cstdio>
 #include "lab126utils.h"
 
@@ -14,6 +13,6 @@ Flags* Flags::GetInstance() {
 Flags::Flags() {
     char* version;
     // Read the version
-    const int result = getReleaseVersion(&version);
+    getReleaseVersion(&version);
     this->firmware_version = version;
 }
