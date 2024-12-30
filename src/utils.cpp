@@ -119,7 +119,7 @@ std::vector<PackageWithVersion> recursivelyGetPackagesFromTarget(Database& datab
 
     if (versionsAvailable.size() == 0 || packagesToInstall.size() == 0) {
         Log::E("Could not find suitable version for package - ABORTING: '%s'", installPackage.package_id.c_str());
-        throw std::runtime_error("Could not find suitable version for package.");
+        exit(1);
     }
 
     // Get dependencies

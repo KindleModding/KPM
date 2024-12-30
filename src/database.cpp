@@ -149,8 +149,8 @@ std::vector<PackageWithVersion> Database::GetCompatiblePackageVersions(const std
 
         const bool hasResult = preQuery.executeStep();
         if (!hasResult) {
-            Log::E("Failed to get version with name: %s", version_name.c_str());
-            throw std::runtime_error("Failed to get version.");
+            Log::E("Failed to get version with name: %s - ABORTING", version_name.c_str());
+            exit(1);
         }
 
         version_number = preQuery.getColumn(0);
