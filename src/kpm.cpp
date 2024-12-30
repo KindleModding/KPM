@@ -1,9 +1,9 @@
-#include <filesystem>
 #include <cstdio>
 #include <cstring>
 #include <curl/curl.h>
 #include <vector>
 
+#include "repositories.h"
 #include "database.h"
 #include "flags.h"
 
@@ -18,7 +18,7 @@ int main(int argc, char* argv[]) {
     std::string operation;
 
     // Parse further args
-    for (int i = 0; i < argc; i++) {
+    for (int i = 1; i < argc; i++) {
         if (argv[i][0] == '-') {
             const int flagCount = strlen(argv[i]) - 1;
             if (flagCount == 0) {
@@ -50,9 +50,9 @@ int main(int argc, char* argv[]) {
                     }
                 }
             }
-        } else if (i != argc-1) {
+        } else if (operation != "") {
             targets.push_back(argv[i]);
-        } else {
+        } else if (operation == "") {
             operation = argv[i];
         }
     }
@@ -65,10 +65,14 @@ int main(int argc, char* argv[]) {
         printf("operation: [%s]\n", operation.c_str());
     }
 
-    const Database database(flags.kpkg_dir + "/kpm.db");
+    Database database(flags.kpkg_dir + "/kpm.db");
+
+    // Initialise curl
+    curl_global_init(CURL_GLOBAL_ALL);
 
     if (operation == "update") {
         printf("Running UPDATE operation\n");
+        printf("* Retreiving repositories from db\n");
     } else if (operation == "install") {
 
     } else if (operation == "remove") {
@@ -77,6 +81,21 @@ int main(int argc, char* argv[]) {
 
     } else if (operation == "search") {
 
+    } else if (operation == "add-repo") {
+        if (targets.size() == 0) {
+            printf("Error: No targets specified for [add-repo]\n");
+            return 1;
+        }
+
+        for (const std::string target : targets) {
+            printf("* Adding repository - %s\n", target.c_str());
+            const std::string result = Repositories::add(database, target);
+            if (result == "") {
+                printf("* Failed to add repository.\n");
+            } else {
+                printf("* Succesfully added repository - %s\n", result.c_str());
+            }
+        }
     } else {
         printf("No such operation [%s].\n", operation.c_str());
         return 1;

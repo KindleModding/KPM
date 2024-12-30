@@ -6,7 +6,7 @@
 
 struct Repository {
     std::string id;
-    std::string uri;
+    std::string url;
 };
 
 struct Package {
@@ -25,6 +25,9 @@ class Database {
         Database(std::string path);
 
         std::vector<Repository> GetRepositories();
+        Repository GetRepository(const std::string& id);
+        int AddRepository(const std::string& id, const std::string& url);
+        int DeleteRepository(const std::string& id);
     private:
     const std::string repoTableName = "repos";
     const std::string packageIndexTableName = "package_index";

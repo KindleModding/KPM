@@ -3,7 +3,6 @@
     "packages": [
         {
             "package_name": "rocks.koreader.koreader",
-            "manifest_path": "/manifests/rocks.koreader.koreader.kpkginfo",
             "versions": [
                 {
                     "version_name": "2024.11",

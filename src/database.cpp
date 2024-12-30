@@ -25,7 +25,7 @@ Database::Database(std::string path): db(path, SQLite::OPEN_READWRITE|SQLite::OP
         printf("Repos table not found - creating\n");
         SQLite::Statement query(db, "CREATE TABLE " + repoTableName + " ("
                                                 "id TEXT NOT NULL PRIMARY KEY,"
-                                                "uri TEXT NOT NULL"
+                                                "url TEXT NOT NULL"
                                                 ") STRICT;");
         query.exec();
 
@@ -72,9 +72,40 @@ std::vector<Repository> Database::GetRepositories() {
     while (query.executeStep()) {
         repositories.push_back({
             .id = query.getColumn(0),
-            .uri = query.getColumn(1)
+            .url = query.getColumn(1)
         });
     }
 
     return repositories;
+}
+
+Repository Database::GetRepository(const std::string& id) {
+    SQLite::Statement query(db, "SELECT * FROM " + repoTableName + " WHERE id=? LIMIT=1;");
+    query.bind(1, id);
+    const bool hasResult = query.executeStep();
+
+    if (hasResult) {
+        return {
+            .id = query.getColumn(0),
+            .url = query.getColumn(1)
+        };
+    } else {
+        return {
+            .id = "",
+            .url = ""
+        };
+    }
+}
+
+int Database::AddRepository(const std::string& id, const std::string& url) {
+    SQLite::Statement query(db, "INSERT INTO " + repoTableName + " (id, url) VALUES (?, ?);");
+    query.bind(1, id);
+    query.bind(2, url);
+    return query.exec();
+}
+
+int Database::DeleteRepository(const std::string& id) {
+    SQLite::Statement query(db, "DELETE FROM " + repoTableName + " WHERE id=?;");
+    query.bind(1, id);
+    return query.exec();
 }
