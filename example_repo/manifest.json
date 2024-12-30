@@ -2,7 +2,8 @@
     "id": "io.github.kindlemodding_repo",
     "packages": [
         {
-            "package_name": "rocks.koreader.koreader",
+            "id": "rocks.koreader.koreader",
+            "package_name": "koreader",
             "versions": [
                 {
                     "version_name": "2024.11",

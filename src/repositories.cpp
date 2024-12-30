@@ -7,12 +7,21 @@
 std::string Repositories::add(Database& db, const std::string& url) {
     Log::I("* Adding repository [%s]", url.c_str());
 
-    const std::string repoID = updateRepository(db, url);
-    if (repoID != "") {
+    // Get the repository ID
+    SimpleGET manifestRequest(url + "/manifest.json");
+    const CURLcode error = manifestRequest.execute();
+    if (error != 0) {
+        Log::E("* CURL error: %s", curl_easy_strerror(error));
+        return "";
+    }
+
+    nlohmann::json jsonData = nlohmann::json::parse(manifestRequest.get_buffer());
+
+    if (jsonData["id"].get<std::string>() != "") {
         Log::D("* Registering repository with DB");
         try {
             db.AddRepository({
-                .id = repoID,
+                .id = jsonData["id"].get<std::string>(),
                 .url = url
             });
         } catch (std::exception& e) {
@@ -21,7 +30,7 @@ std::string Repositories::add(Database& db, const std::string& url) {
         }
     }
 
-    return repoID;
+    return jsonData["id"].get<std::string>();
 }
 
 std::string Repositories::updateRepository(Database& db, const std::string& url) {
@@ -38,7 +47,12 @@ std::string Repositories::updateRepository(Database& db, const std::string& url)
     // Add packages to DB
     Log::D("* Adding packages to DB");
     for (nlohmann::json package : jsonData["packages"]) {
-        Log::D("Package found: %s", package["package_name"].get<std::string>().c_str());
+        Log::D("Package found: %s", package["id"].get<std::string>().c_str());
+        for (nlohmann::json version : package["versions"]) {
+            db.AddPackage({
+                .id = package["id"].get<std::string>(),
+            });
+        }
     }
 
 

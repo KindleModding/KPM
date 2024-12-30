@@ -12,12 +12,31 @@ struct Repository {
 struct Package {
     std::string id;
     std::string repo_id;
+    std::string name;
+    std::string description;
+    std::string screenshots;
+};
+
+struct PackageVersion {
+    std::string package_id;
+    std::string repo_id;
+    uint version_number;
+    std::string version_name;
     std::string architecture;
+    uint min_firmware;
+    uint max_firmware;
+};
+
+struct InstalledPackage {
+    std::string package_id;
+    std::string repo_id;
+    std::string name;
+    std::string description;
+    std::string screenshots;
     std::string version_name;
     uint version_number;
     uint min_firmware;
     uint max_firmware;
-    std::string screenshots;
 };
 
 class Database {
@@ -35,9 +54,5 @@ class Database {
         int AddPackage(Package package);
         int DeletePackage(const std::string& id);
     private:
-    const std::string repoTableName = "repos";
-    const std::string packageIndexTableName = "package_index";
-    const std::string packagesInstalledTableName = "installed_packages";
-
-    SQLite::Database db;
+        SQLite::Database db;
 };
