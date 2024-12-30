@@ -5,13 +5,13 @@
 extern "C" {
 
 int getPrettyVersion(char** out) {
-  std::string test = "Kindle 5.17.1 (4320360039)";
+  std::string test = "Stub! 0.0.0 (0)";
   asprintf(out, "%s", test.c_str());
   return 0;
 }
 
 int getReleaseVersion(char** out) {
-  std::string test = "5.17.1";
+  std::string test = "0.0.0";
   asprintf(out, "%s", test.c_str());
   return 0;
 }
