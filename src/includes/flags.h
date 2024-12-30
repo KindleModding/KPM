@@ -5,10 +5,11 @@ class Flags {
     public:
         static Flags* GetInstance();
 
-        std::string kpkg_dir = "/var/local/kpkg/";
-        bool dry = false;
+        const std::string arch = KPM_ARCH;
+        std::string kpkg_dir = "/mnt/us/kpkg";
         bool verbose = false;
         std::string firmware_version;
+
     private:
         Flags();
         static Flags* instance;

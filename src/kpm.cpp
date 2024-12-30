@@ -9,11 +9,6 @@
 #include "log.h"
 
 int main(int argc, char* argv[]) {
-    if (argc < 2) {
-        Log::E("No operator specified.");
-        return 1;
-    }
-
     std::vector<char*> targets;
     std::string operation;
 
@@ -38,9 +33,6 @@ int main(int argc, char* argv[]) {
             } else {
                 for (int j = 0; j < flagCount; j++) {
                     switch (argv[i][j+1]) {
-                        case 'd':
-                            Flags::GetInstance()->dry = true;
-                            break;
                         case 'v':
                             Flags::GetInstance()->verbose = true;
                             break;
@@ -59,12 +51,16 @@ int main(int argc, char* argv[]) {
 
 
     Log::D("Running with flags:");
+    Log::D("arch: [%s]", Flags::GetInstance()->arch.c_str());
     Log::D("firmware_version: [%s]", Flags::GetInstance()->firmware_version.c_str());
     Log::D("kpkg_dir: [%s]", Flags::GetInstance()->kpkg_dir.c_str());
-    Log::D("dry: [%d]", Flags::GetInstance()->dry);
     Log::D("verbose: [%d]", Flags::GetInstance()->verbose);
     Log::D("operation: [%s]", operation.c_str());
-    
+
+    if (operation == "") {
+        Log::E("No operator specified.");
+        return 1;
+    }    
     
     Database database(Flags::GetInstance()->kpkg_dir + "/kpm.db");
 
