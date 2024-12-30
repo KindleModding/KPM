@@ -4,6 +4,7 @@
 #include <curl/curl.h>
 #include <nlohmann/json.hpp>
 #include "log.hpp"
+#include "utils.hpp"
 
 std::string Repositories::add(Database& db, const std::string& url) {
     Log::I("* Adding repository [%s]", url.c_str());
@@ -18,7 +19,7 @@ std::string Repositories::add(Database& db, const std::string& url) {
 
     nlohmann::json jsonData = nlohmann::json::parse(manifestRequest.get_buffer());
 
-    if (jsonData["id"].get<std::string>() != "") {
+    if (jsonData["id"].get<std::string>().length() != 0) {
         Log::D("* Registering repository with DB");
         try {
             db.AddRepository({
@@ -67,14 +68,25 @@ int Repositories::updateRepository(Database& db, const std::string& id) {
         for (nlohmann::json version : package["versions"]) {
             for (std::string architecture : version["supported_arch"]) {
                 db.AddPackageVersion({
-                .package_id = package["id"].get<std::string>(),
-                .repo_id = repo.id,
-                .version_number = version["version_number"].get<uint>(),
-                .version_name = version["version_name"].get<std::string>(),
-                .architecture = architecture,
-                .min_firmware = version["min_firmware"].get<std::string>(),
-                .max_firmware = version["max_firmware"].get<std::string>()
-            });
+                    .package_id = package["id"].get<std::string>(),
+                    .repo_id = repo.id,
+                    .version_number = version["version_number"].get<uint>(),
+                    .version_name = version["version_name"].get<std::string>(),
+                    .architecture = architecture,
+                    .min_firmware = version["min_firmware"].get<std::string>(),
+                    .max_firmware = version["max_firmware"].get<std::string>()
+                });
+
+                for (std::string dependencyString : version["dependencies"]) {
+                    // Get the version number from the dependency info
+                    db.AddPackageVersionDependency({
+                        .package_id = package["id"].get<std::string>(),
+                        .repo_id = repo.id,
+                        .version_number = version["version_number"].get<uint>(),
+                        .architecture = architecture,
+                        .dependency_install_string = dependencyString
+                    });
+                }
             }
         }
     }
@@ -84,8 +96,9 @@ int Repositories::updateRepository(Database& db, const std::string& id) {
 
 int Repositories::updateRepositories(Database &db) {
     const std::vector<Repository> repos = db.GetRepositories();
+    int packageCount = 0;
     for (Repository repo : repos) {
-        updateRepository(db, repo.id);
+        packageCount += updateRepository(db, repo.id);
     }
-    return repos.size();
+    return packageCount;
 }

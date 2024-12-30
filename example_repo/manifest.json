@@ -6,15 +6,18 @@
             "name": "Koreader",
             "description": "KOReader is a document viewer for E Ink devices. Supported fileformats include EPUB, PDF, DjVu, XPS, CBT, CBZ, FB2, PDB, TXT, HTML, RTF, CHM, DOC, MOBI and ZIP files. It’s available for Kindle, Kobo, PocketBook, Android and desktop Linux.",
             "screenshots": [],
-            "package_name": "koreader",
             "versions": [
                 {
                     "version_name": "2024.11",
                     "version_number": 2,
                     "min_firmware": "5.16.4",
                     "max_firmware": "",
+                    "dependencies": [
+                        "com.github.niluje.fbink"
+                    ],
                     "supported_arch": [
-                        "armhf"
+                        "armhf",
+                        "armel"
                     ]
                 },
                 {
@@ -22,7 +25,29 @@
                     "version_number": 1,
                     "min_firmware": "",
                     "max_firmware": "5.16.4",
+                    "dependencies": [
+                        "com.github.niluje.fbink"
+                    ],
                     "supported_arch": [
+                        "armel"
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "com.github.niluje.fbink",
+            "name": "fbink",
+            "description": "FrameBuffer eInker, a small tool & library to print text & images to an eInk Linux framebuffer",
+            "screenshots": [],
+            "versions": [
+                {
+                    "version_name": "2024.12",
+                    "version_number": 1,
+                    "min_firmware": "",
+                    "max_firmware": "",
+                    "dependencies": [],
+                    "supported_arch": [
+                        "armhf",
                         "armel"
                     ]
                 }

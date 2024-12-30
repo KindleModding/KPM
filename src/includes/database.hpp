@@ -26,6 +26,14 @@ struct PackageVersion {
     std::string max_firmware;
 };
 
+struct PackageVersionDependency {
+    std::string package_id;
+    std::string repo_id;
+    uint version_number;
+    std::string architecture;
+    std::string dependency_install_string;
+};
+
 struct InstalledPackage {
     std::string package_id;
     std::string repo_id;
@@ -51,7 +59,6 @@ struct PackageWithVersion {
     std::string min_firmware;
     std::string max_firmware;
 };
-
 class Database {
     public:
         Database(std::string path);
@@ -64,14 +71,15 @@ class Database {
         int DeleteRepositoryPackages(const std::string& id);
         std::vector<Package> GetRepositoryPackages(const std::string& id);
 
-        std::vector<PackageWithVersion> FindPackage(const std::string& queryString);
-        Package GetPackage(const std::string& id);
+        std::vector<PackageWithVersion> SearchCompatiblePackages(const std::string& queryString);
+        std::vector<PackageWithVersion> GetCompatiblePackageVersions(const std::string& package_id, const std::string& repo_id, const std::string& version_name, const std::string& version_comparison);
         int AddPackage(Package package);
-        int DeletePackage(const std::string& id);
 
-        PackageVersion GetPackageVersion(const std::string& package_id);
+        std::vector<PackageVersion> GetPackageVersions(const Package& package);
         int AddPackageVersion(PackageVersion version);
-        int DeletePackageVersions(const std::string& package_id, const std::string& repo_id);
+
+        int AddPackageVersionDependency(PackageVersionDependency packageVersionDependency);
+        std::vector<PackageVersionDependency> GetPackageVersionDependencies(const PackageVersion& version);
     private:
         SQLite::Database db;
 };

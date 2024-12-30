@@ -50,7 +50,7 @@ int main(int argc, char* argv[]) {
                     }
                 }
             }
-        } else if (operation != "") {
+        } else if (operation.length() != 0) {
             targets.push_back(argv[i]);
         } else if (operation == "") {
             operation = argv[i];
@@ -126,7 +126,7 @@ int main(int argc, char* argv[]) {
         }
         Log::I("* Searching for [%s]", searchTerm.substr(0, searchTerm.length()-1).c_str());
 
-        const std::vector<PackageWithVersion> packages = database.FindPackage('%' + searchTerm.substr(0, searchTerm.length()-1) + '%');
+        const std::vector<PackageWithVersion> packages = database.SearchCompatiblePackages('%' + searchTerm.substr(0, searchTerm.length()-1) + '%');
         if (packages.size() == 0) {
             Log::E("No packages found.");
             return 1;
@@ -137,6 +137,18 @@ int main(int argc, char* argv[]) {
                 Log::I("%s - %s @ %s", package.id.c_str(), package.name.c_str(), package.version_name.c_str());
             }
         }
+    } else if (operation == "install") {
+        std::vector<PackageWithVersion> packagesToInstall;
+        for (const std::string target : targets) {
+            const std::vector<PackageWithVersion> packagesToInstallTarget = recursivelyGetPackagesFromTarget(database, target);
+            packagesToInstall.insert(packagesToInstall.end(), packagesToInstallTarget.begin(), packagesToInstallTarget.end());
+        }
+
+        // List packages that need installing
+        for (PackageWithVersion package : packagesToInstall) {
+            Log::I("%s@%s", package.name.c_str(), package.version_name.c_str());
+        }
+        Log::I("Preparing to install %i packages.", packagesToInstall.size());
     } else {
         Log::E("No such operation [%s].", operation.c_str());
         return 1;
