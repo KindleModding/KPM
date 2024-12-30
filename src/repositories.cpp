@@ -10,7 +10,10 @@ std::string Repositories::add(Database& db, const std::string& url) {
     if (repoID != "") {
         printf("* Registering repository with DB");
         try {
-            db.AddRepository(repoID, url);
+            db.AddRepository({
+                .id = repoID,
+                .url = url
+            });
         } catch (std::exception& e) {
             printf("SQLite error: %s\n", e.what());
             return "";
@@ -31,6 +34,9 @@ std::string Repositories::updateRepository(Database& db, const std::string& url)
     }
 
     nlohmann::json jsonData = nlohmann::json::parse(manifestRequest.get_buffer());
+    // Add packages to DB
+    printf("* Adding packages to DB");
+
 
     return jsonData["id"].get<std::string>().c_str();
 }

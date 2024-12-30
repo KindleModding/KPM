@@ -26,8 +26,14 @@ class Database {
 
         std::vector<Repository> GetRepositories();
         Repository GetRepository(const std::string& id);
-        int AddRepository(const std::string& id, const std::string& url);
+        int AddRepository(Repository repository);
         int DeleteRepository(const std::string& id);
+
+        int DeleteRepositoryPackages(const std::string& id);
+        std::vector<Package> GetRepositoryPackages(const std::string& id);
+        Package GetPackage(const std::string& id);
+        int AddPackage(Package package);
+        int DeletePackage(const std::string& id);
     private:
     const std::string repoTableName = "repos";
     const std::string packageIndexTableName = "package_index";

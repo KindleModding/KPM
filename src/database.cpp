@@ -97,15 +97,90 @@ Repository Database::GetRepository(const std::string& id) {
     }
 }
 
-int Database::AddRepository(const std::string& id, const std::string& url) {
+int Database::AddRepository(Repository repository) {
     SQLite::Statement query(db, "INSERT INTO " + repoTableName + " (id, url) VALUES (?, ?);");
-    query.bind(1, id);
-    query.bind(2, url);
+    query.bind(1, repository.id);
+    query.bind(2, repository.url);
     return query.exec();
 }
 
 int Database::DeleteRepository(const std::string& id) {
     SQLite::Statement query(db, "DELETE FROM " + repoTableName + " WHERE id=?;");
+    query.bind(1, id);
+    return query.exec();
+}
+
+int Database::DeleteRepositoryPackages(const std::string& id) {
+    SQLite::Statement query(db, "DELETE FROM " + packageIndexTableName + " WHERE repo_id=?;");
+    query.bind(1, id);
+    return query.exec();
+}
+
+std::vector<Package> Database::GetRepositoryPackages(const std::string& id) {
+    SQLite::Statement query(db, "SELECT * FROM " + packageIndexTableName + " WHERE repo_id = ?;");
+    query.bind(1, id);
+    std::vector<Package> packages;
+    while (query.executeStep()) {
+        packages.push_back({
+            .id = query.getColumn(0),
+            .repo_id = query.getColumn(1),
+            .architecture = query.getColumn(2),
+            .version_name = query.getColumn(3),
+            .version_number = query.getColumn(4),
+            .min_firmware = query.getColumn(5),
+            .max_firmware = query.getColumn(6),
+            .screenshots = query.getColumn(7)
+        });
+    }
+
+    return packages;
+}
+
+Package Database::GetPackage(const std::string& id) {
+    SQLite::Statement query(db, "SELECT * FROM " + packageIndexTableName + " WHERE id=? LIMIT=1;");
+    query.bind(1, id);
+    const bool hasResult = query.executeStep();
+
+    if (hasResult) {
+        return {
+            .id = query.getColumn(0),
+            .repo_id = query.getColumn(1),
+            .architecture = query.getColumn(2),
+            .version_name = query.getColumn(3),
+            .version_number = query.getColumn(4),
+            .min_firmware = query.getColumn(5),
+            .max_firmware = query.getColumn(6),
+            .screenshots = query.getColumn(7)
+        };
+    } else {
+        return {
+            .id = "",
+            .repo_id = "",
+            .architecture = "",
+            .version_name = "",
+            .version_number = 0,
+            .min_firmware = 0,
+            .max_firmware = 0,
+            .screenshots = 0
+        };
+    }
+}
+
+int Database::AddPackage(Package package) {
+    SQLite::Statement query(db, "INSERT INTO " + packageIndexTableName + " (id, repo_id, architecture, version_name, version_number, min_firmware, max_firmware, screenshots) VALUES (?, ?, ?, ?, ?, ?, ?, ?);");
+    query.bind(1, package.id);
+    query.bind(2, package.repo_id);
+    query.bind(3, package.architecture);
+    query.bind(4, package.version_name);
+    query.bind(5, package.version_number);
+    query.bind(6, package.min_firmware);
+    query.bind(7, package.max_firmware);
+    query.bind(8, package.screenshots);
+    return query.exec();
+}
+
+int Database::DeletePackage(const std::string& id) {
+    SQLite::Statement query(db, "DELETE FROM " + packageIndexTableName + " WHERE id=?;");
     query.bind(1, id);
     return query.exec();
 }
