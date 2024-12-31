@@ -4,7 +4,6 @@
 #include "flags.hpp"
 #include "log.hpp"
 #include <cstring>
-#include <stdexcept>
 #include <vector>
 
 Database::Database(std::string path): db(path, SQLite::OPEN_READWRITE|SQLite::OPEN_CREATE) {
@@ -19,6 +18,7 @@ Database::Database(std::string path): db(path, SQLite::OPEN_READWRITE|SQLite::OP
 
     SQLite::Statement createPackageIndexTable(db, "CREATE TABLE IF NOT EXISTS package_index ("
                                             "id TEXT NOT NULL,"
+                                            "alias TEXT NOT NULL,"
                                             "repo_id TEXT REFERENCES repos(id) ON DELETE CASCADE,"
                                             "name TEXT NOT NULL,"
                                             "description TEXT NOT NULL,"
@@ -70,8 +70,8 @@ std::vector<Repository> Database::GetRepositories() {
     std::vector<Repository> repositories;
     while (query.executeStep()) {
         repositories.push_back({
-            .id = query.getColumn(0),
-            .url = query.getColumn(1)
+            .id = query.getColumn("id"),
+            .url = query.getColumn("url")
         });
     }
 
@@ -85,8 +85,8 @@ Repository Database::GetRepository(const std::string& id) {
 
     if (hasResult) {
         return {
-            .id = query.getColumn(0),
-            .url = query.getColumn(1)
+            .id = query.getColumn("id"),
+            .url = query.getColumn("url")
         };
     } else {
         return {
@@ -121,22 +121,24 @@ std::vector<Package> Database::GetRepositoryPackages(const std::string& id) {
     std::vector<Package> packages;
     while (query.executeStep()) {
         packages.push_back({
-            .id = query.getColumn(0),
-            .repo_id = query.getColumn(1),
-            .name = query.getColumn(2),
-            .description = query.getColumn(3),
-            .screenshots = query.getColumn(4)
+            .id = query.getColumn("id"),
+            .alias = query.getColumn("alias"),
+            .repo_id = query.getColumn("repo_id"),
+            .name = query.getColumn("name"),
+            .description = query.getColumn("description"),
+            .screenshots = query.getColumn("screenshots")
         });
     }
 
     return packages;
 }
 
+// Used to convert a TARGET to an appropriate package version for installation
 std::vector<PackageWithVersion> Database::GetCompatiblePackageVersions(const std::string& package_id, const std::string& repo_id, const std::string& version_name, const std::string& version_comparison) {
     // Get version number if needed
     int version_number;
     if (version_comparison.length() != 0 && version_name.length() != 0) {
-        std::string preQueryString = "SELECT version_number FROM version_index WHERE version_index.package_id=?1";
+        std::string preQueryString = "SELECT version_number FROM version_index JOIN package_index ON package_index.id=version_index.package_id WHERE version_index.package_id=?1 OR package_index.alias=?1";
         if (repo_id.length() != 0) {
             preQueryString += " AND version_index.repo_id=?2";
         }
@@ -153,7 +155,7 @@ std::vector<PackageWithVersion> Database::GetCompatiblePackageVersions(const std
             exit(1);
         }
 
-        version_number = preQuery.getColumn(0);
+        version_number = preQuery.getColumn("version_number");
     }
     
     std::string queryString = "SELECT * FROM package_index JOIN version_index ON version_index.package_id=package_index.id";
@@ -164,7 +166,7 @@ std::vector<PackageWithVersion> Database::GetCompatiblePackageVersions(const std
     if (repo_id.length() != 0) {
         queryString += " WHERE package_index.repo_id = ?2";
     }
-    queryString += " AND package_index.id = ?1 AND version_index.architecture = ?4";
+    queryString += " AND (package_index.id = ?1 OR package_index.alias = ?1) AND version_index.architecture = ?4";
 
     if (version_name.length() != 0 && version_comparison.length() != 0) {
         queryString += " AND version_number " + version_comparison + " ?5";
@@ -185,6 +187,7 @@ std::vector<PackageWithVersion> Database::GetCompatiblePackageVersions(const std
     while (query.executeStep()) {
         packages.push_back({
             .id = query.getColumn("package_id"),
+            .alias = query.getColumn("alias"),
             .repo_id = query.getColumn("repo_id"),
             .name = query.getColumn("name"),
             .description = query.getColumn("description"),
@@ -202,23 +205,24 @@ std::vector<PackageWithVersion> Database::GetCompatiblePackageVersions(const std
 }
 
 std::vector<PackageWithVersion> Database::SearchCompatiblePackages(const std::string& queryString) {
-    SQLite::Statement query(db, "SELECT * FROM (SELECT *, MAX(version_number) latest_version FROM package_index LEFT JOIN version_index ON package_id=id WHERE name LIKE ?1 AND architecture = ?2 ORDER BY ABS(LENGTH(?1) - LENGTH(name)) ASC) WHERE version_number = latest_version;");
+    SQLite::Statement query(db, "SELECT * FROM (SELECT *, MAX(version_number) latest_version FROM package_index LEFT JOIN version_index ON package_id=id WHERE (name LIKE ?1 OR alias LIKE ?1 OR id LIKE ?1) AND architecture = ?2 ORDER BY ABS(LENGTH(?1) - LENGTH(name)) ASC) WHERE version_number = latest_version;");
     query.bind(1, queryString);
     query.bind(2, Flags::GetInstance()->architecture);
     std::vector<PackageWithVersion> packages;
     while (query.executeStep()) {
         packages.push_back({
-            .id = query.getColumn(0),
-            .repo_id = query.getColumn(1),
-            .name = query.getColumn(2),
-            .description = query.getColumn(3),
-            .screenshots = query.getColumn(4),
-            .package_id = query.getColumn(5),
-            .version_number = query.getColumn(7),
-            .version_name = query.getColumn(8),
-            .architecture = query.getColumn(9),
-            .min_firmware = query.getColumn(10),
-            .max_firmware = query.getColumn(11)
+            .id = query.getColumn("id"),
+            .alias = query.getColumn("alias"),
+            .repo_id = query.getColumn("repo_id"),
+            .name = query.getColumn("name"),
+            .description = query.getColumn("description"),
+            .screenshots = query.getColumn("screenshots"),
+            .package_id = query.getColumn("package_id"),
+            .version_number = query.getColumn("version_number"),
+            .version_name = query.getColumn("version_name"),
+            .architecture = query.getColumn("architecture"),
+            .min_firmware = query.getColumn("min_firmware"),
+            .max_firmware = query.getColumn("max_firmware")
         });
     }
 
@@ -226,12 +230,13 @@ std::vector<PackageWithVersion> Database::SearchCompatiblePackages(const std::st
 }
 
 int Database::AddPackage(Package package) {
-    SQLite::Statement query(db, "INSERT INTO package_index (id, repo_id, name, description, screenshots) VALUES (?, ?, ?, ?, ?);");
+    SQLite::Statement query(db, "INSERT INTO package_index (id, alias, repo_id, name, description, screenshots) VALUES (?, ?, ?, ?, ?, ?);");
     query.bind(1, package.id);
-    query.bind(2, package.repo_id);
-    query.bind(3, package.name);
-    query.bind(4, package.description);
-    query.bind(5, package.screenshots);
+    query.bind(2, package.alias);
+    query.bind(3, package.repo_id);
+    query.bind(4, package.name);
+    query.bind(5, package.description);
+    query.bind(6, package.screenshots);
     return query.exec();
 }
 
@@ -245,13 +250,13 @@ std::vector<PackageVersion> Database::GetPackageVersions(const Package& package)
 
     while (query.executeStep()) {
         packageVersions.push_back({
-            .package_id = query.getColumn(0),
-            .repo_id = query.getColumn(1),
-            .version_number = query.getColumn(2),
-            .version_name = query.getColumn(3),
-            .architecture = query.getColumn(4),
-            .min_firmware = query.getColumn(5),
-            .max_firmware = query.getColumn(6)
+            .package_id = query.getColumn("package_id"),
+            .repo_id = query.getColumn("repo_id"),
+            .version_number = query.getColumn("version_number"),
+            .version_name = query.getColumn("version_name"),
+            .architecture = query.getColumn("architecture"),
+            .min_firmware = query.getColumn("min_firmware"),
+            .max_firmware = query.getColumn("max_firmware")
         });
     }
 
@@ -291,11 +296,11 @@ std::vector<PackageVersionDependency> Database::GetPackageVersionDependencies(co
 
     while (query.executeStep()) {
         packageDependencies.push_back({
-            .package_id = query.getColumn(0),
-            .repo_id = query.getColumn(1),
-            .version_number = query.getColumn(2),
-            .architecture = query.getColumn(3),
-            .dependency_install_string = query.getColumn(4)
+            .package_id = query.getColumn("package_id"),
+            .repo_id = query.getColumn("repo_id"),
+            .version_number = query.getColumn("version_number"),
+            .architecture = query.getColumn("architecture"),
+            .dependency_install_string = query.getColumn("dependency_install_string")
         });
     }
 

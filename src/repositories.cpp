@@ -74,6 +74,7 @@ int Repositories::updateRepository(Database& db, const std::string& id) {
         Log::D("Package found: %s", package["id"].get<std::string>().c_str());
         db.AddPackage({
             .id = package["id"].get<std::string>(),
+            .alias = package["alias"].is_null() ? "" : package["alias"].get<std::string>(),
             .repo_id = repo.id,
             .name = package["name"],
             .description = package["description"],

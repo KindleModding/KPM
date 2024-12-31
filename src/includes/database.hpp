@@ -10,6 +10,7 @@ struct Repository {
 
 struct Package {
     std::string id;
+    std::string alias;
     std::string repo_id;
     std::string name;
     std::string description;
@@ -48,6 +49,7 @@ struct InstalledPackage {
 
 struct PackageWithVersion {
     std::string id;
+    std::string alias;
     std::string repo_id;
     std::string name;
     std::string description;
