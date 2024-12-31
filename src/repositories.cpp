@@ -4,7 +4,8 @@
 #include <curl/curl.h>
 #include <nlohmann/json.hpp>
 #include "log.hpp"
-#include "utils.hpp"
+
+#define CURRENT_MANIFEST_VERSION 1
 
 std::string Repositories::add(Database& db, const std::string& url) {
     Log::I("* Adding repository [%s]", url.c_str());
@@ -18,6 +19,12 @@ std::string Repositories::add(Database& db, const std::string& url) {
     }
 
     nlohmann::json jsonData = nlohmann::json::parse(manifestRequest.get_buffer());
+
+    const uint manifest_version = jsonData["version"].get<uint>();
+    if (manifest_version > CURRENT_MANIFEST_VERSION) {
+        Log::E("Repository manifest (%i) is newer than expected (%i)! Please update KPM.", manifest_version, CURRENT_MANIFEST_VERSION);
+        return "";
+    }
 
     if (jsonData["id"].get<std::string>().length() != 0) {
         Log::D("* Registering repository with DB");
@@ -48,10 +55,17 @@ int Repositories::updateRepository(Database& db, const std::string& id) {
         return 0;
     }
 
+    nlohmann::json jsonData = nlohmann::json::parse(manifestRequest.get_buffer());
+
+    const uint manifest_version = jsonData["version"].get<uint>();
+    if (manifest_version > CURRENT_MANIFEST_VERSION) {
+        Log::E("Repository manifest (%i) is newer than expected (%i)!\nPlease update KPM.", manifest_version, CURRENT_MANIFEST_VERSION);
+        exit(1);
+    }
+
     Log::D("Clearing package index for this repo");
     db.DeleteRepositoryPackages(id);
 
-    nlohmann::json jsonData = nlohmann::json::parse(manifestRequest.get_buffer());
     // Add packages to DB
     Log::D("* Adding packages to DB");
     int packages = 0;

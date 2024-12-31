@@ -2,7 +2,6 @@
 #include "database.hpp"
 #include "log.hpp"
 #include <algorithm>
-#include <stdexcept>
 #include <vector>
 
 bool compareSemverGTOE(const std::string& a, const std::string& b) { // Will return true if a is greater than or equal to b
@@ -75,23 +74,23 @@ InstallPackage parsePackageTarget(const std::string &target) {
         return installPackage; // There is no desired version_name
     }
 
-    if (gtIndex != -1 && eqIndex != -1 && gtIndex < eqIndex) {
+    if (eqIndex - gtIndex + ltIndex == 0) {
         installPackage.package_version_comparison = ">=";
         installPackage.package_id = target.substr(separatorIndex + 1, gtIndex - (separatorIndex+1));
         installPackage.package_version_name = target.substr(eqIndex+1, target.npos);
-    } else if (ltIndex != -1 && eqIndex != -1 && ltIndex < eqIndex) {
+    } else if (eqIndex - ltIndex + gtIndex == 0) {
         installPackage.package_version_comparison = "<=";
         installPackage.package_id = target.substr(separatorIndex + 1, ltIndex - (separatorIndex+1));
         installPackage.package_version_name = target.substr(eqIndex+1, target.npos);
-    } else if (ltIndex != -1) {
+    } else if (ltIndex != -1 && gtIndex == -1 && eqIndex == -1) {
         installPackage.package_version_comparison = "<";
         installPackage.package_id = target.substr(separatorIndex + 1, ltIndex - (separatorIndex+1));
         installPackage.package_version_name = target.substr(ltIndex+1, target.npos);
-    } else if (gtIndex != -1) {
+    } else if (gtIndex != -1 && ltIndex == -1 && eqIndex == -1) {
         installPackage.package_version_comparison = ">";
         installPackage.package_id = target.substr(separatorIndex + 1, gtIndex - (separatorIndex+1));
         installPackage.package_version_name = target.substr(gtIndex+1, target.npos);
-    } else if (eqIndex != -1) {
+    } else if (eqIndex != -1 && ltIndex == -1 && gtIndex == -1) {
         installPackage.package_version_comparison = "=";
         installPackage.package_id = target.substr(separatorIndex + 1, eqIndex - (separatorIndex+1));
         installPackage.package_version_name = target.substr(eqIndex+1, target.npos);
