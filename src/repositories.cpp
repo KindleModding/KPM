@@ -115,7 +115,7 @@ int Repositories::updateRepository(Database& db, const std::string& id) {
                 for (std::string dependencyString : version["dependencies"]) {
                     // Get the version number from the dependency info
                     const PackageTarget packageTarget = parsePackageTarget(db, dependencyString);
-                    db.AddPackageVersionDependency({
+                    db.AddPackageDependency({
                         .dependent_package_id = package["id"].get<std::string>(),
                         .dependent_repository_id = repo.id,
                         .dependent_version_number = version["version_number"].get<uint>(),
@@ -123,7 +123,7 @@ int Repositories::updateRepository(Database& db, const std::string& id) {
                         .package_id = packageTarget.package_id,
                         .repository_id = packageTarget.repository_id,
                         .version_number = packageTarget.package_version_number,
-                        .version_comparison = packageTarget.package_version_comparison
+                        .version_comparison_type = packageTarget.package_version_comparison_type
                     });
                 }
             }

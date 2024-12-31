@@ -4,6 +4,15 @@
 #include <string>
 #include <vector>
 
+enum class VersionComparisonType {
+    NONE=-1, // No version check
+    EQ=0, // =
+    LT, // <
+    GT, // >
+    GTEQ, // >=
+    LTEQ // <=
+};
+
 struct Repository {
     std::string id;
     std::string url;
@@ -28,7 +37,7 @@ struct PackageVersion {
     std::string max_firmware;
 };
 
-struct PackageVersionDependency {
+struct PackageDependency {
     std::string dependent_package_id;
     std::string dependent_repository_id;
     uint dependent_version_number;
@@ -36,7 +45,7 @@ struct PackageVersionDependency {
     std::string package_id;
     std::string repository_id;
     uint version_number;
-    std::string version_comparison;
+    VersionComparisonType version_comparison_type;
 };
 
 struct InstalledPackage {
@@ -51,14 +60,14 @@ struct InstalledPackage {
     std::string max_firmware;
 };
 
-struct PackageWithVersion {
-    std::string id;
+struct PackageInstallCandidate {
+    std::string package_id;
     std::string alias;
     std::string repository_id;
+    std::string repository_url;
     std::string name;
     std::string description;
     std::string screenshots;
-    std::string package_id;
     uint version_number;
     std::string version_name;
     std::string architecture;
@@ -88,21 +97,23 @@ class Database {
         uint ConvertVersionNameToNumber(const std::string& package_id, const std::string& repository_id, const std::string& version_name);
 
         // Get possible package versions to install given a set of constraints
-        std::vector<PackageWithVersion> GetCompatiblePackageVersions(const std::string& package_id, const std::string& repository_id, const uint& version_number, const std::string& version_comparison);
+        std::vector<PackageInstallCandidate> GetCompatiblePackageVersions(const std::string& package_id, const std::string& repository_id, const uint& version_number, const VersionComparisonType& version_comparison_type);
         
-        std::vector<PackageWithVersion> SearchCompatiblePackages(const std::string& queryString);
+        std::vector<PackageInstallCandidate> SearchCompatiblePackages(const std::string& queryString);
         
         int AddPackage(Package package);
 
         int AddPackageVersion(PackageVersion version);
 
-        int AddPackageVersionDependency(PackageVersionDependency packageVersionDependency);
+        int AddPackageDependency(PackageDependency packageVersionDependency);
 
         // Get dependencies for a specific package version
-        std::vector<PackageVersionDependency> GetPackageVersionDependencies(const PackageVersion& version);
+        std::vector<PackageDependency> GetPackageVersionDependencies(const PackageVersion& version);
 
-        std::vector<PackageVersionDependency> GetRequiredDependencies(); // Get dependencies required by installed packages
+        std::vector<PackageDependency> GetRequiredDependencies(); // Get dependencies required by installed packages
 
+        void InstallPackage(PackageInstallCandidate package);
+        bool CheckConflicts();
     private:
         SQLite::Database db;
         bool isTransaction = false;

@@ -52,14 +52,14 @@ Database::Database(std::string path): db(path, SQLite::OPEN_READWRITE|SQLite::OP
                                             "package_id TEXT NOT NULL,"
                                             "repository_id TEXT NOT NULL,"
                                             "version_number TEXT NOT NULL,"
-                                            "version_comparison TEXT NOT NULL,"
-                                            "PRIMARY KEY(package_id, repository_id, version_number, architecture),"
-                                            "FOREIGN KEY (package_id, repository_id, version_number, architecture) REFERENCES version_index(package_id, repository_id, version_number, architecture) ON DELETE CASCADE"
+                                            "version_comparison_type INTEGER NOT NULL,"
+                                            "PRIMARY KEY(dependent_package_id, dependent_repository_id, dependent_version_number, dependent_architecture),"
+                                            "FOREIGN KEY (dependent_package_id, dependent_repository_id, dependent_version_number, dependent_architecture) REFERENCES version_index(package_id, repository_id, version_number, architecture) ON DELETE CASCADE"
                                             ") STRICT;");
     createDependencyIndexTable.exec();
 
     SQLite::Statement createInstalledPackagesTable(db, "CREATE TABLE IF NOT EXISTS installed_packages ("
-                                            "package_id TEXT NOT NULL PRIMARY KEY,"
+                                            "package_id TEXT NOT NULL,"
                                             "repository_id TEXT NOT NULL,"
                                             "name TEXT NOT NULL,"
                                             "description TEXT NOT NULL,"
@@ -67,9 +67,24 @@ Database::Database(std::string path): db(path, SQLite::OPEN_READWRITE|SQLite::OP
                                             "version_name TEXT NOT NULL,"
                                             "version_number INTEGER NOT NULL,"
                                             "min_firmware TEXT NOT NULL,"
-                                            "max_firmware TEXT NOT NULL"
+                                            "max_firmware TEXT NOT NULL,"
+                                            "PRIMARY KEY(package_id, repository_id, version_number)"
                                             ") STRICT;");
     createInstalledPackagesTable.exec();
+
+    SQLite::Statement createInstalledDependencyTable(db, "CREATE TABLE IF NOT EXISTS installed_package_dependencies ("
+                                            "dependent_package_id TEXT,"
+                                            "dependent_repository_id TEXT,"
+                                            "dependent_version_number INTEGER NOT NULL,"
+                                            "dependent_architecture TEXT NOT NULL,"
+                                            "package_id TEXT NOT NULL,"
+                                            "repository_id TEXT NOT NULL,"
+                                            "version_number TEXT NOT NULL,"
+                                            "version_comparison_type INTEGER NOT NULL,"
+                                            "PRIMARY KEY(dependent_package_id, dependent_repository_id, dependent_version_number, dependent_architecture),"
+                                            "FOREIGN KEY (dependent_package_id, dependent_repository_id, dependent_version_number) REFERENCES installed_packages(package_id, repository_id, version_number) ON DELETE CASCADE"
+                                            ") STRICT;");
+    createInstalledDependencyTable.exec();
 }
 
 void Database::Begin() {
@@ -83,6 +98,7 @@ void Database::Begin() {
     }
 
     db.exec("BEGIN");
+    isTransaction = true;
 }
 
 void Database::End(bool rollback) {
@@ -99,6 +115,7 @@ void Database::End(bool rollback) {
     } else {
         db.exec("COMMIT");
     }
+    isTransaction = false;
 }
 
 std::vector<Repository> Database::GetRepositories() {
@@ -197,14 +214,14 @@ uint Database::ConvertVersionNameToNumber(const std::string& package_id, const s
     return preQuery.getColumn("version_number");
 }
 
-std::vector<PackageWithVersion> Database::GetCompatiblePackageVersions(const std::string& package_id, const std::string& repository_id, const uint& version_number, const std::string& version_comparison) {
+std::vector<PackageInstallCandidate> Database::GetCompatiblePackageVersions(const std::string& package_id, const std::string& repository_id, const uint& version_number, const VersionComparisonType& version_comparison_type) {
     /**
      * @brief Given a set of constraints, find compatible package version candidates that we can install
      * 
      */
-    std::string queryString = "SELECT * FROM package_index JOIN version_index ON version_index.package_id=package_index.id";
+    std::string queryString = "SELECT package_index.*, version_index.*, repositories.url repository_url FROM package_index JOIN repositories ON repositories.id=package_index.repository_id JOIN version_index ON version_index.package_id=package_index.id";
 
-    if (version_comparison.length() != 0) {
+    if (version_comparison_type != VersionComparisonType::NONE) {
         queryString += " AND version_index.repository_id=package_index.repository_id";
     }
     if (repository_id.length() != 0) {
@@ -212,8 +229,28 @@ std::vector<PackageWithVersion> Database::GetCompatiblePackageVersions(const std
     }
     queryString += " AND (package_index.id = ?1 OR package_index.alias = ?1) AND version_index.architecture = ?4";
 
-    if (version_comparison.length() != 0) {
-        queryString += " AND version_number " + version_comparison + " ?5";
+    if (version_comparison_type != VersionComparisonType::NONE) {
+        queryString += " AND version_number ";
+        switch (version_comparison_type) {
+            case VersionComparisonType::EQ:
+                queryString += "=";
+                break;
+            case VersionComparisonType::GT:
+                queryString += ">";
+                break;
+            case VersionComparisonType::LT:
+                queryString += "<";
+                break;
+            case VersionComparisonType::LTEQ:
+                queryString += "<=";
+                break;
+            case VersionComparisonType::GTEQ:
+                queryString += ">=";
+                break;
+            default:
+                break;
+        }
+        queryString += " ?5";
     }
     
     SQLite::Statement query(db, queryString + ";");
@@ -221,21 +258,21 @@ std::vector<PackageWithVersion> Database::GetCompatiblePackageVersions(const std
     if (repository_id.length() != 0) {
         query.bind(2, repository_id);
     }
-    if (version_comparison.length() != 0) {
+    if (version_comparison_type != VersionComparisonType::NONE) {
         query.bind(5, version_number);
     }
     query.bind(4, Flags::GetInstance()->architecture);
 
-    std::vector<PackageWithVersion> packages;
+    std::vector<PackageInstallCandidate> packages;
     while (query.executeStep()) {
         packages.push_back({
-            .id = query.getColumn("package_id"),
+            .package_id = query.getColumn("package_id"),
             .alias = query.getColumn("alias"),
             .repository_id = query.getColumn("repository_id"),
+            .repository_url = query.getColumn("repository_url"),
             .name = query.getColumn("name"),
             .description = query.getColumn("description"),
             .screenshots = query.getColumn("screenshots"),
-            .package_id = query.getColumn("package_id"),
             .version_number = query.getColumn("version_number"),
             .version_name = query.getColumn("version_name"),
             .architecture = query.getColumn("architecture"),
@@ -247,7 +284,7 @@ std::vector<PackageWithVersion> Database::GetCompatiblePackageVersions(const std
     return packages;
 }
 
-std::vector<PackageWithVersion> Database::SearchCompatiblePackages(const std::string& queryString) {
+std::vector<PackageInstallCandidate> Database::SearchCompatiblePackages(const std::string& queryString) {
     /**
      * @brief Search the package index for packages
      * 
@@ -255,16 +292,15 @@ std::vector<PackageWithVersion> Database::SearchCompatiblePackages(const std::st
     SQLite::Statement query(db, "SELECT * FROM (SELECT *, MAX(version_number) latest_version FROM package_index LEFT JOIN version_index ON package_id=id WHERE (name LIKE ?1 OR alias LIKE ?1 OR id LIKE ?1) AND architecture = ?2 ORDER BY ABS(LENGTH(?1) - LENGTH(name)) ASC) WHERE version_number = latest_version;");
     query.bind(1, queryString);
     query.bind(2, Flags::GetInstance()->architecture);
-    std::vector<PackageWithVersion> packages;
+    std::vector<PackageInstallCandidate> packages;
     while (query.executeStep()) {
         packages.push_back({
-            .id = query.getColumn("id"),
+            .package_id = query.getColumn("package_id"),
             .alias = query.getColumn("alias"),
             .repository_id = query.getColumn("repository_id"),
             .name = query.getColumn("name"),
             .description = query.getColumn("description"),
             .screenshots = query.getColumn("screenshots"),
-            .package_id = query.getColumn("package_id"),
             .version_number = query.getColumn("version_number"),
             .version_name = query.getColumn("version_name"),
             .architecture = query.getColumn("architecture"),
@@ -307,12 +343,12 @@ int Database::AddPackageVersion(PackageVersion packageVersion) {
     return query.exec();
 }
 
-int Database::AddPackageVersionDependency(PackageVersionDependency packageVersionDependency) {
+int Database::AddPackageDependency(PackageDependency packageVersionDependency) {
     /**
      * @brief Add a package version dependency to the dependency index
      * 
      */
-    SQLite::Statement query(db, "INSERT INTO dependency_index (dependent_package_id, dependent_repository_id, dependent_version_number, dependent_architecture, package_id, repository_id, version_number, version_comparison) VALUES (?, ?, ?, ?, ?, ?, ?, ?);");
+    SQLite::Statement query(db, "INSERT INTO dependency_index (dependent_package_id, dependent_repository_id, dependent_version_number, dependent_architecture, package_id, repository_id, version_number, version_comparison_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?);");
     query.bind(1, packageVersionDependency.dependent_package_id);
     query.bind(2, packageVersionDependency.dependent_repository_id);
     query.bind(3, packageVersionDependency.dependent_version_number);
@@ -320,11 +356,11 @@ int Database::AddPackageVersionDependency(PackageVersionDependency packageVersio
     query.bind(5, packageVersionDependency.package_id);
     query.bind(6, packageVersionDependency.repository_id);
     query.bind(7, packageVersionDependency.version_number);
-    query.bind(8, packageVersionDependency.version_comparison);
+    query.bind(8, static_cast<int>(packageVersionDependency.version_comparison_type));
     return query.exec();
 }
 
-std::vector<PackageVersionDependency> Database::GetPackageVersionDependencies(const PackageVersion& version) {
+std::vector<PackageDependency> Database::GetPackageVersionDependencies(const PackageVersion& version) {
     /**
      * @brief Given a specific package version, get its dependencies
      * 
@@ -335,7 +371,7 @@ std::vector<PackageVersionDependency> Database::GetPackageVersionDependencies(co
     query.bind(3, version.version_number);
     query.bind(4, version.architecture);
 
-    std::vector<PackageVersionDependency> packageDependencies;
+    std::vector<PackageDependency> packageDependencies;
 
     while (query.executeStep()) {
         packageDependencies.push_back({
@@ -346,14 +382,14 @@ std::vector<PackageVersionDependency> Database::GetPackageVersionDependencies(co
             .package_id = query.getColumn("package_id"),
             .repository_id = query.getColumn("repository_id"),
             .version_number = query.getColumn("version_number"),
-            .version_comparison = query.getColumn("version_comparison")
+            .version_comparison_type = static_cast<VersionComparisonType>(query.getColumn("version_comparison_type").getInt())
         });
     }
 
     return packageDependencies;
 }
 
-std::vector<PackageVersionDependency> Database::GetRequiredDependencies() {
+std::vector<PackageDependency> Database::GetRequiredDependencies() {
     /**
      * @brief Get every required dependency from installed packages
      * 
@@ -361,7 +397,7 @@ std::vector<PackageVersionDependency> Database::GetRequiredDependencies() {
     SQLite::Statement query(db, "SELECT * FROM dependency_index JOIN installed_packages ON installed_packages.package_id=dependency_index.dependent_package_id AND installed_packages.repository_id=dependency_index.dependent_repository_id AND installed_packages.version_number=dependency_index.dependent_version_number WHERE dependency_index.dependent_architecture = ?1");
     query.bind(1, Flags::GetInstance()->architecture);
 
-    std::vector<PackageVersionDependency> packageDependencies;
+    std::vector<PackageDependency> packageDependencies;
 
     while (query.executeStep()) {
         packageDependencies.push_back({
@@ -372,9 +408,104 @@ std::vector<PackageVersionDependency> Database::GetRequiredDependencies() {
             .package_id = query.getColumn("package_id"),
             .repository_id = query.getColumn("repository_id"),
             .version_number = query.getColumn("version_number"),
-            .version_comparison = query.getColumn("version_comparison")
+            .version_comparison_type = static_cast<VersionComparisonType>(query.getColumn("version_comparison_type").getInt())
         });
     }
 
     return packageDependencies;
+}
+
+void Database::InstallPackage(PackageInstallCandidate package) {
+    // Remove if the package is currently installed
+    SQLite::Statement deletePackageQuery(db, "DELETE FROM installed_packages WHERE package_id = ?1");
+    deletePackageQuery.bind(1, package.package_id);
+    deletePackageQuery.exec();
+
+    // Add package and its dependencies to the corresponding tables
+    SQLite::Statement insertInstalledPackage(db, "INSERT INTO installed_packages (package_id, repository_id, name, description, screenshots, version_name, version_number, min_firmware, max_firmware) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    insertInstalledPackage.bind(1, package.package_id);
+    insertInstalledPackage.bind(2, package.repository_id);
+    insertInstalledPackage.bind(3, package.name);
+    insertInstalledPackage.bind(4, package.description);
+    insertInstalledPackage.bind(5, package.screenshots);
+    insertInstalledPackage.bind(6, package.version_name);
+    insertInstalledPackage.bind(7, package.version_number);
+    insertInstalledPackage.bind(8, package.min_firmware);
+    insertInstalledPackage.bind(9, package.max_firmware);
+    insertInstalledPackage.exec();
+
+    // Now add the dependencies
+    SQLite::Statement copyDependencyQuery(db, "INSERT INTO installed_package_dependencies SELECT * FROM dependency_index WHERE dependent_package_id=? AND dependent_repository_id=? AND dependent_version_number=? AND dependent_architecture=?");
+    copyDependencyQuery.bind(1, package.package_id);
+    copyDependencyQuery.bind(2, package.repository_id);
+    copyDependencyQuery.bind(3, package.version_number);
+    copyDependencyQuery.bind(4, Flags::GetInstance()->architecture);
+    copyDependencyQuery.exec();
+}
+
+bool Database::CheckConflicts() {
+    bool conflicts = false;
+
+    // List installed dependencies which are the wrong version
+    SQLite::Statement checkPackagesViolatingGTEQ(db, "SELECT installed_package_dependencies.*, installed_packages.version_number installed_version_number FROM installed_packages JOIN installed_package_dependencies ON installed_packages.package_id=installed_package_dependencies.package_id WHERE version_comparison_type=? AND installed_packages.version_number < installed_package_dependencies.version_number");
+    checkPackagesViolatingGTEQ.bind(1, static_cast<int>(VersionComparisonType::GTEQ));
+    while (checkPackagesViolatingGTEQ.executeStep()) {
+        conflicts = true;
+        Log::E("Package %s@%s conflicts with %s@%s (which depends on %s)",
+            checkPackagesViolatingGTEQ.getColumn("package_id").getString().c_str(),
+            checkPackagesViolatingGTEQ.getColumn("installed_version_number").getString().c_str(),
+            checkPackagesViolatingGTEQ.getColumn("dependent_package_id").getString().c_str(),
+            checkPackagesViolatingGTEQ.getColumn("dependent_version_number").getString().c_str()
+        );
+    }
+
+    SQLite::Statement checkPackagesViolatingLTEQ(db, "SELECT installed_package_dependencies.*, installed_packages.version_number installed_version_number FROM installed_packages JOIN installed_package_dependencies ON installed_packages.package_id=installed_package_dependencies.package_id WHERE version_comparison_type=? AND installed_packages.version_number > installed_package_dependencies.version_number");
+    checkPackagesViolatingLTEQ.bind(1, static_cast<int>(VersionComparisonType::LTEQ));
+    while (checkPackagesViolatingLTEQ.executeStep()) {
+        conflicts = true;
+        Log::E("Package %s@%s conflicts with %s@%s (which depends on %s)",
+            checkPackagesViolatingLTEQ.getColumn("package_id").getString().c_str(),
+            checkPackagesViolatingLTEQ.getColumn("installed_version_number").getString().c_str(),
+            checkPackagesViolatingLTEQ.getColumn("dependent_package_id").getString().c_str(),
+            checkPackagesViolatingLTEQ.getColumn("dependent_version_number").getString().c_str()
+        );
+    }
+
+    SQLite::Statement checkPackagesViolatingEQ(db, "SELECT installed_package_dependencies.*, installed_packages.version_number installed_version_number FROM installed_packages JOIN installed_package_dependencies ON installed_packages.package_id=installed_package_dependencies.package_id WHERE version_comparison_type=? AND installed_packages.version_number != installed_package_dependencies.version_number");
+    checkPackagesViolatingEQ.bind(1, static_cast<int>(VersionComparisonType::EQ));
+    while (checkPackagesViolatingEQ.executeStep()) {
+        conflicts = true;
+        Log::E("Package %s@%s conflicts with %s@%s (which depends on %s)",
+            checkPackagesViolatingEQ.getColumn("package_id").getString().c_str(),
+            checkPackagesViolatingEQ.getColumn("installed_version_number").getString().c_str(),
+            checkPackagesViolatingEQ.getColumn("dependent_package_id").getString().c_str(),
+            checkPackagesViolatingEQ.getColumn("dependent_version_number").getString().c_str()
+        );
+    }
+
+    SQLite::Statement checkPackagesViolatingGT(db, "SELECT installed_package_dependencies.*, installed_packages.version_number installed_version_number FROM installed_packages JOIN installed_package_dependencies ON installed_packages.package_id=installed_package_dependencies.package_id WHERE version_comparison_type=? AND installed_packages.version_number <= installed_package_dependencies.version_number");
+    checkPackagesViolatingGT.bind(1, static_cast<int>(VersionComparisonType::GT));
+    while (checkPackagesViolatingGT.executeStep()) {
+        conflicts = true;
+        Log::E("Package %s@%s conflicts with %s@%s (which depends on %s)",
+            checkPackagesViolatingGT.getColumn("package_id").getString().c_str(),
+            checkPackagesViolatingGT.getColumn("installed_version_number").getString().c_str(),
+            checkPackagesViolatingGT.getColumn("dependent_package_id").getString().c_str(),
+            checkPackagesViolatingGT.getColumn("dependent_version_number").getString().c_str()
+        );
+    }
+
+    SQLite::Statement checkPackagesViolatingLT(db, "SELECT installed_package_dependencies.*, installed_packages.version_number installed_version_number FROM installed_packages JOIN installed_package_dependencies ON installed_packages.package_id=installed_package_dependencies.package_id WHERE version_comparison_type=? AND installed_packages.version_number >= installed_package_dependencies.version_number");
+    checkPackagesViolatingLT.bind(1, static_cast<int>(VersionComparisonType::LT));
+    while (checkPackagesViolatingLT.executeStep()) {
+        conflicts = true;
+        Log::E("Package %s@%s conflicts with %s@%s (which depends on %s)",
+            checkPackagesViolatingLT.getColumn("package_id").getString().c_str(),
+            checkPackagesViolatingLT.getColumn("installed_version_number").getString().c_str(),
+            checkPackagesViolatingLT.getColumn("dependent_package_id").getString().c_str(),
+            checkPackagesViolatingLT.getColumn("dependent_version_number").getString().c_str()
+        );
+    }
+
+    return conflicts;
 }

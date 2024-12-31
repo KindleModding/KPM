@@ -37,6 +37,28 @@
             ]
         },
         {
+            "id": "com.github.kindlemodding.require_old_fbink",
+            "name": "require_old_fbink",
+            "alias": "require_old_fbink",
+            "description": "Just for testing!",
+            "screenshots": [],
+            "versions": [
+                {
+                    "version_name": "2025.01",
+                    "version_number": 1,
+                    "min_firmware": "",
+                    "max_firmware": "",
+                    "dependencies": [
+                        "io.github.kindlemodding_repo/fbink=2023.12"
+                    ],
+                    "supported_arch": [
+                        "armhf",
+                        "armel"
+                    ]
+                }
+            ]
+        },
+        {
             "id": "com.github.kindlemodding.fbink",
             "name": "fbink",
             "alias": "fbink",

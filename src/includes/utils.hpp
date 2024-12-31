@@ -9,9 +9,9 @@ struct PackageTarget {
     std::string repository_id;
     std::string package_id;
     uint package_version_number;
-    std::string package_version_comparison;
+    VersionComparisonType package_version_comparison_type;
 };
 
 PackageTarget parsePackageTarget(Database& database, const std::string &target);
-std::vector<PackageWithVersion> recursivelyGetPackagesFromInstallTarget(Database& database, const PackageTarget &packageTarget);
-bool installSinglePackage(PackageWithVersion packageToInstall);
+std::vector<PackageInstallCandidate> recursivelyGetPackagesFromInstallTarget(Database& database, const PackageTarget &packageTarget);
+bool installSinglePackage(PackageInstallCandidate packageToInstall);

@@ -1,7 +1,6 @@
 #include "utils.hpp"
 #include "database.hpp"
 #include "log.hpp"
-#include <algorithm>
 #include <vector>
 
 bool compareSemverGTEQ(const std::string& a, const std::string& b) { // Will return true if a is greater than or equal to b
@@ -53,7 +52,7 @@ bool firmwareWithinRange(const std::string &current, const std::string &min, con
 
 PackageTarget parsePackageTarget(Database& database, const std::string &target) {
     /**
-     * @brief Convert a string representation of a package name and constraints into a PackageTarget
+     * @brief Convert a string representation of a package name and constraints into a PackageTarget, the package MUST be in the database
      * 
      */
     // Package format is:
@@ -62,14 +61,17 @@ PackageTarget parsePackageTarget(Database& database, const std::string &target) 
     // repository_id/package_id
     // repository_id/package_id>=version_name
 
-    // Version comparisons are same as SQL, they are mapped directly
-    PackageTarget packageTarget;
+    // Set default comparison type
+    PackageTarget packageTarget = {
+        .package_version_comparison_type = VersionComparisonType::NONE
+    };
 
-    int separatorIndex = target.find('/');
+    int separatorIndex = target.find('/'); // Repo is specified
     if (separatorIndex != -1) {
         packageTarget.repository_id = target.substr(0, separatorIndex);
     }
 
+    // Check for version name and version comparison
     const int gtIndex = target.find('>');
     const int ltIndex = target.find('<');
     const int eqIndex = target.find('=');
@@ -79,46 +81,46 @@ PackageTarget parsePackageTarget(Database& database, const std::string &target) 
         return packageTarget; // There is no desired version_name
     }
 
-    int version_comparison_index = 0;
+    int version_comparison_type_index = 0;
     int version_number_index = 0;
 
     if (eqIndex - gtIndex + ltIndex == 0) {
-        packageTarget.package_version_comparison = ">=";
-        version_comparison_index = gtIndex;
+        packageTarget.package_version_comparison_type = VersionComparisonType::GTEQ;
+        version_comparison_type_index = gtIndex;
         version_number_index = gtIndex + 2;
     } else if (eqIndex - ltIndex + gtIndex == 0) {
-        packageTarget.package_version_comparison = "<=";
-        version_comparison_index = ltIndex;
+        packageTarget.package_version_comparison_type = VersionComparisonType::LTEQ;
+        version_comparison_type_index = ltIndex;
         version_number_index = ltIndex + 2;
     } else if (ltIndex != -1 && gtIndex == -1 && eqIndex == -1) {
-        packageTarget.package_version_comparison = "<";
-        version_comparison_index = ltIndex;
+        packageTarget.package_version_comparison_type =VersionComparisonType::LT;
+        version_comparison_type_index = ltIndex;
         version_number_index = ltIndex + 1;
     } else if (gtIndex != -1 && ltIndex == -1 && eqIndex == -1) {
-        packageTarget.package_version_comparison = ">";
-        version_comparison_index = gtIndex;
+        packageTarget.package_version_comparison_type = VersionComparisonType::GT;
+        version_comparison_type_index = gtIndex;
         version_number_index = gtIndex + 1;
     } else if (eqIndex != -1 && ltIndex == -1 && gtIndex == -1) {
-        packageTarget.package_version_comparison = "=";
-        version_comparison_index = eqIndex;
+        packageTarget.package_version_comparison_type = VersionComparisonType::EQ;
+        version_comparison_type_index = eqIndex;
         version_number_index = eqIndex + 1;
     } else {
         packageTarget.package_id = "";
     }
 
-    packageTarget.package_id = target.substr(separatorIndex + 1, version_comparison_index - (separatorIndex + 1));
+    packageTarget.package_id = target.substr(separatorIndex + 1, version_comparison_type_index - (separatorIndex + 1));
     packageTarget.package_version_number = database.ConvertVersionNameToNumber(packageTarget.package_id, packageTarget.repository_id, target.substr(version_number_index, target.npos));
 
     return packageTarget;
 }
 
-std::vector<PackageWithVersion> recursivelyGetPackagesFromInstallTarget(Database& database, const PackageTarget &packageTarget) {
+std::vector<PackageInstallCandidate> recursivelyGetPackagesFromInstallTarget(Database& database, const PackageTarget &packageTarget) {
     Log::I("Getting packages needed for: %s", packageTarget.package_id.c_str());
-    const std::vector<PackageWithVersion> versionsAvailable = database.GetCompatiblePackageVersions(packageTarget.package_id, packageTarget.repository_id, packageTarget.package_version_number, packageTarget.package_version_comparison);
-    std::vector<PackageWithVersion> packagesToInstall;
+    const std::vector<PackageInstallCandidate> versionsAvailable = database.GetCompatiblePackageVersions(packageTarget.package_id, packageTarget.repository_id, packageTarget.package_version_number, packageTarget.package_version_comparison_type);
+    std::vector<PackageInstallCandidate> packagesToInstall;
 
     // Get the optimum version
-    for (PackageWithVersion version : versionsAvailable) {
+    for (PackageInstallCandidate version : versionsAvailable) {
         Log::D("Version %s supports %s -> %s", version.version_name.c_str(), version.min_firmware.c_str(), version.max_firmware.c_str());
         if (firmwareWithinRange(Flags::GetInstance()->firmware_version, version.min_firmware, version.max_firmware)) {
             packagesToInstall.push_back(version);
@@ -132,7 +134,7 @@ std::vector<PackageWithVersion> recursivelyGetPackagesFromInstallTarget(Database
     }
 
     // Get dependencies for this package
-    const std::vector<PackageVersionDependency> dependencies = database.GetPackageVersionDependencies({
+    const std::vector<PackageDependency> dependencies = database.GetPackageVersionDependencies({
         .package_id = packagesToInstall[0].package_id,
         .repository_id = packagesToInstall[0].repository_id,
         .version_number = packagesToInstall[0].version_number,
@@ -143,12 +145,12 @@ std::vector<PackageWithVersion> recursivelyGetPackagesFromInstallTarget(Database
     });
 
     // Add each dependency to the list of packages to install alongside the recursive dependencies for it
-    for (PackageVersionDependency dependency : dependencies) {
-        const std::vector<PackageWithVersion> installForDependency = recursivelyGetPackagesFromInstallTarget(database, {
+    for (PackageDependency dependency : dependencies) {
+        const std::vector<PackageInstallCandidate> installForDependency = recursivelyGetPackagesFromInstallTarget(database, {
             .repository_id = dependency.repository_id,
             .package_id = dependency.package_id,
             .package_version_number = dependency.version_number,
-            .package_version_comparison = dependency.version_comparison
+            .package_version_comparison_type = dependency.version_comparison_type
         });
         // Add deps to vector
         packagesToInstall.insert(packagesToInstall.begin(), installForDependency.begin(), installForDependency.end()); // Dependencies are inserted at start so they are installed BEFORE the package itself is
@@ -157,7 +159,7 @@ std::vector<PackageWithVersion> recursivelyGetPackagesFromInstallTarget(Database
     return packagesToInstall;
 }
 
-bool installSinglePackage(PackageWithVersion packageToInstall) {
+bool installSinglePackage(PackageInstallCandidate packageToInstall) {
     // Ensure this package does not intefere with any existing dependencies
     return true;
 }
