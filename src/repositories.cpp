@@ -98,32 +98,21 @@ int Repositories::updateRepository(Database& db, const std::string& id) {
                 db.AddPackageVersion({
                     .package_id = package["id"].get<std::string>(),
                     .repository_id = repo.id,
-                    .version_number = version["version_number"].get<uint>(),
                     .version_name = version["version_name"].get<std::string>(),
+                    .version_number = version["version_number"].get<uint>(),
                     .architecture = architecture,
                     .min_firmware = version["min_firmware"].get<std::string>(),
                     .max_firmware = version["max_firmware"].get<std::string>()
                 });
-            }
-        }
-    }
 
-    // Add dependencies separately
-    for (nlohmann::json package : jsonData["packages"]) {
-        for (nlohmann::json version : package["versions"]) {
-            for (std::string architecture : version["supported_arch"]) {
                 for (std::string dependencyString : version["dependencies"]) {
                     // Get the version number from the dependency info
-                    const PackageTarget packageTarget = parsePackageTarget(db, dependencyString);
                     db.AddPackageDependency({
                         .dependent_package_id = package["id"].get<std::string>(),
                         .dependent_repository_id = repo.id,
                         .dependent_version_number = version["version_number"].get<uint>(),
                         .dependent_architecture = architecture,
-                        .package_id = packageTarget.package_id,
-                        .repository_id = packageTarget.repository_id,
-                        .version_number = packageTarget.package_version_number,
-                        .version_comparison_type = packageTarget.package_version_comparison_type
+                        .install_string = dependencyString
                     });
                 }
             }

@@ -8,7 +8,6 @@
 #include "database.hpp"
 #include "flags.hpp"
 #include "log.hpp"
-#include "utils.hpp"
 
 int main(int argc, char* argv[]) {
     std::vector<char*> targets;
@@ -131,61 +130,8 @@ int main(int argc, char* argv[]) {
                 Log::I("* Succesfully removed repository");
             }
         }
-
-    // Search for a specific package
-    } else if (operation == "search") {
-        std::string searchTerm;
-        for (const std::string target : targets) {
-            searchTerm += target + ' ';
-        }
-        Log::I("* Searching for [%s]", searchTerm.substr(0, searchTerm.length()-1).c_str());
-
-        const std::vector<PackageInstallCandidate> packages = database.SearchCompatiblePackages('%' + searchTerm.substr(0, searchTerm.length()-1) + '%');
-        if (packages.size() == 0) {
-            Log::E("No packages found.");
-            return 1;
-        }
-
-        for (PackageInstallCandidate package : packages) {
-            if (firmwareWithinRange(Flags::GetInstance()->firmware_version, package.min_firmware, package.max_firmware)) {
-                Log::I("%s - %s @ %s", package.package_id.c_str(), package.name.c_str(), package.version_name.c_str());
-            }
-        }
-
     // Install a specific package
     } else if (operation == "install") {
-        std::vector<PackageInstallCandidate> packagesToInstall;
-        for (const std::string target : targets) {
-            const PackageTarget packageTarget = parsePackageTarget(database, target);
-            const std::vector<PackageInstallCandidate> packagesToInstallTarget = recursivelyGetPackagesFromInstallTarget(database, packageTarget);
-            packagesToInstall.insert(packagesToInstall.end(), packagesToInstallTarget.begin(), packagesToInstallTarget.end());
-        }
-
-        // List packages that need installing
-        for (PackageInstallCandidate package : packagesToInstall) {
-            Log::I("%s@%s", package.name.c_str(), package.version_name.c_str());
-        }
-        Log::I("Preparing to install %i packages.", packagesToInstall.size());
-
-        // "Dry-install" packages DB only
-        database.Begin();
-        for (PackageInstallCandidate package : packagesToInstall) {
-            database.InstallPackage(package);
-        }
-
-        // Now we check that with our new, hypothetical database, there are no conflicts
-        if (database.CheckConflicts()) {
-            database.End(true);
-            return 1;
-        }
-
-        database.End(true);
-
-        // now we download the package files
-        for (PackageInstallCandidate package : packagesToInstall) {
-            database.InstallPackage(package);
-        }
-
 
     // Invalid operation requested
     } else {

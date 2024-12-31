@@ -30,8 +30,8 @@ struct Package {
 struct PackageVersion {
     std::string package_id;
     std::string repository_id;
-    uint version_number;
     std::string version_name;
+    uint version_number;
     std::string architecture;
     std::string min_firmware;
     std::string max_firmware;
@@ -42,10 +42,7 @@ struct PackageDependency {
     std::string dependent_repository_id;
     uint dependent_version_number;
     std::string dependent_architecture;
-    std::string package_id;
-    std::string repository_id;
-    uint version_number;
-    VersionComparisonType version_comparison_type;
+    std::string install_string; // String that defines the dependency
 };
 
 struct InstalledPackage {
@@ -90,30 +87,11 @@ class Database {
         Repository GetRepository(const std::string& id);
         int AddRepository(Repository repository);
         int DeleteRepository(const std::string& id);
-
         int DeleteRepositoryPackages(const std::string& id);
-
-        // Convert a version name to a version number by checking the index
-        uint ConvertVersionNameToNumber(const std::string& package_id, const std::string& repository_id, const std::string& version_name);
-
-        // Get possible package versions to install given a set of constraints
-        std::vector<PackageInstallCandidate> GetCompatiblePackageVersions(const std::string& package_id, const std::string& repository_id, const uint& version_number, const VersionComparisonType& version_comparison_type);
         
-        std::vector<PackageInstallCandidate> SearchCompatiblePackages(const std::string& queryString);
-        
-        int AddPackage(Package package);
-
-        int AddPackageVersion(PackageVersion version);
-
-        int AddPackageDependency(PackageDependency packageVersionDependency);
-
-        // Get dependencies for a specific package version
-        std::vector<PackageDependency> GetPackageVersionDependencies(const PackageVersion& version);
-
-        std::vector<PackageDependency> GetRequiredDependencies(); // Get dependencies required by installed packages
-
-        void InstallPackage(PackageInstallCandidate package);
-        bool CheckConflicts();
+        void AddPackage(Package package);
+        void AddPackageVersion(PackageVersion packageVersion);
+        void AddPackageDependency(PackageDependency PackageDependency);
     private:
         SQLite::Database db;
         bool isTransaction = false;
