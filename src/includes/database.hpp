@@ -1,5 +1,6 @@
 #pragma once
 #include "SQLiteCpp/Database.h"
+#include "SQLiteCpp/Transaction.h"
 #include <string>
 #include <vector>
 
@@ -32,7 +33,10 @@ struct PackageVersionDependency {
     std::string repo_id;
     uint version_number;
     std::string architecture;
-    std::string dependency_install_string;
+    std::string dependency_package_id;
+    std::string dependency_repo_id;
+    uint dependency_version_number;
+    std::string dependency_version_comparison;
 };
 
 struct InstalledPackage {
@@ -74,14 +78,23 @@ class Database {
         std::vector<Package> GetRepositoryPackages(const std::string& id);
 
         std::vector<PackageWithVersion> SearchCompatiblePackages(const std::string& queryString);
-        std::vector<PackageWithVersion> GetCompatiblePackageVersions(const std::string& package_id, const std::string& repo_id, const std::string& version_name, const std::string& version_comparison);
+
+        // Convert a version name to a version number by checking the index
+        uint ConvertVersionStringToNumber(const std::string& package_id, const std::string& repo_id, const std::string& version_name);
+
+        // Get possible package versions to install given a set of constraints
+        std::vector<PackageWithVersion> GetCompatiblePackageVersions(const std::string& package_id, const std::string& repo_id, const uint& version_number, const std::string& version_comparison);
         int AddPackage(Package package);
 
         std::vector<PackageVersion> GetPackageVersions(const Package& package);
         int AddPackageVersion(PackageVersion version);
 
         int AddPackageVersionDependency(PackageVersionDependency packageVersionDependency);
+
+        // Get dependencies for a specific package version
         std::vector<PackageVersionDependency> GetPackageVersionDependencies(const PackageVersion& version);
-    private:
+
+        std::vector<PackageVersionDependency> GetRequiredDependencies(); // Get dependencies required by installed packages
+
         SQLite::Database db;
 };

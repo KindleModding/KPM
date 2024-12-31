@@ -15,7 +15,7 @@
                     "min_firmware": "5.16.4",
                     "max_firmware": "",
                     "dependencies": [
-                        "io.github.kindlemodding_repo/fbink"
+                        "io.github.kindlemodding_repo/fbink>=2024.12"
                     ],
                     "supported_arch": [
                         "armhf",
@@ -28,7 +28,7 @@
                     "min_firmware": "",
                     "max_firmware": "5.16.4",
                     "dependencies": [
-                        "io.github.kindlemodding_repo/fbink"
+                        "io.github.kindlemodding_repo/fbink>=2024.12"
                     ],
                     "supported_arch": [
                         "armel"
@@ -45,6 +45,17 @@
             "versions": [
                 {
                     "version_name": "2024.12",
+                    "version_number": 2,
+                    "min_firmware": "",
+                    "max_firmware": "",
+                    "dependencies": [],
+                    "supported_arch": [
+                        "armhf",
+                        "armel"
+                    ]
+                },
+                {
+                    "version_name": "2023.12",
                     "version_number": 1,
                     "min_firmware": "",
                     "max_firmware": "",

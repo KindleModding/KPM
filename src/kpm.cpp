@@ -140,7 +140,8 @@ int main(int argc, char* argv[]) {
     } else if (operation == "install") {
         std::vector<PackageWithVersion> packagesToInstall;
         for (const std::string target : targets) {
-            const std::vector<PackageWithVersion> packagesToInstallTarget = recursivelyGetPackagesFromTarget(database, target);
+            const InstallTarget installTarget = parsePackageTarget(database, target);
+            const std::vector<PackageWithVersion> packagesToInstallTarget = recursivelyGetPackagesFromInstallTarget(database, installTarget);
             packagesToInstall.insert(packagesToInstall.end(), packagesToInstallTarget.begin(), packagesToInstallTarget.end());
         }
 

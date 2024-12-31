@@ -51,7 +51,7 @@ bool firmwareWithinRange(const std::string &current, const std::string &min, con
     return (min.size() == 0 || compareSemverGTOE(current, min)) && (max.size() == 0 || compareSemverGTOE(max, Flags::GetInstance()->firmware_version));
 }
 
-InstallPackage parsePackageTarget(const std::string &target) {
+InstallTarget parsePackageTarget(Database& database, const std::string &target) {
     // Package format is:
     // package_id
     // package_id=version_name
@@ -59,52 +59,52 @@ InstallPackage parsePackageTarget(const std::string &target) {
     // repo_id/package_id>=version_name
 
     // Version comparisons are same as SQL, they are mapped directly
-    InstallPackage installPackage;
+    InstallTarget installTarget;
 
     int separatorIndex = target.find('/');
     if (separatorIndex != -1) {
-        installPackage.repo_id = target.substr(0, separatorIndex);
+        installTarget.repo_id = target.substr(0, separatorIndex);
     }
 
     const int gtIndex = target.find('>');
     const int ltIndex = target.find('<');
     const int eqIndex = target.find('=');
 
-    if (std::max(std::max(gtIndex, ltIndex), eqIndex) == static_cast<int>(target.length()-1)) {
-        return installPackage; // There is no desired version_name
+    if (gtIndex + ltIndex + eqIndex == -3) {
+        installTarget.package_id = target.substr(separatorIndex + 1);
+        return installTarget; // There is no desired version_name
     }
 
     if (eqIndex - gtIndex + ltIndex == 0) {
-        installPackage.package_version_comparison = ">=";
-        installPackage.package_id = target.substr(separatorIndex + 1, gtIndex - (separatorIndex+1));
-        installPackage.package_version_name = target.substr(eqIndex+1, target.npos);
+        installTarget.package_version_comparison = ">=";
+        installTarget.package_id = target.substr(separatorIndex + 1, gtIndex - (separatorIndex+1));
+        installTarget.package_version_number = database.ConvertVersionStringToNumber(installTarget.package_id, installTarget.repo_id, target.substr(eqIndex+1, target.npos));
     } else if (eqIndex - ltIndex + gtIndex == 0) {
-        installPackage.package_version_comparison = "<=";
-        installPackage.package_id = target.substr(separatorIndex + 1, ltIndex - (separatorIndex+1));
-        installPackage.package_version_name = target.substr(eqIndex+1, target.npos);
+        installTarget.package_version_comparison = "<=";
+        installTarget.package_id = target.substr(separatorIndex + 1, ltIndex - (separatorIndex+1));
+        installTarget.package_version_number = database.ConvertVersionStringToNumber(installTarget.package_id, installTarget.repo_id, target.substr(eqIndex+1, target.npos));
     } else if (ltIndex != -1 && gtIndex == -1 && eqIndex == -1) {
-        installPackage.package_version_comparison = "<";
-        installPackage.package_id = target.substr(separatorIndex + 1, ltIndex - (separatorIndex+1));
-        installPackage.package_version_name = target.substr(ltIndex+1, target.npos);
+        installTarget.package_version_comparison = "<";
+        installTarget.package_id = target.substr(separatorIndex + 1, ltIndex - (separatorIndex+1));
+        installTarget.package_version_number = database.ConvertVersionStringToNumber(installTarget.package_id, installTarget.repo_id, target.substr(ltIndex+1, target.npos));
     } else if (gtIndex != -1 && ltIndex == -1 && eqIndex == -1) {
-        installPackage.package_version_comparison = ">";
-        installPackage.package_id = target.substr(separatorIndex + 1, gtIndex - (separatorIndex+1));
-        installPackage.package_version_name = target.substr(gtIndex+1, target.npos);
+        installTarget.package_version_comparison = ">";
+        installTarget.package_id = target.substr(separatorIndex + 1, gtIndex - (separatorIndex+1));
+        installTarget.package_version_number = database.ConvertVersionStringToNumber(installTarget.package_id, installTarget.repo_id, target.substr(gtIndex+1, target.npos));
     } else if (eqIndex != -1 && ltIndex == -1 && gtIndex == -1) {
-        installPackage.package_version_comparison = "=";
-        installPackage.package_id = target.substr(separatorIndex + 1, eqIndex - (separatorIndex+1));
-        installPackage.package_version_name = target.substr(eqIndex+1, target.npos);
+        installTarget.package_version_comparison = "=";
+        installTarget.package_id = target.substr(separatorIndex + 1, eqIndex - (separatorIndex+1));
+        installTarget.package_version_number = database.ConvertVersionStringToNumber(installTarget.package_id, installTarget.repo_id, target.substr(eqIndex+1, target.npos));
     } else {
-        installPackage.package_id = target.substr(separatorIndex + 1, std::max(gtIndex - (separatorIndex+1), std::max(ltIndex - (separatorIndex + 1), std::max(eqIndex - (separatorIndex + 1), static_cast<int>(target.length() - (separatorIndex + 1))))));
+        installTarget.package_id = target.substr(separatorIndex + 1, std::max(gtIndex - (separatorIndex+1), std::max(ltIndex - (separatorIndex + 1), std::max(eqIndex - (separatorIndex + 1), static_cast<int>(target.length() - (separatorIndex + 1))))));
     }
 
-    return installPackage;
+    return installTarget;
 }
 
-std::vector<PackageWithVersion> recursivelyGetPackagesFromTarget(Database& database, const std::string &target) {
-    Log::I("Getting packages needed for: %s", target.c_str());
-    const InstallPackage installPackage = parsePackageTarget(target);
-    const std::vector<PackageWithVersion> versionsAvailable = database.GetCompatiblePackageVersions(installPackage.package_id, installPackage.repo_id, installPackage.package_version_name, installPackage.package_version_comparison);
+std::vector<PackageWithVersion> recursivelyGetPackagesFromInstallTarget(Database& database, const InstallTarget &installTarget) {
+    Log::I("Getting packages needed for: %s", installTarget.package_id.c_str());
+    const std::vector<PackageWithVersion> versionsAvailable = database.GetCompatiblePackageVersions(installTarget.package_id, installTarget.repo_id, installTarget.package_version_number, installTarget.package_version_comparison);
     std::vector<PackageWithVersion> packagesToInstall;
 
     // Get the optimum version
@@ -117,10 +117,9 @@ std::vector<PackageWithVersion> recursivelyGetPackagesFromTarget(Database& datab
     }
 
     if (versionsAvailable.size() == 0 || packagesToInstall.size() == 0) {
-        Log::E("Could not find suitable version for package - ABORTING: '%s'", installPackage.package_id.c_str());
+        Log::E("Could not find suitable version for package - ABORTING: '%s'", installTarget.package_id.c_str());
         exit(1);
     }
-
     // Get dependencies
     const std::vector<PackageVersionDependency> dependencies = database.GetPackageVersionDependencies({
         .package_id = packagesToInstall[0].package_id,
@@ -133,10 +132,21 @@ std::vector<PackageWithVersion> recursivelyGetPackagesFromTarget(Database& datab
     });
 
     for (PackageVersionDependency dependency : dependencies) {
-        const std::vector<PackageWithVersion> installForDependency = recursivelyGetPackagesFromTarget(database, dependency.dependency_install_string);
+        Log::I("Dependency: %s/%s%s%i", dependency.dependency_repo_id.c_str(), dependency.dependency_package_id.c_str(), dependency.dependency_version_comparison.c_str(), dependency.dependency_version_number);
+        const std::vector<PackageWithVersion> installForDependency = recursivelyGetPackagesFromInstallTarget(database, {
+            .repo_id = dependency.dependency_repo_id,
+            .package_id = dependency.dependency_package_id,
+            .package_version_number = dependency.dependency_version_number,
+            .package_version_comparison = dependency.dependency_version_comparison
+        });
         // Add dep deps to vector
         packagesToInstall.insert(packagesToInstall.begin(), installForDependency.begin(), installForDependency.end()); // Dependencies are inserted at start so they are installed BEFORE the package itself is
     }
 
     return packagesToInstall;
+}
+
+bool installSinglePackage(PackageWithVersion packageToInstall) {
+    // Ensure this package does not intefere with any existing dependencies
+    return true;
 }

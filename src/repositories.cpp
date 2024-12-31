@@ -1,9 +1,11 @@
 #include "repositories.hpp"
+#include "SQLiteCpp/Transaction.h"
 #include "database.hpp"
 #include "request.hpp"
 #include <curl/curl.h>
 #include <nlohmann/json.hpp>
 #include "log.hpp"
+#include "utils.hpp"
 
 #define CURRENT_MANIFEST_VERSION 1
 
@@ -45,6 +47,7 @@ std::string Repositories::add(Database& db, const std::string& url) {
 int Repositories::updateRepository(Database& db, const std::string& id) {
     Log::I("* Updating repository [%s]", id.c_str());
     Log::D("* Fetching repository manifest...");
+    SQLite::Transaction transaction(db.db);
 
     const Repository repo = db.GetRepository(id);
 
@@ -91,20 +94,33 @@ int Repositories::updateRepository(Database& db, const std::string& id) {
                     .min_firmware = version["min_firmware"].get<std::string>(),
                     .max_firmware = version["max_firmware"].get<std::string>()
                 });
+            }
+        }
+    }
 
+    // Add dependencies separately
+    for (nlohmann::json package : jsonData["packages"]) {
+        for (nlohmann::json version : package["versions"]) {
+            for (std::string architecture : version["supported_arch"]) {
                 for (std::string dependencyString : version["dependencies"]) {
                     // Get the version number from the dependency info
+                    const InstallTarget installTarget = parsePackageTarget(db, dependencyString);
                     db.AddPackageVersionDependency({
                         .package_id = package["id"].get<std::string>(),
                         .repo_id = repo.id,
                         .version_number = version["version_number"].get<uint>(),
                         .architecture = architecture,
-                        .dependency_install_string = dependencyString
+                        .dependency_package_id = installTarget.package_id,
+                        .dependency_repo_id = installTarget.repo_id,
+                        .dependency_version_number = installTarget.package_version_number,
+                        .dependency_version_comparison = installTarget.package_version_comparison
                     });
                 }
             }
         }
     }
+
+    transaction.commit();
 
     return packages;
 }
