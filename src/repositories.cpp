@@ -1,5 +1,4 @@
 #include "repositories.hpp"
-#include "SQLiteCpp/Transaction.h"
 #include "database.hpp"
 #include "request.hpp"
 #include <curl/curl.h>
@@ -10,6 +9,11 @@
 #define CURRENT_MANIFEST_VERSION 1
 
 std::string Repositories::add(Database& db, const std::string& url) {
+    /**
+     * @brief Add a repository to the index from its URL
+     * 
+     */
+    db.Begin();
     Log::I("* Adding repository [%s]", url.c_str());
 
     // Get the repository ID
@@ -17,6 +21,7 @@ std::string Repositories::add(Database& db, const std::string& url) {
     const CURLcode error = manifestRequest.execute();
     if (error != 0) {
         Log::E("* CURL error: %s", curl_easy_strerror(error));
+        db.End(true);
         return "";
     }
 
@@ -25,6 +30,7 @@ std::string Repositories::add(Database& db, const std::string& url) {
     const uint manifest_version = jsonData["version"].get<uint>();
     if (manifest_version > CURRENT_MANIFEST_VERSION) {
         Log::E("Repository manifest (%i) is newer than expected (%i)! Please update KPM.", manifest_version, CURRENT_MANIFEST_VERSION);
+        db.End(true);
         return "";
     }
 
@@ -37,17 +43,19 @@ std::string Repositories::add(Database& db, const std::string& url) {
             });
         } catch (std::exception& e) {
             Log::E("SQLite error: %s", e.what());
+            db.End(true);
             return "";
         }
     }
 
+    db.End();
     return jsonData["id"].get<std::string>();
 }
 
 int Repositories::updateRepository(Database& db, const std::string& id) {
     Log::I("* Updating repository [%s]", id.c_str());
     Log::D("* Fetching repository manifest...");
-    SQLite::Transaction transaction(db.db);
+    db.Begin();
 
     const Repository repo = db.GetRepository(id);
 
@@ -55,6 +63,7 @@ int Repositories::updateRepository(Database& db, const std::string& id) {
     const CURLcode error = manifestRequest.execute();
     if (error != 0) {
         Log::E("* CURL error: %s", curl_easy_strerror(error));
+        db.End(true);
         return 0;
     }
 
@@ -63,6 +72,7 @@ int Repositories::updateRepository(Database& db, const std::string& id) {
     const uint manifest_version = jsonData["version"].get<uint>();
     if (manifest_version > CURRENT_MANIFEST_VERSION) {
         Log::E("Repository manifest (%i) is newer than expected (%i)!\nPlease update KPM.", manifest_version, CURRENT_MANIFEST_VERSION);
+        db.End(true);
         exit(1);
     }
 
@@ -78,7 +88,7 @@ int Repositories::updateRepository(Database& db, const std::string& id) {
         db.AddPackage({
             .id = package["id"].get<std::string>(),
             .alias = package["alias"].is_null() ? "" : package["alias"].get<std::string>(),
-            .repo_id = repo.id,
+            .repository_id = repo.id,
             .name = package["name"],
             .description = package["description"],
             .screenshots = package["screenshots"].dump()
@@ -87,7 +97,7 @@ int Repositories::updateRepository(Database& db, const std::string& id) {
             for (std::string architecture : version["supported_arch"]) {
                 db.AddPackageVersion({
                     .package_id = package["id"].get<std::string>(),
-                    .repo_id = repo.id,
+                    .repository_id = repo.id,
                     .version_number = version["version_number"].get<uint>(),
                     .version_name = version["version_name"].get<std::string>(),
                     .architecture = architecture,
@@ -104,31 +114,30 @@ int Repositories::updateRepository(Database& db, const std::string& id) {
             for (std::string architecture : version["supported_arch"]) {
                 for (std::string dependencyString : version["dependencies"]) {
                     // Get the version number from the dependency info
-                    const InstallTarget installTarget = parsePackageTarget(db, dependencyString);
+                    const PackageTarget packageTarget = parsePackageTarget(db, dependencyString);
                     db.AddPackageVersionDependency({
-                        .package_id = package["id"].get<std::string>(),
-                        .repo_id = repo.id,
-                        .version_number = version["version_number"].get<uint>(),
-                        .architecture = architecture,
-                        .dependency_package_id = installTarget.package_id,
-                        .dependency_repo_id = installTarget.repo_id,
-                        .dependency_version_number = installTarget.package_version_number,
-                        .dependency_version_comparison = installTarget.package_version_comparison
+                        .dependent_package_id = package["id"].get<std::string>(),
+                        .dependent_repository_id = repo.id,
+                        .dependent_version_number = version["version_number"].get<uint>(),
+                        .dependent_architecture = architecture,
+                        .package_id = packageTarget.package_id,
+                        .repository_id = packageTarget.repository_id,
+                        .version_number = packageTarget.package_version_number,
+                        .version_comparison = packageTarget.package_version_comparison
                     });
                 }
             }
         }
     }
 
-    transaction.commit();
-
+    db.End();
     return packages;
 }
 
 int Repositories::updateRepositories(Database &db) {
-    const std::vector<Repository> repos = db.GetRepositories();
+    const std::vector<Repository> repositories = db.GetRepositories();
     int packageCount = 0;
-    for (Repository repo : repos) {
+    for (Repository repo : repositories) {
         packageCount += updateRepository(db, repo.id);
     }
     return packageCount;

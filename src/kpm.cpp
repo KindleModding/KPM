@@ -23,8 +23,7 @@ int main(int argc, char* argv[]) {
                 return 1;
             }
 
-            if (argv[i][1] == '-') {
-                // It's not a single-letter flag
+            if (argv[i][1] == '-') { // Parse complex parameters
                 if (strcmp(argv[i], "--kpkg_dir") == 0) {
                     Flags::GetInstance()->kpkg_dir = std::string(argv[i+1]);
                     i++;
@@ -38,7 +37,7 @@ int main(int argc, char* argv[]) {
                     Log::E("Invalid flags specified.");
                     return 1; // For now we don't have any of these
                 }
-            } else {
+            } else { // Parse single-letter boolean flags
                 for (int j = 0; j < flagCount; j++) {
                     switch (argv[i][j+1]) {
                         case 'v':
@@ -50,14 +49,16 @@ int main(int argc, char* argv[]) {
                     }
                 }
             }
-        } else if (operation.length() != 0) {
+        } else if (operation.length() != 0) { // If the operation was gotten then we are now on targets
             targets.push_back(argv[i]);
-        } else if (operation == "") {
+        } else if (operation == "") { // No operation and not a flag? this must be it
             operation = argv[i];
         }
     }
 
-
+    /**
+     * Debug stuff 
+     */
     Log::D("Running with flags:");
     Log::D("architecture: [%s]", Flags::GetInstance()->architecture.c_str());
     Log::D("firmware_version: [%s]", Flags::GetInstance()->firmware_version.c_str());
@@ -73,11 +74,18 @@ int main(int argc, char* argv[]) {
     // Try to create the kpkg directory if it doesn't already exist
     std::filesystem::create_directories(Flags::GetInstance()->kpkg_dir);
     
+    // Initialise the database object
     Database database(Flags::GetInstance()->kpkg_dir + "/kpm.db");
 
     // Initialise curl
     curl_global_init(CURL_GLOBAL_ALL);
 
+    /**
+     * Main KPM code here
+     * 
+     */
+
+    // Refresh the repository index from online sources
     if (operation == "update") {
         if (targets.size() != 0) {
             Log::E("UPDATE operation MUST not specify TARGETS");
@@ -85,6 +93,8 @@ int main(int argc, char* argv[]) {
         }
         const int updateResult = Repositories::updateRepositories(database);
         Log::I("Update complete - [%d] package(s) pulled!", updateResult);
+
+    // Add a repository from an online source
     } else if (operation == "add-repo") {
         if (targets.size() == 0) {
             Log::E("Error: No targets specified for [add-repo]");
@@ -103,6 +113,8 @@ int main(int argc, char* argv[]) {
 
         const int updateResult = Repositories::updateRepositories(database);
         Log::I("Update complete - [%d] package(s) pulled!", updateResult);
+
+    // Remove a repository by its ID
     } else if (operation == "remove-repo") {
         if (targets.size() == 0) {
             Log::E("Error: No targets specified for [remove-repo]");
@@ -119,6 +131,8 @@ int main(int argc, char* argv[]) {
                 Log::I("* Succesfully removed repository");
             }
         }
+
+    // Search for a specific package
     } else if (operation == "search") {
         std::string searchTerm;
         for (const std::string target : targets) {
@@ -137,11 +151,14 @@ int main(int argc, char* argv[]) {
                 Log::I("%s - %s @ %s", package.id.c_str(), package.name.c_str(), package.version_name.c_str());
             }
         }
+
+    // Install a specific package
     } else if (operation == "install") {
+        database.Begin();
         std::vector<PackageWithVersion> packagesToInstall;
         for (const std::string target : targets) {
-            const InstallTarget installTarget = parsePackageTarget(database, target);
-            const std::vector<PackageWithVersion> packagesToInstallTarget = recursivelyGetPackagesFromInstallTarget(database, installTarget);
+            const PackageTarget packageTarget = parsePackageTarget(database, target);
+            const std::vector<PackageWithVersion> packagesToInstallTarget = recursivelyGetPackagesFromInstallTarget(database, packageTarget);
             packagesToInstall.insert(packagesToInstall.end(), packagesToInstallTarget.begin(), packagesToInstallTarget.end());
         }
 
@@ -150,6 +167,13 @@ int main(int argc, char* argv[]) {
             Log::I("%s@%s", package.name.c_str(), package.version_name.c_str());
         }
         Log::I("Preparing to install %i packages.", packagesToInstall.size());
+
+        // Ensure none of the packages intefere with an existing dependency
+        for (PackageWithVersion package : packagesToInstall) {
+            
+        }
+        database.End();
+    // Invalid operation requested
     } else {
         Log::E("No such operation [%s].", operation.c_str());
         return 1;

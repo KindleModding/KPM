@@ -12,7 +12,7 @@ struct Repository {
 struct Package {
     std::string id;
     std::string alias;
-    std::string repo_id;
+    std::string repository_id;
     std::string name;
     std::string description;
     std::string screenshots;
@@ -20,7 +20,7 @@ struct Package {
 
 struct PackageVersion {
     std::string package_id;
-    std::string repo_id;
+    std::string repository_id;
     uint version_number;
     std::string version_name;
     std::string architecture;
@@ -29,19 +29,19 @@ struct PackageVersion {
 };
 
 struct PackageVersionDependency {
+    std::string dependent_package_id;
+    std::string dependent_repository_id;
+    uint dependent_version_number;
+    std::string dependent_architecture;
     std::string package_id;
-    std::string repo_id;
+    std::string repository_id;
     uint version_number;
-    std::string architecture;
-    std::string dependency_package_id;
-    std::string dependency_repo_id;
-    uint dependency_version_number;
-    std::string dependency_version_comparison;
+    std::string version_comparison;
 };
 
 struct InstalledPackage {
     std::string package_id;
-    std::string repo_id;
+    std::string repository_id;
     std::string name;
     std::string description;
     std::string screenshots;
@@ -54,7 +54,7 @@ struct InstalledPackage {
 struct PackageWithVersion {
     std::string id;
     std::string alias;
-    std::string repo_id;
+    std::string repository_id;
     std::string name;
     std::string description;
     std::string screenshots;
@@ -65,9 +65,17 @@ struct PackageWithVersion {
     std::string min_firmware;
     std::string max_firmware;
 };
+
 class Database {
     public:
         Database(std::string path);
+        
+        Database(Database& database) = delete;
+        Database operator = (const Database&) = delete;
+
+        void Begin();
+        void End() { End(false); }
+        void End(bool rollback);
 
         std::vector<Repository> GetRepositories();
         Repository GetRepository(const std::string& id);
@@ -75,18 +83,17 @@ class Database {
         int DeleteRepository(const std::string& id);
 
         int DeleteRepositoryPackages(const std::string& id);
-        std::vector<Package> GetRepositoryPackages(const std::string& id);
-
-        std::vector<PackageWithVersion> SearchCompatiblePackages(const std::string& queryString);
 
         // Convert a version name to a version number by checking the index
-        uint ConvertVersionStringToNumber(const std::string& package_id, const std::string& repo_id, const std::string& version_name);
+        uint ConvertVersionNameToNumber(const std::string& package_id, const std::string& repository_id, const std::string& version_name);
 
         // Get possible package versions to install given a set of constraints
-        std::vector<PackageWithVersion> GetCompatiblePackageVersions(const std::string& package_id, const std::string& repo_id, const uint& version_number, const std::string& version_comparison);
+        std::vector<PackageWithVersion> GetCompatiblePackageVersions(const std::string& package_id, const std::string& repository_id, const uint& version_number, const std::string& version_comparison);
+        
+        std::vector<PackageWithVersion> SearchCompatiblePackages(const std::string& queryString);
+        
         int AddPackage(Package package);
 
-        std::vector<PackageVersion> GetPackageVersions(const Package& package);
         int AddPackageVersion(PackageVersion version);
 
         int AddPackageVersionDependency(PackageVersionDependency packageVersionDependency);
@@ -96,5 +103,7 @@ class Database {
 
         std::vector<PackageVersionDependency> GetRequiredDependencies(); // Get dependencies required by installed packages
 
+    private:
         SQLite::Database db;
+        bool isTransaction = false;
 };
