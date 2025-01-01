@@ -89,7 +89,7 @@ int Repositories::updateRepository(Database& db, const std::string& id) {
             .id = package["id"].get<std::string>(),
             .alias = package["alias"].is_null() ? "" : package["alias"].get<std::string>(),
             .repository_id = repo.id,
-            .name = package["name"],
+            .display_name = package["display_name"],
             .description = package["description"],
             .screenshots = package["screenshots"].dump()
         });

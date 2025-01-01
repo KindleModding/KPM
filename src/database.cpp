@@ -25,7 +25,7 @@ Database::Database(std::string path): db(path, SQLite::OPEN_READWRITE|SQLite::OP
                                             "id TEXT NOT NULL,"
                                             "alias TEXT NOT NULL,"
                                             "repository_id TEXT REFERENCES repositories(id) ON DELETE CASCADE,"
-                                            "name TEXT NOT NULL,"
+                                            "display_name TEXT NOT NULL,"
                                             "description TEXT NOT NULL,"
                                             "screenshots TEXT NOT NULL,"
                                             "PRIMARY KEY(id, repository_id)"
@@ -62,7 +62,7 @@ Database::Database(std::string path): db(path, SQLite::OPEN_READWRITE|SQLite::OP
     SQLite::Statement createInstalledPackagesTable(db, "CREATE TABLE IF NOT EXISTS installed_packages ("
                                             "package_id TEXT NOT NULL,"
                                             "repository_id TEXT NOT NULL,"
-                                            "name TEXT NOT NULL,"
+                                            "display_name TEXT NOT NULL,"
                                             "description TEXT NOT NULL,"
                                             "screenshots TEXT NOT NULL,"
                                             "version_name TEXT NOT NULL,"
@@ -190,11 +190,11 @@ int Database::DeleteRepositoryPackages(const std::string& id) {
 }
 
 void Database::AddPackage(const Package& package) {
-    SQLite::Statement query(db, "INSERT INTO package_index (id, alias, repository_id, name, description, screenshots) VALUES (?, ?, ?, ?, ?, ?);");
+    SQLite::Statement query(db, "INSERT INTO package_index (id, alias, repository_id, display_name, description, screenshots) VALUES (?, ?, ?, ?, ?, ?);");
     query.bind(1, package.id);
     query.bind(2, package.alias);
     query.bind(3, package.repository_id);
-    query.bind(4, package.name);
+    query.bind(4, package.display_name);
     query.bind(5, package.description);
     query.bind(6, package.screenshots);
     query.exec();
@@ -255,7 +255,6 @@ std::vector<PackageInstallCandidate> Database::FindInstallationCandidates(const 
         queryString += " (SELECT version_number FROM version_index search_version_index WHERE search_version_index.package_id=version_index.package_id AND search_version_index.repository_id=version_index.repository_id AND search_version_index.version_name=?4 LIMIT 1)";
     }
 
-    Log::D("%s", queryString.c_str());
     SQLite::Statement query(db, queryString + "ORDER BY version_index.version_number DESC");
     query.bind(1, parsedTarget.package_name);
     query.bind(2, Flags::GetInstance()->architecture);
@@ -275,7 +274,7 @@ std::vector<PackageInstallCandidate> Database::FindInstallationCandidates(const 
                 .alias = query.getColumn("alias"),
                 .repository_id = query.getColumn("repository_id"),
                 .repository_url = query.getColumn("repository_url"),
-                .name = query.getColumn("name"),
+                .display_name = query.getColumn("display_name"),
                 .description = query.getColumn("description"),
                 .screenshots = query.getColumn("screenshots"),
                 .version_number = query.getColumn("version_number"),
@@ -323,7 +322,7 @@ InstalledPackage Database::GetInstalledPackage(const std::string& package_id) {
         return {
             .package_id = query.getColumn("package_id"),
             .repository_id = query.getColumn("repository_id"),
-            .name = query.getColumn("name"),
+            .display_name = query.getColumn("display_name"),
             .description = query.getColumn("description"),
             .screenshots = query.getColumn("screenshots"),
             .version_name = query.getColumn("version_name"),
@@ -335,7 +334,7 @@ InstalledPackage Database::GetInstalledPackage(const std::string& package_id) {
         return {
             .package_id = "",
             .repository_id = "",
-            .name = "",
+            .display_name = "",
             .description = "",
             .screenshots = "",
             .version_name = "",

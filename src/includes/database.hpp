@@ -29,7 +29,7 @@ struct Package {
     std::string id;
     std::string alias;
     std::string repository_id;
-    std::string name;
+    std::string display_name;
     std::string description;
     std::string screenshots;
 };
@@ -58,7 +58,7 @@ struct PackageDependency {
 struct InstalledPackage {
     std::string package_id;
     std::string repository_id;
-    std::string name;
+    std::string display_name;
     std::string description;
     std::string screenshots;
     std::string version_name;
@@ -72,7 +72,7 @@ struct PackageInstallCandidate {
     std::string alias;
     std::string repository_id;
     std::string repository_url;
-    std::string name;
+    std::string display_name;
     std::string description;
     std::string screenshots;
     uint version_number;
