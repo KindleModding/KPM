@@ -346,14 +346,14 @@ InstalledPackage Database::GetInstalledPackage(const std::string& package_id) {
     }   
 }
 
-PackageDependency Database::GetInstalledPackageDependenciesFromDependencyID(const std::string& package_id, const std::string& package_alias) {
+std::vector<PackageDependency> Database::GetInstalledPackageDependenciesFromDependencyID(const std::string& package_id, const std::string& package_alias) {
     SQLite::Statement query(db, "SELECT * FROM installed_package_dependencies WHERE package_name=? OR package_name=? LIMIT 1;");
     query.bind(1, package_id);
     query.bind(1, package_alias);
-    const bool hasResult = query.executeStep();
 
-    if (hasResult) {
-        return {
+    std::vector<PackageDependency> dependencies;
+    while (query.executeStep()) {
+        dependencies.push_back({
             .dependent_package_id = query.getColumn("dependent_package_id"),
             .dependent_repository_id = query.getColumn("dependent_repository_id"),
             .dependent_version_number = query.getColumn("dependent_version_number"),
@@ -362,17 +362,8 @@ PackageDependency Database::GetInstalledPackageDependenciesFromDependencyID(cons
             .package_name = query.getColumn("package_name"),
             .version_name = query.getColumn("version_name"),
             .version_comparison_type = static_cast<VersionComparisonType>(query.getColumn("version_comparison_type").getInt())
-        };
-    } else {
-        return {
-            .dependent_package_id = "",
-            .dependent_repository_id = "",
-            .dependent_version_number = 0,
-            .dependent_architecture = "",
-            .repository_id = "",
-            .package_name = "",
-            .version_name = "",
-            .version_comparison_type = VersionComparisonType::NONE
-        };
-    }   
+        });
+    }
+    
+    return dependencies;
 }

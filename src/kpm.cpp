@@ -187,7 +187,44 @@ int main(int argc, char* argv[]) {
 
             // Check that our installation packages don't intefere with any dependencies
             for (PackageInstallCandidate package : packagesToInstall) {
-                
+                // Get existing dependencies that depend on this package
+                std::vector<PackageDependency> dependencies = database.GetInstalledPackageDependenciesFromDependencyID(package.package_id, package.alias);
+
+                // Ensure that the package we are installing is all good with the existing dependencies
+                for (PackageDependency dependency : dependencies) {
+                    // Find the dependency in our package_index
+                    std::vector<PackageInstallCandidate> dependencyCandidates = database.FindInstallationCandidates({
+                        .repository_id = dependency.repository_id,
+                        .package_name = dependency.package_name,
+                        .version_name = dependency.version_name,
+                        .version_comparison_type = VersionComparisonType::EQ
+                    });
+                    if (dependencyCandidates.size() != 1) {
+                        Log::E("Failed to find version_number for dependency %s - not in repo? (%i)", dependency.package_name.c_str(), dependencyCandidates.size());
+                    }
+
+                    if (
+                        (
+                            dependency.version_comparison_type == VersionComparisonType::GTEQ &&
+                            package.version_number < dependencyCandidates[0].version_number
+                        ) || (
+                            dependency.version_comparison_type == VersionComparisonType::LTEQ &&
+                            package.version_number > dependencyCandidates[0].version_number
+                        ) || (
+                            dependency.version_comparison_type == VersionComparisonType::GT &&
+                            package.version_number <= dependencyCandidates[0].version_number
+                        ) || (
+                            dependency.version_comparison_type == VersionComparisonType::LT &&
+                            package.version_number >= dependencyCandidates[0].version_number
+                        ) || (
+                            dependency.version_comparison_type == VersionComparisonType::EQ &&
+                            package.version_number != dependencyCandidates[0].version_number
+                        )
+                    ) {
+                        Log::E("ERROR: %s conflicts with dependency %s (%s) required by %s - ABORTING", package.package_id.c_str(), dependency.package_name.c_str(), dependency.version_name.c_str(), dependency.dependent_package_id.c_str());
+                        exit(1);
+                    }
+                }
             }
         }
 

@@ -107,7 +107,7 @@ class Database {
 
         std::vector<PackageDependency> GetPackageDependencies(const PackageVersion& package);
         InstalledPackage GetInstalledPackage(const std::string& package_id);
-        PackageDependency GetInstalledPackageDependenciesFromDependencyID(const std::string& package_id, const std::string& package_alias);
+        std::vector<PackageDependency> GetInstalledPackageDependenciesFromDependencyID(const std::string& package_id, const std::string& package_alias);
     private:
         SQLite::Database db;
         bool isTransaction = false;
