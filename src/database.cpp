@@ -3,6 +3,7 @@
 #include "SQLiteCpp/Statement.h"
 #include "flags.hpp"
 #include "log.hpp"
+#include "utils.hpp"
 #include <cstring>
 #include <vector>
 
@@ -213,4 +214,69 @@ void Database::AddPackageDependency(PackageDependency packageDependency) {
     query.bind(4, packageDependency.dependent_architecture);
     query.bind(5, packageDependency.install_string);
     query.exec();
+}
+
+std::vector<PackageInstallCandidate> Database::FindInstallationCandidates(ParsedPackageTarget parsedTarget) {
+    std::string queryString = "SELECT package_index.*, version_index.*, repositories.url repository_url FROM package_index JOIN repositories ON repositories.id=package_index.repository_id JOIN version_index ON version_index.package_id=package_index.id WHERE package_index.id=?1 OR package_index.alias=?1 AND version_index.architecture=?2";
+    if (parsedTarget.repository_id.length() != 0) {
+        queryString += " AND repository_id=?3";
+    }
+
+    if (parsedTarget.version_comparison_type != VersionComparisonType::NONE) {
+        queryString += " AND version_index.version_number ";
+        switch (parsedTarget.version_comparison_type) {
+            case VersionComparisonType::EQ:
+                queryString += '=';
+                break;
+            case VersionComparisonType::GT:
+                queryString += '>';
+                break;
+            case VersionComparisonType::LT:
+                queryString += '<';
+                break;
+            case VersionComparisonType::GTEQ:
+                queryString += ">=";
+                break;
+            case VersionComparisonType::LTEQ:
+                queryString += "<=";
+                break;
+            default:
+                break;
+        }
+        queryString += " (SELECT version_number FROM version_index search_version_index WHERE search_version_index.package_id=version_index.package_id AND search_version_index.repository_id=version_index.repository_id AND search_version_index.version_name=?4 LIMIT 1)";
+    }
+
+    Log::D("%s", queryString.c_str());
+    SQLite::Statement query(db, queryString + "ORDER BY version_index.version_number DESC");
+    query.bind(1, parsedTarget.package_name);
+    query.bind(2, Flags::GetInstance()->architecture);
+    if (parsedTarget.repository_id.length() != 0) {
+        query.bind(3, parsedTarget.repository_id);
+    }
+
+    if (parsedTarget.version_comparison_type != VersionComparisonType::NONE) {
+        query.bind(4, parsedTarget.package_version_name);
+    }
+
+    std::vector<PackageInstallCandidate> candidates;
+    while (query.executeStep()) {
+        if (firmwareWithinRange(Flags::GetInstance()->firmware_version, query.getColumn("min_firmware").getString(), query.getColumn("max_firmware").getString())) {
+            candidates.push_back({
+                .package_id = query.getColumn("package_id"),
+                .alias = query.getColumn("alias"),
+                .repository_id = query.getColumn("repository_id"),
+                .repository_url = query.getColumn("repository_url"),
+                .name = query.getColumn("name"),
+                .description = query.getColumn("description"),
+                .screenshots = query.getColumn("screenshots"),
+                .version_number = query.getColumn("version_number"),
+                .version_name = query.getColumn("version_name"),
+                .architecture = query.getColumn("architecture"),
+                .min_firmware = query.getColumn("min_firmware"),
+                .max_firmware = query.getColumn("max_firmware")
+            });
+        }
+    }
+
+    return candidates;
 }

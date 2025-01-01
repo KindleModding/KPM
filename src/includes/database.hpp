@@ -13,6 +13,13 @@ enum class VersionComparisonType {
     LTEQ // <=
 };
 
+struct ParsedPackageTarget {
+    std::string repository_id;
+    std::string package_name;
+    std::string package_version_name;
+    VersionComparisonType version_comparison_type;
+};
+
 struct Repository {
     std::string id;
     std::string url;
@@ -92,6 +99,8 @@ class Database {
         void AddPackage(Package package);
         void AddPackageVersion(PackageVersion packageVersion);
         void AddPackageDependency(PackageDependency PackageDependency);
+
+        std::vector<PackageInstallCandidate> FindInstallationCandidates(ParsedPackageTarget parsedTarget);
     private:
         SQLite::Database db;
         bool isTransaction = false;

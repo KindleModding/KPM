@@ -92,7 +92,7 @@ ParsedPackageTarget parsePackageTarget(const std::string& target) {
         parsedTarget.version_comparison_type = VersionComparisonType::GTEQ;
     }
 
-    parsedTarget.package_name = target.substr(packageNameIndex, packageNameEndIndex - packageNameEndIndex);
+    parsedTarget.package_name = target.substr(packageNameIndex, packageNameEndIndex - packageNameIndex);
 
     if (versionNameStartIndex != -1) {
         parsedTarget.package_version_name = target.substr(versionNameStartIndex);

@@ -136,8 +136,13 @@ int main(int argc, char* argv[]) {
         for (const std::string target : targets) {
             Log::D("Getting package and repository for %s", target.c_str());
             ParsedPackageTarget parsedTarget = parsePackageTarget(target);
+            Log::D("Parsed as: %s/%s@%s", parsedTarget.repository_id.c_str(), parsedTarget.package_name.c_str(), parsedTarget.package_version_name.c_str());
 
             // Find package candidates from the DB
+            const std::vector<PackageInstallCandidate> installationCandidates = database.FindInstallationCandidates(parsedTarget);
+            for (PackageInstallCandidate installCandidate : installationCandidates) {
+                Log::I("Found installation candidate: %s/%s@%s", installCandidate.repository_id.c_str(), installCandidate.package_id.c_str(), installCandidate.version_name.c_str());
+            }
         }
     // Invalid operation requested
     } else {
