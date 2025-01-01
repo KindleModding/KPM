@@ -8,6 +8,7 @@
 #include "database.hpp"
 #include "flags.hpp"
 #include "log.hpp"
+#include "utils.hpp"
 
 int main(int argc, char* argv[]) {
     std::vector<char*> targets;
@@ -132,7 +133,12 @@ int main(int argc, char* argv[]) {
         }
     // Install a specific package
     } else if (operation == "install") {
+        for (const std::string target : targets) {
+            Log::D("Getting package and repository for %s", target.c_str());
+            ParsedPackageTarget parsedTarget = parsePackageTarget(target);
 
+            // Find package candidates from the DB
+        }
     // Invalid operation requested
     } else {
         Log::E("No such operation [%s].", operation.c_str());

@@ -1,6 +1,6 @@
 #include "utils.hpp"
 #include "database.hpp"
-#include "log.hpp"
+#include "flags.hpp"
 #include <vector>
 
 bool compareSemverGTEQ(const std::string& a, const std::string& b) { // Will return true if a is greater than or equal to b
@@ -48,4 +48,55 @@ bool compareSemverGTEQ(const std::string& a, const std::string& b) { // Will ret
 
 bool firmwareWithinRange(const std::string &current, const std::string &min, const std::string &max) {
     return (min.size() == 0 || compareSemverGTEQ(current, min)) && (max.size() == 0 || compareSemverGTEQ(max, Flags::GetInstance()->firmware_version));
+}
+
+ParsedPackageTarget parsePackageTarget(const std::string& target) {
+    ParsedPackageTarget parsedTarget = {
+        .repository_id = "",
+        .package_version_name = "",
+        .version_comparison_type = VersionComparisonType::NONE
+    };
+
+    // Get the indices
+    const int repoEndIndex = target.find('/');
+    const int LTIndex = target.find('<');
+    const int GTIndex = target.find('>');
+    const int EQIndex = target.find('=');
+
+    if (repoEndIndex != -1) {
+        parsedTarget.repository_id = target.substr(0, repoEndIndex);
+    }
+
+    int packageNameIndex = repoEndIndex+1;
+    size_t packageNameEndIndex = std::string::npos;
+    int versionNameStartIndex = -1;
+    if (LTIndex != -1 && GTIndex == -1 && EQIndex == -1) { // <
+        packageNameEndIndex = LTIndex;
+        versionNameStartIndex = LTIndex+1;
+        parsedTarget.version_comparison_type = VersionComparisonType::LT;
+    } else if (GTIndex != -1 && LTIndex == -1 && EQIndex == -1) { // >
+        packageNameEndIndex = GTIndex;
+        versionNameStartIndex = GTIndex+1;
+        parsedTarget.version_comparison_type = VersionComparisonType::GT;
+    } else if (EQIndex != -1 && LTIndex == -1 && GTIndex == -1) { // =
+        packageNameEndIndex = EQIndex;
+        versionNameStartIndex = EQIndex+1;
+        parsedTarget.version_comparison_type = VersionComparisonType::EQ;
+    } else if (EQIndex - GTIndex == 1 && LTIndex == -1) { // >=
+        packageNameEndIndex = GTIndex;
+        versionNameStartIndex = EQIndex+1;
+        parsedTarget.version_comparison_type = VersionComparisonType::GTEQ;
+    } else if (EQIndex - LTIndex == 1 && GTIndex == -1) { // <=
+        packageNameEndIndex = LTIndex;
+        versionNameStartIndex = EQIndex+1;
+        parsedTarget.version_comparison_type = VersionComparisonType::GTEQ;
+    }
+
+    parsedTarget.package_name = target.substr(packageNameIndex, packageNameEndIndex - packageNameEndIndex);
+
+    if (versionNameStartIndex != -1) {
+        parsedTarget.package_version_name = target.substr(versionNameStartIndex);
+    }
+
+    return parsedTarget;
 }
