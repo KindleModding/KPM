@@ -73,6 +73,8 @@ int main(int argc, char* argv[]) {
 
     // Try to create the kpkg directory if it doesn't already exist
     std::filesystem::create_directories(Flags::GetInstance()->kpkg_dir);
+    std::filesystem::create_directories(Flags::GetInstance()->cache_dir);
+    std::filesystem::create_directories(Flags::GetInstance()->kpkg_dir + "/packages");
     
     // Initialise the database object
     Database database(Flags::GetInstance()->kpkg_dir + "/kpm.db");
