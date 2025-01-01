@@ -16,7 +16,7 @@ enum class VersionComparisonType {
 struct ParsedPackageTarget {
     std::string repository_id;
     std::string package_name;
-    std::string package_version_name;
+    std::string version_name;
     VersionComparisonType version_comparison_type;
 };
 
@@ -49,7 +49,10 @@ struct PackageDependency {
     std::string dependent_repository_id;
     uint dependent_version_number;
     std::string dependent_architecture;
-    std::string install_string; // String that defines the dependency
+    std::string repository_id;
+    std::string package_name;
+    std::string version_name;
+    VersionComparisonType version_comparison_type;
 };
 
 struct InstalledPackage {
@@ -103,6 +106,8 @@ class Database {
         std::vector<PackageInstallCandidate> FindInstallationCandidates(const ParsedPackageTarget& parsedTarget);
 
         std::vector<PackageDependency> GetPackageDependencies(const PackageVersion& package);
+        InstalledPackage GetInstalledPackage(const std::string& package_id);
+        PackageDependency GetInstalledPackageDependenciesFromDependencyID(const std::string& package_id, const std::string& package_alias);
     private:
         SQLite::Database db;
         bool isTransaction = false;

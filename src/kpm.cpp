@@ -138,7 +138,7 @@ int main(int argc, char* argv[]) {
         for (const std::string target : targets) {
             Log::D("Getting package and repository for %s", target.c_str());
             ParsedPackageTarget parsedTarget = parsePackageTarget(target);
-            Log::D("Parsed as: %s/%s@%s", parsedTarget.repository_id.c_str(), parsedTarget.package_name.c_str(), parsedTarget.package_version_name.c_str());
+            Log::D("Parsed as: %s/%s@%s", parsedTarget.repository_id.c_str(), parsedTarget.package_name.c_str(), parsedTarget.version_name.c_str());
 
             // Find package candidates from the DB
             const std::vector<PackageInstallCandidate> installationCandidates = database.FindInstallationCandidates(parsedTarget);
@@ -184,6 +184,11 @@ int main(int argc, char* argv[]) {
                 packagesToInstall.push_back(dependencyCandidate);
             }
             packagesToInstall.push_back(installationCandidates[0]);
+
+            // Check that our installation packages don't intefere with any dependencies
+            for (PackageInstallCandidate package : packagesToInstall) {
+                
+            }
         }
 
         for (PackageInstallCandidate package : packagesToInstall) {

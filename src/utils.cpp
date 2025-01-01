@@ -54,7 +54,7 @@ bool firmwareWithinRange(const std::string &current, const std::string &min, con
 ParsedPackageTarget parsePackageTarget(const std::string& target) {
     ParsedPackageTarget parsedTarget = {
         .repository_id = "",
-        .package_version_name = "",
+        .version_name = "",
         .version_comparison_type = VersionComparisonType::NONE
     };
 
@@ -96,7 +96,7 @@ ParsedPackageTarget parsePackageTarget(const std::string& target) {
     parsedTarget.package_name = target.substr(packageNameIndex, packageNameEndIndex - packageNameIndex);
 
     if (versionNameStartIndex != -1) {
-        parsedTarget.package_version_name = target.substr(versionNameStartIndex);
+        parsedTarget.version_name = target.substr(versionNameStartIndex);
     }
 
     return parsedTarget;
@@ -116,10 +116,14 @@ std::vector<PackageInstallCandidate> getRecursiveDependencies(Database& database
 
     std::vector<PackageInstallCandidate> dependencyInstallCandidates;
     for (PackageDependency dependency : dependencies) {
-        ParsedPackageTarget parsedTarget = parsePackageTarget(dependency.install_string);
-        const std::vector<PackageInstallCandidate> installationCandidates = database.FindInstallationCandidates(parsedTarget);
+        const std::vector<PackageInstallCandidate> installationCandidates = database.FindInstallationCandidates({
+            .repository_id = dependency.repository_id,
+            .package_name = dependency.package_name,
+            .version_name = dependency.version_name,
+            .version_comparison_type = dependency.version_comparison_type
+        });
         if (installationCandidates.size() == 0) {
-            Log::E("Could not find installation candidate for dependency %s!", dependency.install_string.c_str());
+            Log::E("Could not find installation candidate for dependency %s!", dependency.package_name.c_str());
             exit(1);
         }
 
@@ -127,6 +131,11 @@ std::vector<PackageInstallCandidate> getRecursiveDependencies(Database& database
         if (installationCandidates.size() > 1) {
             // If multiple installation candidates are found we check if any of them are already installed and use that one
             // (safest option to avoid conflicts)
+            for (size_t i=0; i < installationCandidates.size(); i++) {
+                if (database.GetInstalledPackage(installationCandidates[i].package_id).package_id.length() != 0) {
+                    candidateIndex = i;
+                }
+            }
         }
 
         // Now add the dependencies for this to the list

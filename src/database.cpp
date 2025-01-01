@@ -50,7 +50,10 @@ Database::Database(std::string path): db(path, SQLite::OPEN_READWRITE|SQLite::OP
                                             "dependent_repository_id TEXT,"
                                             "dependent_version_number INTEGER NOT NULL,"
                                             "dependent_architecture TEXT NOT NULL,"
-                                            "install_string TEXT NOT NULL,"
+                                            "repository_id TEXT NOT NULL,"
+                                            "package_name TEXT NOT NULL,"
+                                            "version_name TEXT NOT NULL,"
+                                            "version_comparison_type INTEGER NOT NULL,"
                                             "PRIMARY KEY(dependent_package_id, dependent_repository_id, dependent_version_number, dependent_architecture),"
                                             "FOREIGN KEY (dependent_package_id, dependent_repository_id, dependent_version_number, dependent_architecture) REFERENCES version_index(package_id, repository_id, version_number, architecture) ON DELETE CASCADE"
                                             ") STRICT;");
@@ -75,7 +78,10 @@ Database::Database(std::string path): db(path, SQLite::OPEN_READWRITE|SQLite::OP
                                             "dependent_repository_id TEXT,"
                                             "dependent_version_number INTEGER NOT NULL,"
                                             "dependent_architecture TEXT NOT NULL,"
-                                            "install_string TEXT NOT NULL,"
+                                            "repository_id TEXT NOT NULL,"
+                                            "package_name TEXT NOT NULL,"
+                                            "version_name TEXT NOT NULL,"
+                                            "version_comparison_type INTEGER NOT NULL,"
                                             "PRIMARY KEY(dependent_package_id, dependent_repository_id, dependent_version_number, dependent_architecture),"
                                             "FOREIGN KEY (dependent_package_id, dependent_repository_id, dependent_version_number) REFERENCES installed_packages(package_id, repository_id, version_number) ON DELETE CASCADE"
                                             ") STRICT;");
@@ -207,12 +213,15 @@ void Database::AddPackageVersion(const PackageVersion& packageVersion) {
 }
 
 void Database::AddPackageDependency(const PackageDependency& packageDependency) {
-    SQLite::Statement query(db, "INSERT INTO dependency_index VALUES (?, ?, ?, ?, ?)");
+    SQLite::Statement query(db, "INSERT INTO dependency_index VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
     query.bind(1, packageDependency.dependent_package_id);
     query.bind(2, packageDependency.dependent_repository_id);
     query.bind(3, packageDependency.dependent_version_number);
     query.bind(4, packageDependency.dependent_architecture);
-    query.bind(5, packageDependency.install_string);
+    query.bind(5, packageDependency.repository_id);
+    query.bind(6, packageDependency.package_name);
+    query.bind(7, packageDependency.version_name);
+    query.bind(8, static_cast<int>(packageDependency.version_comparison_type));
     query.exec();
 }
 
@@ -255,7 +264,7 @@ std::vector<PackageInstallCandidate> Database::FindInstallationCandidates(const 
     }
 
     if (parsedTarget.version_comparison_type != VersionComparisonType::NONE) {
-        query.bind(4, parsedTarget.package_version_name);
+        query.bind(4, parsedTarget.version_name);
     }
 
     std::vector<PackageInstallCandidate> candidates;
@@ -295,9 +304,75 @@ std::vector<PackageDependency> Database::GetPackageDependencies(const PackageVer
             .dependent_repository_id = query.getColumn("dependent_repository_id"),
             .dependent_version_number = query.getColumn("dependent_version_number"),
             .dependent_architecture = query.getColumn("dependent_architecture"),
-            .install_string = query.getColumn("install_string")
+            .repository_id = query.getColumn("repository_id"),
+            .package_name = query.getColumn("package_name"),
+            .version_name = query.getColumn("version_name"),
+            .version_comparison_type = static_cast<VersionComparisonType>(query.getColumn("version_comparison_type").getInt())
         });
     }
 
     return dependencies;
+}
+
+InstalledPackage Database::GetInstalledPackage(const std::string& package_id) {
+    SQLite::Statement query(db, "SELECT * FROM installed_packages WHERE id=? LIMIT 1;");
+    query.bind(1, package_id);
+    const bool hasResult = query.executeStep();
+
+    if (hasResult) {
+        return {
+            .package_id = query.getColumn("package_id"),
+            .repository_id = query.getColumn("repository_id"),
+            .name = query.getColumn("name"),
+            .description = query.getColumn("description"),
+            .screenshots = query.getColumn("screenshots"),
+            .version_name = query.getColumn("version_name"),
+            .version_number = query.getColumn("version_number"),
+            .min_firmware = query.getColumn("min_firmware"),
+            .max_firmware = query.getColumn("max_firmware")
+        };
+    } else {
+        return {
+            .package_id = "",
+            .repository_id = "",
+            .name = "",
+            .description = "",
+            .screenshots = "",
+            .version_name = "",
+            .version_number = 0,
+            .min_firmware = "",
+            .max_firmware = ""
+        };
+    }   
+}
+
+PackageDependency Database::GetInstalledPackageDependenciesFromDependencyID(const std::string& package_id, const std::string& package_alias) {
+    SQLite::Statement query(db, "SELECT * FROM installed_package_dependencies WHERE package_name=? OR package_name=? LIMIT 1;");
+    query.bind(1, package_id);
+    query.bind(1, package_alias);
+    const bool hasResult = query.executeStep();
+
+    if (hasResult) {
+        return {
+            .dependent_package_id = query.getColumn("dependent_package_id"),
+            .dependent_repository_id = query.getColumn("dependent_repository_id"),
+            .dependent_version_number = query.getColumn("dependent_version_number"),
+            .dependent_architecture = query.getColumn("dependent_architecture"),
+            .repository_id = query.getColumn("repository_id"),
+            .package_name = query.getColumn("package_name"),
+            .version_name = query.getColumn("version_name"),
+            .version_comparison_type = static_cast<VersionComparisonType>(query.getColumn("version_comparison_type").getInt())
+        };
+    } else {
+        return {
+            .dependent_package_id = "",
+            .dependent_repository_id = "",
+            .dependent_version_number = 0,
+            .dependent_architecture = "",
+            .repository_id = "",
+            .package_name = "",
+            .version_name = "",
+            .version_comparison_type = VersionComparisonType::NONE
+        };
+    }   
 }
