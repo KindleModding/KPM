@@ -15,7 +15,7 @@
                     "min_firmware": "5.16.4",
                     "max_firmware": "",
                     "dependencies": [
-                        "io.github.kindlemodding_repo/fbink>=2024.12"
+                        "io.github.kindlemodding_repo/fbink"
                     ],
                     "supported_arch": [
                         "armhf",

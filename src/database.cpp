@@ -314,7 +314,7 @@ std::vector<PackageDependency> Database::GetPackageDependencies(const PackageVer
 }
 
 InstalledPackage Database::GetInstalledPackage(const std::string& package_id) {
-    SQLite::Statement query(db, "SELECT * FROM installed_packages WHERE id=? LIMIT 1;");
+    SQLite::Statement query(db, "SELECT * FROM installed_packages WHERE package_id=? LIMIT 1;");
     query.bind(1, package_id);
     const bool hasResult = query.executeStep();
 
@@ -369,7 +369,7 @@ std::vector<PackageDependency> Database::GetInstalledPackageDependenciesFromDepe
 
 void Database::InstallPackage(PackageInstallCandidate package) {
     // Add the package as an installed package
-    SQLite::Statement query(db, "INSERT INTO installed_packages (package_id, repository_id, display_name, description, screenshots, version_name, version_number, min_firmware, max_firmware) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    SQLite::Statement query(db, "INSERT OR REPLACE INTO installed_packages (package_id, repository_id, display_name, description, screenshots, version_name, version_number, min_firmware, max_firmware) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
     query.bind(1, package.package_id);
     query.bind(2, package.repository_id);
     query.bind(3, package.display_name);
@@ -380,6 +380,14 @@ void Database::InstallPackage(PackageInstallCandidate package) {
     query.bind(8, package.min_firmware);
     query.bind(9, package.max_firmware);
     query.exec();
+
+    // Delete previous dependencies if exist
+    SQLite::Statement depClearQuery(db, "DELETE FROM installed_package_dependencies WHERE dependent_package_id=? AND dependent_repository_id=? AND dependent_version_number=? AND dependent_architecture=?");
+    depClearQuery.bind(1, package.package_id);
+    depClearQuery.bind(2, package.repository_id);
+    depClearQuery.bind(3, package.version_number);
+    depClearQuery.bind(4, package.architecture);
+    depClearQuery.exec();
 
     // Add the package dependencies
     SQLite::Statement depQuery(db, "INSERT INTO installed_package_dependencies SELECT * FROM dependency_index WHERE dependent_package_id=? AND dependent_repository_id=? AND dependent_version_number=? AND dependent_architecture=?");

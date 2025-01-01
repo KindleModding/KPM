@@ -156,6 +156,7 @@ int main(int argc, char* argv[]) {
             }
 
             // Get the recursive dependencies for this package
+            Log::D("Obtaining dependencies for %s", installationCandidates[0].package_id.c_str());
             std::vector<PackageInstallCandidate> dependencyCandidates = getRecursiveDependencies(database, {
                 .package_id = installationCandidates[0].package_id,
                 .repository_id = installationCandidates[0].repository_id,
@@ -186,6 +187,7 @@ int main(int argc, char* argv[]) {
             packagesToInstall.push_back(installationCandidates[0]);
 
             // Check that our installation packages don't intefere with any dependencies
+            Log::D("Checking for dependency conflicts");
             for (PackageInstallCandidate package : packagesToInstall) {
                 // Get existing dependencies that depend on this package
                 std::vector<PackageDependency> dependencies = database.GetInstalledPackageDependenciesFromDependencyID(package.package_id, package.alias);
