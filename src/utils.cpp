@@ -1,6 +1,7 @@
 #include "utils.hpp"
 #include "database.hpp"
 #include "flags.hpp"
+#include "log.hpp"
 #include <vector>
 
 bool compareSemverGTEQ(const std::string& a, const std::string& b) { // Will return true if a is greater than or equal to b
@@ -99,4 +100,48 @@ ParsedPackageTarget parsePackageTarget(const std::string& target) {
     }
 
     return parsedTarget;
+}
+
+
+std::vector<PackageInstallCandidate> getRecursiveDependencies(Database& database, const PackageVersion& target) {
+    std::vector<PackageDependency> dependencies = database.GetPackageDependencies({
+        .package_id = target.package_id,
+        .repository_id = target.repository_id,
+        .version_name = target.version_name,
+        .version_number = target.version_number,
+        .architecture = target.architecture,
+        .min_firmware = target.min_firmware,
+        .max_firmware = target.max_firmware
+    });
+
+    std::vector<PackageInstallCandidate> dependencyInstallCandidates;
+    for (PackageDependency dependency : dependencies) {
+        ParsedPackageTarget parsedTarget = parsePackageTarget(dependency.install_string);
+        const std::vector<PackageInstallCandidate> installationCandidates = database.FindInstallationCandidates(parsedTarget);
+        if (installationCandidates.size() == 0) {
+            Log::E("Could not find installation candidate for dependency %s!", dependency.install_string.c_str());
+            exit(1);
+        }
+
+        int candidateIndex = 0;
+        if (installationCandidates.size() > 1) {
+            // If multiple installation candidates are found we check if any of them are already installed and use that one
+            // (safest option to avoid conflicts)
+        }
+
+        // Now add the dependencies for this to the list
+        const std::vector<PackageInstallCandidate> subDependencies = getRecursiveDependencies(database, {
+            .package_id = installationCandidates[candidateIndex].package_id,
+            .repository_id = installationCandidates[candidateIndex].repository_id,
+            .version_name = installationCandidates[candidateIndex].version_name,
+            .version_number = installationCandidates[candidateIndex].version_number,
+            .architecture = installationCandidates[candidateIndex].architecture,
+            .min_firmware = installationCandidates[candidateIndex].min_firmware,
+            .max_firmware = installationCandidates[candidateIndex].max_firmware
+        });
+        dependencyInstallCandidates.insert(dependencyInstallCandidates.end(), subDependencies.begin(), subDependencies.end()); // Add the dependency's dependencies
+        dependencyInstallCandidates.push_back(installationCandidates[candidateIndex]); // Add the dependency itself
+    }
+
+    return dependencyInstallCandidates;
 }

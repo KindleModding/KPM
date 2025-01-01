@@ -133,6 +133,8 @@ int main(int argc, char* argv[]) {
         }
     // Install a specific package
     } else if (operation == "install") {
+        std::vector<PackageInstallCandidate> packagesToInstall;
+
         for (const std::string target : targets) {
             Log::D("Getting package and repository for %s", target.c_str());
             ParsedPackageTarget parsedTarget = parsePackageTarget(target);
@@ -143,7 +145,52 @@ int main(int argc, char* argv[]) {
             for (PackageInstallCandidate installCandidate : installationCandidates) {
                 Log::I("Found installation candidate: %s/%s@%s", installCandidate.repository_id.c_str(), installCandidate.package_id.c_str(), installCandidate.version_name.c_str());
             }
+
+            if (installationCandidates.size() > 1) {
+                Log::E("Found multiple installation candidates - Unable to proceed"); // @TODO: Implement actual version candidate selection
+                exit(1);
+            }
+            if (installationCandidates.size() == 0) {
+                Log::E("No installation candidate found for '%s'", target.c_str());
+                exit(1);
+            }
+
+            // Get the recursive dependencies for this package
+            std::vector<PackageInstallCandidate> dependencyCandidates = getRecursiveDependencies(database, {
+                .package_id = installationCandidates[0].package_id,
+                .repository_id = installationCandidates[0].repository_id,
+                .version_name = installationCandidates[0].version_name,
+                .version_number = installationCandidates[0].version_number,
+                .architecture = installationCandidates[0].architecture,
+                .min_firmware = installationCandidates[0].min_firmware,
+                .max_firmware = installationCandidates[0].max_firmware
+            });
+
+            for (PackageInstallCandidate dependencyCandidate : dependencyCandidates) {
+                // Check if we already added this package ID
+                // @TODO: Track this in a seperate set or smth?
+                bool found = false;
+                for (PackageInstallCandidate alreadyInstalling : packagesToInstall) {
+                    if (alreadyInstalling.package_id == dependencyCandidate.package_id) {
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (found) {
+                    continue;
+                }
+
+                packagesToInstall.push_back(dependencyCandidate);
+            }
+            packagesToInstall.push_back(installationCandidates[0]);
         }
+
+        for (PackageInstallCandidate package : packagesToInstall) {
+            Log::I("%s/%s=%s", package.repository_id.c_str(), package.package_id.c_str(), package.version_name.c_str());
+        }
+        Log::I("Preparing to install %i packages.", packagesToInstall.size());
+
     // Invalid operation requested
     } else {
         Log::E("No such operation [%s].", operation.c_str());

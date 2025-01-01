@@ -96,11 +96,13 @@ class Database {
         int DeleteRepository(const std::string& id);
         int DeleteRepositoryPackages(const std::string& id);
         
-        void AddPackage(Package package);
-        void AddPackageVersion(PackageVersion packageVersion);
-        void AddPackageDependency(PackageDependency PackageDependency);
+        void AddPackage(const Package& package);
+        void AddPackageVersion(const PackageVersion& packageVersion);
+        void AddPackageDependency(const PackageDependency& PackageDependency);
 
-        std::vector<PackageInstallCandidate> FindInstallationCandidates(ParsedPackageTarget parsedTarget);
+        std::vector<PackageInstallCandidate> FindInstallationCandidates(const ParsedPackageTarget& parsedTarget);
+
+        std::vector<PackageDependency> GetPackageDependencies(const PackageVersion& package);
     private:
         SQLite::Database db;
         bool isTransaction = false;

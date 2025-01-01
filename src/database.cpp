@@ -183,7 +183,7 @@ int Database::DeleteRepositoryPackages(const std::string& id) {
     return query.exec();
 }
 
-void Database::AddPackage(Package package) {
+void Database::AddPackage(const Package& package) {
     SQLite::Statement query(db, "INSERT INTO package_index (id, alias, repository_id, name, description, screenshots) VALUES (?, ?, ?, ?, ?, ?);");
     query.bind(1, package.id);
     query.bind(2, package.alias);
@@ -194,7 +194,7 @@ void Database::AddPackage(Package package) {
     query.exec();
 }
 
-void Database::AddPackageVersion(PackageVersion packageVersion) {
+void Database::AddPackageVersion(const PackageVersion& packageVersion) {
     SQLite::Statement query(db, "INSERT INTO version_index (package_id, repository_id, version_name, version_number, architecture, min_firmware, max_firmware) VALUES (?, ?, ?, ?, ?, ?, ?)");
     query.bind(1, packageVersion.package_id);
     query.bind(2, packageVersion.repository_id);
@@ -206,7 +206,7 @@ void Database::AddPackageVersion(PackageVersion packageVersion) {
     query.exec();
 }
 
-void Database::AddPackageDependency(PackageDependency packageDependency) {
+void Database::AddPackageDependency(const PackageDependency& packageDependency) {
     SQLite::Statement query(db, "INSERT INTO dependency_index VALUES (?, ?, ?, ?, ?)");
     query.bind(1, packageDependency.dependent_package_id);
     query.bind(2, packageDependency.dependent_repository_id);
@@ -216,10 +216,10 @@ void Database::AddPackageDependency(PackageDependency packageDependency) {
     query.exec();
 }
 
-std::vector<PackageInstallCandidate> Database::FindInstallationCandidates(ParsedPackageTarget parsedTarget) {
+std::vector<PackageInstallCandidate> Database::FindInstallationCandidates(const ParsedPackageTarget& parsedTarget) {
     std::string queryString = "SELECT package_index.*, version_index.*, repositories.url repository_url FROM package_index JOIN repositories ON repositories.id=package_index.repository_id JOIN version_index ON version_index.package_id=package_index.id WHERE package_index.id=?1 OR package_index.alias=?1 AND version_index.architecture=?2";
     if (parsedTarget.repository_id.length() != 0) {
-        queryString += " AND repository_id=?3";
+        queryString += " AND package_index.repository_id=?3";
     }
 
     if (parsedTarget.version_comparison_type != VersionComparisonType::NONE) {
@@ -279,4 +279,25 @@ std::vector<PackageInstallCandidate> Database::FindInstallationCandidates(Parsed
     }
 
     return candidates;
+}
+
+std::vector<PackageDependency> Database::GetPackageDependencies(const PackageVersion& packageVersion) {
+    SQLite::Statement query(db, "SELECT * FROM dependency_index WHERE dependent_package_id=? AND dependent_repository_id=? AND dependent_version_number=? AND dependent_architecture=?;");
+    query.bind(1, packageVersion.package_id);
+    query.bind(2, packageVersion.repository_id);
+    query.bind(3, packageVersion.version_number);
+    query.bind(4, packageVersion.architecture);
+
+    std::vector<PackageDependency> dependencies;
+    while (query.executeStep()) {
+        dependencies.push_back({
+            .dependent_package_id = query.getColumn("dependent_package_id"),
+            .dependent_repository_id = query.getColumn("dependent_repository_id"),
+            .dependent_version_number = query.getColumn("dependent_version_number"),
+            .dependent_architecture = query.getColumn("dependent_architecture"),
+            .install_string = query.getColumn("install_string")
+        });
+    }
+
+    return dependencies;
 }

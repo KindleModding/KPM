@@ -6,3 +6,4 @@ bool compareSemverGTEQ(const std::string& a, const std::string& b); // Will retu
 bool firmwareWithinRange(const std::string& current, const std::string& min, const std::string& max);
 
 ParsedPackageTarget parsePackageTarget(const std::string& target);
+std::vector<PackageInstallCandidate> getRecursiveDependencies(Database& database, const PackageVersion& target);
