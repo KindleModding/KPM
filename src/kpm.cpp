@@ -221,7 +221,7 @@ int main(int argc, char* argv[]) {
                             package.version_number != dependencyCandidates[0].version_number
                         )
                     ) {
-                        Log::E("ERROR: %s conflicts with dependency %s (%s) required by %s - ABORTING", package.package_id.c_str(), dependency.package_name.c_str(), dependency.version_name.c_str(), dependency.dependent_package_id.c_str());
+                        Log::E("ERROR: %s (%s) conflicts with dependency %s (%s) required by %s - ABORTING", package.package_id.c_str(), package.version_name.c_str(), dependency.package_name.c_str(), dependency.version_name.c_str(), dependency.dependent_package_id.c_str());
                         exit(1);
                     }
                 }
@@ -232,6 +232,11 @@ int main(int argc, char* argv[]) {
             Log::I("%s/%s=%s", package.repository_id.c_str(), package.package_id.c_str(), package.version_name.c_str());
         }
         Log::I("Preparing to install %i packages.", packagesToInstall.size());
+
+        for (PackageInstallCandidate package : packagesToInstall) {
+            database.InstallPackage(package);
+        }
+        Log::I("Done. Installed %i packages.", packagesToInstall.size());
 
     // Invalid operation requested
     } else {

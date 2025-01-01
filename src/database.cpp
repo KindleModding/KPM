@@ -366,3 +366,26 @@ std::vector<PackageDependency> Database::GetInstalledPackageDependenciesFromDepe
     
     return dependencies;
 }
+
+void Database::InstallPackage(PackageInstallCandidate package) {
+    // Add the package as an installed package
+    SQLite::Statement query(db, "INSERT INTO installed_packages (package_id, repository_id, display_name, description, screenshots, version_name, version_number, min_firmware, max_firmware) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    query.bind(1, package.package_id);
+    query.bind(2, package.repository_id);
+    query.bind(3, package.display_name);
+    query.bind(4, package.description);
+    query.bind(5, package.screenshots);
+    query.bind(6, package.version_name);
+    query.bind(7, package.version_number);
+    query.bind(8, package.min_firmware);
+    query.bind(9, package.max_firmware);
+    query.exec();
+
+    // Add the package dependencies
+    SQLite::Statement depQuery(db, "INSERT INTO installed_package_dependencies SELECT * FROM dependency_index WHERE dependent_package_id=? AND dependent_repository_id=? AND dependent_version_number=? AND dependent_architecture=?");
+    depQuery.bind(1, package.package_id);
+    depQuery.bind(2, package.repository_id);
+    depQuery.bind(3, package.version_number);
+    depQuery.bind(4, package.architecture);
+    depQuery.exec();
+}
