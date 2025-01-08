@@ -35,3 +35,4 @@ builddir/
 subprojects/*/
 kindlehf.txt
 kindlepw2.txt
+example_repo/
