@@ -27,6 +27,9 @@ int main(int argc, char* argv[]) {
                 if (strcmp(argv[i], "--kpkg_dir") == 0) {
                     Flags::GetInstance()->kpkg_dir = std::string(argv[i+1]);
                     i++;
+                } else if (strcmp(argv[i], "--cache_dir") == 0) {
+                    Flags::GetInstance()->cache_dir = std::string(argv[i+1]);
+                    i++;
                 } else if (strcmp(argv[i], "--force_architecture") == 0) {
                     Flags::GetInstance()->architecture = std::string(argv[i+1]);
                     i++;

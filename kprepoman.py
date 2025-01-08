@@ -127,6 +127,13 @@ elif (args.operator == "add_package"):
             os.rename(args.repopath.joinpath("packages").joinpath(packageManifest["id"]).joinpath(member.path), args.repopath.joinpath("packages").joinpath(packageManifest["id"]).joinpath(f"screenshots/{repoManifest["packages"][packageIndex]["screenshots"]}.png"))
             repoManifest["packages"][packageIndex]["screenshots"] += 1
 
+    print("* Copying package")
+    try:
+        os.remove(args.repopath.joinpath("packages").joinpath(packageManifest["id"]).joinpath(packageManifest["version_name"]).joinpath(f"{packageManifest["id"]}_{packageManifest["version_name"]}_{packageManifest["supported_arch"]}.kpkg"))
+    except:
+        pass
+    shutil.copy(args.target, args.repopath.joinpath("packages").joinpath(packageManifest["id"]).joinpath(packageManifest["version_name"]).joinpath(f"{packageManifest["id"]}_{packageManifest["version_name"]}_{packageManifest["supported_arch"]}.kpkg"))
+
     print("* Writing repo manifest")
     with open(args.repopath.joinpath("manifest.json"), 'w', encoding='utf-8') as file:
         file.write(json.dumps(repoManifest))

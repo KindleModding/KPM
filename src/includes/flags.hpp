@@ -7,7 +7,7 @@ class Flags {
 
         std::string architecture = KPM_ARCH;
         std::string cache_dir = "/var/cache/kpm";
-        std::string kpkg_dir = "/mnt/us/kpkg";
+        std::string kpkg_dir = "/var/local/kpm";
         bool verbose = false;
         std::string firmware_version;
 
