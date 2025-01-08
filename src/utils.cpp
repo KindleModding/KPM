@@ -154,3 +154,12 @@ std::vector<PackageInstallCandidate> getRecursiveDependencies(Database& database
 
     return dependencyInstallCandidates;
 }
+
+bool installPackage(const std::string& packageFilePath) {
+    // Assume checks have been done beforehand and that the kpkg file exists in our cache
+    Log::I("Installing %s", packageFilePath.c_str());
+    
+    Log::D("Unpacking %s", packageFilePath.c_str());
+    
+    return false;
+}

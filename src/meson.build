@@ -1,10 +1,11 @@
 sources = files(
     './flags.cpp',
-    './request.cpp',
+    './simpleGET.cpp',
     './utils.cpp',
     './repositories.cpp',
     './kpm.cpp',
-    './database.cpp'
+    './database.cpp',
+    './multiDownload.cpp'
 )
 include_dir = include_directories('./includes')
 

@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <vector>
 
+#include "multiDownload.hpp"
 #include "repositories.hpp"
 #include "database.hpp"
 #include "flags.hpp"
@@ -24,8 +25,8 @@ int main(int argc, char* argv[]) {
             }
 
             if (argv[i][1] == '-') { // Parse complex parameters
-                if (strcmp(argv[i], "--kpkg_dir") == 0) {
-                    Flags::GetInstance()->kpkg_dir = std::string(argv[i+1]);
+                if (strcmp(argv[i], "--kpm_dir") == 0) {
+                    Flags::GetInstance()->kpm_dir = std::string(argv[i+1]);
                     i++;
                 } else if (strcmp(argv[i], "--cache_dir") == 0) {
                     Flags::GetInstance()->cache_dir = std::string(argv[i+1]);
@@ -65,7 +66,7 @@ int main(int argc, char* argv[]) {
     Log::D("Running with flags:");
     Log::D("architecture: [%s]", Flags::GetInstance()->architecture.c_str());
     Log::D("firmware_version: [%s]", Flags::GetInstance()->firmware_version.c_str());
-    Log::D("kpkg_dir: [%s]", Flags::GetInstance()->kpkg_dir.c_str());
+    Log::D("kpm_dir: [%s]", Flags::GetInstance()->kpm_dir.c_str());
     Log::D("verbose: [%d]", Flags::GetInstance()->verbose);
     Log::D("operation: [%s]", operation.c_str());
 
@@ -75,12 +76,12 @@ int main(int argc, char* argv[]) {
     }
 
     // Try to create the kpkg directory if it doesn't already exist
-    std::filesystem::create_directories(Flags::GetInstance()->kpkg_dir);
+    std::filesystem::create_directories(Flags::GetInstance()->kpm_dir);
     std::filesystem::create_directories(Flags::GetInstance()->cache_dir);
-    std::filesystem::create_directories(Flags::GetInstance()->kpkg_dir + "/packages");
+    std::filesystem::create_directories(Flags::GetInstance()->kpm_dir + "/packages");
     
     // Initialise the database object
-    Database database(Flags::GetInstance()->kpkg_dir + "/kpm.db");
+    Database database(Flags::GetInstance()->kpm_dir + "/kpm.db");
 
     // Initialise curl
     curl_global_init(CURL_GLOBAL_ALL);
@@ -94,6 +95,7 @@ int main(int argc, char* argv[]) {
     if (operation == "update") {
         if (targets.size() != 0) {
             Log::E("UPDATE operation MUST not specify TARGETS");
+            curl_global_cleanup();
             return 1;
         }
         const int updateResult = Repositories::updateRepositories(database);
@@ -103,6 +105,7 @@ int main(int argc, char* argv[]) {
     } else if (operation == "add-repo") {
         if (targets.size() == 0) {
             Log::E("Error: No targets specified for [add-repo]");
+            curl_global_cleanup();
             return 1;
         }
 
@@ -123,6 +126,7 @@ int main(int argc, char* argv[]) {
     } else if (operation == "remove-repo") {
         if (targets.size() == 0) {
             Log::E("Error: No targets specified for [remove-repo]");
+            curl_global_cleanup();
             return 1;
         }
 
@@ -240,16 +244,39 @@ int main(int argc, char* argv[]) {
         }
         Log::I("Preparing to install %i packages.", packagesToInstall.size());
 
+        std::vector<DownloadTarget> downloadTargets;
         for (PackageInstallCandidate package : packagesToInstall) {
-            database.InstallPackage(package);
+            // Queue download file
+            std::string filename = package.package_id + '_' + package.version_name + '_' + package.architecture + ".kpkg";
+            downloadTargets.push_back({
+                .url = package.repository_url + "/packages/" + package.package_id + '/' + package.version_name + '/' + filename,
+                .dest = Flags::GetInstance()->cache_dir + '/' + filename
+            });
         }
+        MultiDownload md(downloadTargets);
+        Log::I("Downloading packages...");
+        if (!md.execute()) {
+            Log::E("Download failed - Aborting.");
+            return 1;
+        }
+
+        Log::I("Installing %i packages.", packagesToInstall.size());
+        for (DownloadTarget packageDownload : downloadTargets) {
+            // Unpack our kpkg files
+            if (!installPackage(packageDownload.dest)) {
+                Log::E("Error installing %s - SKIPPING - YOU MAY HAVE BROKEN PACKAGES", packageDownload.dest.c_str());
+            }
+        }
+
         Log::I("Done. Installed %i packages.", packagesToInstall.size());
 
     // Invalid operation requested
     } else {
         Log::E("No such operation [%s].", operation.c_str());
+        curl_global_cleanup();
         return 1;
     }
 
+    curl_global_cleanup();
     return 0;
 }

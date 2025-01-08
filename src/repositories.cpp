@@ -1,6 +1,6 @@
 #include "repositories.hpp"
 #include "database.hpp"
-#include "request.hpp"
+#include "simpleGET.hpp"
 #include <curl/curl.h>
 #include <nlohmann/json.hpp>
 #include "log.hpp"

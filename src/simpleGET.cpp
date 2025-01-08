@@ -1,4 +1,4 @@
-#include "request.hpp"
+#include "simpleGET.hpp"
 #include <cstring>
 #include <curl/curl.h>
 #include <curl/easy.h>

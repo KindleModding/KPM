@@ -7,3 +7,4 @@ bool firmwareWithinRange(const std::string& current, const std::string& min, con
 
 ParsedPackageTarget parsePackageTarget(const std::string& target);
 std::vector<PackageInstallCandidate> getRecursiveDependencies(Database& database, const PackageVersion& target);
+bool installPackage(const std::string& packageFilePath);
