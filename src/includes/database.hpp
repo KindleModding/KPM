@@ -31,7 +31,7 @@ struct Package {
     std::string repository_id;
     std::string display_name;
     std::string description;
-    std::string screenshots;
+    uint screenshots;
 };
 
 struct PackageVersion {
@@ -60,7 +60,7 @@ struct InstalledPackage {
     std::string repository_id;
     std::string display_name;
     std::string description;
-    std::string screenshots;
+    uint screenshots;
     std::string version_name;
     uint version_number;
     std::string min_firmware;
@@ -74,7 +74,7 @@ struct PackageInstallCandidate {
     std::string repository_url;
     std::string display_name;
     std::string description;
-    std::string screenshots;
+    uint screenshots;
     uint version_number;
     std::string version_name;
     std::string architecture;

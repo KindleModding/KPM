@@ -261,10 +261,13 @@ int main(int argc, char* argv[]) {
         }
 
         Log::I("Installing %i packages.", packagesToInstall.size());
-        for (DownloadTarget packageDownload : downloadTargets) {
+        for (size_t i=0; i < packagesToInstall.size(); i++) {
             // Unpack our kpkg files
-            if (!installPackage(database, packageDownload.dest)) {
-                Log::E("Error installing %s - SKIPPING - YOU MAY HAVE BROKEN PACKAGES", packageDownload.dest.c_str());
+            if (!installPackage(database, downloadTargets[i].dest, {
+                    .id = packagesToInstall[i].repository_id,
+                    .url = packagesToInstall[i].repository_url
+                })) {
+                Log::E("Error installing %s - SKIPPING - YOU MAY HAVE BROKEN PACKAGES", downloadTargets[i].dest.c_str());
             }
         }
 

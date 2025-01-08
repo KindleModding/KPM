@@ -86,31 +86,31 @@ int Repositories::updateRepository(Database& db, const std::string& id) {
         packages++;
         Log::D("Package found: %s", package["id"].get<std::string>().c_str());
         db.AddPackage({
-            .id = package["id"].get<std::string>(),
+            .id = package["id"],
             .alias = package["alias"].is_null() ? "" : package["alias"].get<std::string>(),
             .repository_id = repo.id,
             .display_name = package["display_name"],
             .description = package["description"],
-            .screenshots = package["screenshots"].dump()
+            .screenshots = package["screenshots"]
         });
         for (nlohmann::json version : package["versions"]) {
             db.AddPackageVersion({
-                .package_id = package["id"].get<std::string>(),
+                .package_id = package["id"],
                 .repository_id = repo.id,
-                .version_name = version["version_name"].get<std::string>(),
-                .version_number = version["version_number"].get<uint>(),
+                .version_name = version["version_name"],
+                .version_number = version["version_number"],
                 .architecture = version["supported_arch"],
-                .min_firmware = version["min_firmware"].get<std::string>(),
-                .max_firmware = version["max_firmware"].get<std::string>()
+                .min_firmware = version["min_firmware"],
+                .max_firmware = version["max_firmware"]
             });
 
             for (std::string dependencyString : version["dependencies"]) {
                 ParsedPackageTarget parsedTarget = parsePackageTarget(dependencyString);
                 // Get the version number from the dependency info
                 db.AddPackageDependency({
-                    .dependent_package_id = package["id"].get<std::string>(),
+                    .dependent_package_id = package["id"],
                     .dependent_repository_id = repo.id,
-                    .dependent_version_number = version["version_number"].get<uint>(),
+                    .dependent_version_number = version["version_number"],
                     .dependent_architecture = version["supported_arch"],
                     .repository_id = parsedTarget.repository_id,
                     .package_name = parsedTarget.package_name,

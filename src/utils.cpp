@@ -6,6 +6,8 @@
 #include <filesystem>
 #include <fstream>
 #include <nlohmann/json.hpp>
+#include <sys/types.h>
+#include <unistd.h>
 #include <vector>
 #include <archive.h>
 #include <archive_entry.h>
@@ -161,7 +163,7 @@ std::vector<PackageInstallCandidate> getRecursiveDependencies(Database& database
     return dependencyInstallCandidates;
 }
 
-bool installPackage(Database& database, const std::filesystem::path& packageFilePath) {
+bool installPackage(Database& database, const std::filesystem::path& packageFilePath, const Repository& repository) {
     // Assume checks have been done beforehand and that the kpkg file exists in our cache
     Log::I("Installing %s", packageFilePath.c_str());
     std::string tmpPath = Flags::GetInstance()->kpm_dir + "/tmp/" + packageFilePath.filename().string();//"/tmp/kpm/" + packageFilePath.filename().string();
@@ -256,16 +258,44 @@ bool installPackage(Database& database, const std::filesystem::path& packageFile
     std::ifstream manifestFile((tmpPath + "/manifest.json").c_str());
     nlohmann::json manifest = nlohmann::json::parse(manifestFile);
     Log::I("Package: %s (%s)", manifest["id"].get<std::string>().c_str(), manifest["version_name"].get<std::string>().c_str());
-    std::filesystem::remove_all(Flags::GetInstance()->kpm_dir + "/packages/" + manifest["id"].get<std::string>());
-    std::filesystem::rename(tmpPath, Flags::GetInstance()->kpm_dir + "/packages/" + manifest["id"].get<std::string>());
+    std::string installPath = Flags::GetInstance()->kpm_dir + "/packages/" + manifest["id"].get<std::string>();
+    std::filesystem::remove_all(installPath);
+    std::filesystem::rename(tmpPath, installPath);
 
     Log::D("Running install actions");
+    if (std::filesystem::exists(installPath + "/install.sh")) {
+        int returnCode = system(("/bin/sh \"" + installPath + "/install.sh\"").c_str());
+        if (returnCode != 0) {
+            Log::E("An error occured whilst running install actions for %s", manifest["id"].get<std::string>().c_str());
+            std::filesystem::remove_all(installPath);
+            return false;
+        }
+    } else {
+        Log::D("No install actions to run for this package.");
+    }
 
     Log::D("Adding package to database");
-    /*database.InstallPackage({
+
+    uint screenshots = 0;
+    for (const std::filesystem::directory_entry& dir_entry : std::filesystem::directory_iterator(installPath + "/screenshots")) {
+        if (dir_entry.is_regular_file()) {
+            screenshots++;
+        }
+    }
+
+    database.InstallPackage({
         .package_id = manifest["id"],
-        .alias = manifest["alias"],
-        .repository_id
-    })*/
-    return false;
+        .alias = manifest["alias"].is_null() ? "" : manifest["alias"].get<std::string>(),
+        .repository_id = repository.id,
+        .repository_url = repository.url,
+        .display_name = manifest["display_name"],
+        .description = manifest["description"],
+        .screenshots = screenshots,
+        .version_number = manifest["version_number"],
+        .version_name = manifest["version_name"],
+        .architecture = manifest["supported_arch"],
+        .min_firmware = manifest["min_firmware"],
+        .max_firmware = manifest["max_firmware"]
+    });
+    return true;
 }

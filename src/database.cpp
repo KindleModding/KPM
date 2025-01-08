@@ -27,7 +27,7 @@ Database::Database(std::string path): db(path, SQLite::OPEN_READWRITE|SQLite::OP
                                             "repository_id TEXT REFERENCES repositories(id) ON DELETE CASCADE,"
                                             "display_name TEXT NOT NULL,"
                                             "description TEXT NOT NULL,"
-                                            "screenshots TEXT NOT NULL,"
+                                            "screenshots INTEGER NOT NULL,"
                                             "PRIMARY KEY(id, repository_id)"
                                             ") STRICT;");
     createPackageIndexTable.exec();
@@ -64,7 +64,7 @@ Database::Database(std::string path): db(path, SQLite::OPEN_READWRITE|SQLite::OP
                                             "repository_id TEXT NOT NULL,"
                                             "display_name TEXT NOT NULL,"
                                             "description TEXT NOT NULL,"
-                                            "screenshots TEXT NOT NULL,"
+                                            "screenshots INTEGER NOT NULL,"
                                             "version_name TEXT NOT NULL,"
                                             "version_number INTEGER NOT NULL,"
                                             "min_firmware TEXT NOT NULL,"
@@ -336,7 +336,7 @@ InstalledPackage Database::GetInstalledPackage(const std::string& package_id) {
             .repository_id = "",
             .display_name = "",
             .description = "",
-            .screenshots = "",
+            .screenshots = 0,
             .version_name = "",
             .version_number = 0,
             .min_firmware = "",
