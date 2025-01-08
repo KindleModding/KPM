@@ -80,7 +80,8 @@ elif (args.operator == "add_package"):
 
     print("* Checking version")
     versionIndex = -1
-    for version in repoManifest["packages"][packageIndex]["versions"]:
+    for i in range(len(repoManifest["packages"][packageIndex]["versions"])):
+        version = repoManifest["packages"][packageIndex]["versions"][i]
         if (version["version_name"] == packageManifest["version_name"] and version["version_number"] != packageManifest["version_number"]):
             print(f"ERR: Version name {version["version_name"]} is already defined with version number {version["version_number"]} (tried to add as {version["version_name"]})")
             exit(1)
@@ -91,6 +92,7 @@ elif (args.operator == "add_package"):
 
         if (version["version_name"] == packageManifest["version_name"] and version["version_number"] == packageManifest["version_number"]):
             print(f"WARN: Version {version["version_name"]} ({version["version_number"]}) already in repo - OVERWRITING")
+            versionIndex = i
 
     if (versionIndex == -1):
         repoManifest["packages"][packageIndex]["versions"].append({
@@ -101,13 +103,14 @@ elif (args.operator == "add_package"):
             "dependencies": packageManifest["dependencies"],
             "supported_arch": packageManifest["supported_arch"]
         })
+        versionIndex = len(repoManifest["packages"][packageIndex]["versions"]) - 1
     else:
-        repoManifest["packages"][packageIndex]["versions"]["version_name"] = packageManifest["version_name"]
-        repoManifest["packages"][packageIndex]["versions"]["version_number"] = packageManifest["version_number"]
-        repoManifest["packages"][packageIndex]["versions"]["min_firmware"] = packageManifest["min_firmware"]
-        repoManifest["packages"][packageIndex]["versions"]["max_firmware"] = packageManifest["max_firmware"]
-        repoManifest["packages"][packageIndex]["versions"]["dependencies"] = packageManifest["dependencies"]
-        repoManifest["packages"][packageIndex]["versions"]["supported_arch"] = packageManifest["supported_arch"]
+        repoManifest["packages"][packageIndex]["versions"][versionIndex]["version_name"] = packageManifest["version_name"]
+        repoManifest["packages"][packageIndex]["versions"][versionIndex]["version_number"] = packageManifest["version_number"]
+        repoManifest["packages"][packageIndex]["versions"][versionIndex]["min_firmware"] = packageManifest["min_firmware"]
+        repoManifest["packages"][packageIndex]["versions"][versionIndex]["max_firmware"] = packageManifest["max_firmware"]
+        repoManifest["packages"][packageIndex]["versions"][versionIndex]["dependencies"] = packageManifest["dependencies"]
+        repoManifest["packages"][packageIndex]["versions"][versionIndex]["supported_arch"] = packageManifest["supported_arch"]
     
     print("* Creating folder")
     os.makedirs(args.repopath.joinpath("packages").joinpath(packageManifest["id"]).joinpath(packageManifest["version_name"]), exist_ok=True)
