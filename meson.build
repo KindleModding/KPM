@@ -2,8 +2,9 @@ project('kpm', 'cpp', version : '1.0.0', license : 'GPL', default_options: ['cpp
 add_global_arguments('-DKPM_ARCH="' + meson.get_external_property('kpm_arch', host_machine.cpu_family()) + '"', language: 'cpp')
 
 curl_dep = dependency('libcurl')
-nlohmann_json_dep = dependency('nlohmann_json')
+nlohmann_json_dep = dependency('nlohmann_json', static: true)
 sqlitecpp_dep = dependency('sqlitecpp', static: true)
+libarchive_dep = dependency('libarchive', static: true)
 
 subdir('./stubs')
 subdir('./src')

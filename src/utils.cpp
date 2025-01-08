@@ -2,7 +2,13 @@
 #include "database.hpp"
 #include "flags.hpp"
 #include "log.hpp"
+#include <cstring>
+#include <filesystem>
+#include <fstream>
+#include <nlohmann/json.hpp>
 #include <vector>
+#include <archive.h>
+#include <archive_entry.h>
 
 bool compareSemverGTEQ(const std::string& a, const std::string& b) { // Will return true if a is greater than or equal to b
     std::vector<uint> semverComponentsA;
@@ -155,11 +161,111 @@ std::vector<PackageInstallCandidate> getRecursiveDependencies(Database& database
     return dependencyInstallCandidates;
 }
 
-bool installPackage(const std::string& packageFilePath) {
+bool installPackage(Database& database, const std::filesystem::path& packageFilePath) {
     // Assume checks have been done beforehand and that the kpkg file exists in our cache
     Log::I("Installing %s", packageFilePath.c_str());
+    std::string tmpPath = Flags::GetInstance()->kpm_dir + "/tmp/" + packageFilePath.filename().string();//"/tmp/kpm/" + packageFilePath.filename().string();
+    std::filesystem::remove_all(tmpPath);
+    std::filesystem::create_directories(tmpPath);
     
+
     Log::D("Unpacking %s", packageFilePath.c_str());
+    struct archive* a;
+    struct archive* ext;
+    struct archive_entry* entry;
+    int flags;
+    int r;
+
+    flags = ARCHIVE_EXTRACT_TIME;
+    flags |= ARCHIVE_EXTRACT_PERM;
+    flags |= ARCHIVE_EXTRACT_ACL;
+    flags |= ARCHIVE_EXTRACT_FFLAGS;
+
+    a = archive_read_new();
+    archive_read_support_format_all(a);
+    archive_read_support_filter_all(a);
+    ext = archive_write_disk_new();
+    archive_write_disk_set_options(ext, flags);
+    archive_write_disk_set_standard_lookup(ext);
+    if ((r = archive_read_open_filename(a, packageFilePath.c_str(), 10240))) {
+        return false;
+    }
+
+    while (true) {
+        r = archive_read_next_header(a, &entry);
+        if (r == ARCHIVE_EOF) {
+            break;
+        }
+
+        if (r < ARCHIVE_OK && r >= ARCHIVE_WARN) {
+            Log::W("Reading kpkg: %s", archive_error_string(a));
+        } else if (r < ARCHIVE_WARN) {
+            Log::E("Failed to read kpkg: %s", archive_error_string(a));
+            return false;
+        }
+
+        archive_entry_set_pathname(entry, (tmpPath + '/' + archive_entry_pathname(entry)).c_str());
+        r = archive_write_header(ext, entry);
+        if (r < ARCHIVE_OK && r >= ARCHIVE_WARN) {
+            Log::W("Reading kpkg: %s", archive_error_string(ext));
+        } else if (r < ARCHIVE_WARN) {
+            Log::E("Failed to read kpkg header: %s", archive_error_string(ext));
+            return false;
+        } else if (archive_entry_size(entry) > 0) {
+            // Copy archive data to location
+            while (true) {
+                const void* buff;
+                size_t size;
+                la_int64_t offset;
+                r = archive_read_data_block(a, &buff, &size, &offset);
+                if (r == ARCHIVE_EOF) {
+                    break;
+                }
+                if (r < ARCHIVE_OK && r >= ARCHIVE_WARN) {
+                    Log::W("Reading kpkg: %s", archive_error_string(a));
+                } else if (r < ARCHIVE_WARN) {
+                    Log::E("Failed to read kpkg data block: %s", archive_error_string(a));
+                    return false;
+                }
+
+                // Write the data
+                r = archive_write_data_block(ext, buff, size, offset);
+                if (r < ARCHIVE_OK) {
+                    Log::E("Failed to write kpkg data block: %s", archive_error_string(ext));
+                    return false;
+                }
+            }
+        }
+
+        r = archive_write_finish_entry(ext);
+        if (r < ARCHIVE_OK && r >= ARCHIVE_WARN) {
+            Log::W("Reading kpkg: %s", archive_error_string(ext));
+        } else if (r < ARCHIVE_WARN) {
+            Log::E("Failed to read kpkg: %s", archive_error_string(ext));
+            return false;
+        }
+    }
+
+    archive_read_close(a);
+    archive_read_free(a);
+    archive_write_close(ext);
+    archive_write_free(ext);
+
     
+    Log::D("Reading manifest.");
+    std::ifstream manifestFile((tmpPath + "/manifest.json").c_str());
+    nlohmann::json manifest = nlohmann::json::parse(manifestFile);
+    Log::I("Package: %s (%s)", manifest["id"].get<std::string>().c_str(), manifest["version_name"].get<std::string>().c_str());
+    std::filesystem::remove_all(Flags::GetInstance()->kpm_dir + "/packages/" + manifest["id"].get<std::string>());
+    std::filesystem::rename(tmpPath, Flags::GetInstance()->kpm_dir + "/packages/" + manifest["id"].get<std::string>());
+
+    Log::D("Running install actions");
+
+    Log::D("Adding package to database");
+    /*database.InstallPackage({
+        .package_id = manifest["id"],
+        .alias = manifest["alias"],
+        .repository_id
+    })*/
     return false;
 }

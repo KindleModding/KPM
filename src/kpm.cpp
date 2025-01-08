@@ -263,7 +263,7 @@ int main(int argc, char* argv[]) {
         Log::I("Installing %i packages.", packagesToInstall.size());
         for (DownloadTarget packageDownload : downloadTargets) {
             // Unpack our kpkg files
-            if (!installPackage(packageDownload.dest)) {
+            if (!installPackage(database, packageDownload.dest)) {
                 Log::E("Error installing %s - SKIPPING - YOU MAY HAVE BROKEN PACKAGES", packageDownload.dest.c_str());
             }
         }
