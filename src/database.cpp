@@ -60,7 +60,7 @@ Database::Database(std::string path): db(path, SQLite::OPEN_READWRITE|SQLite::OP
     createDependencyIndexTable.exec();
 
     SQLite::Statement createInstalledPackagesTable(db, "CREATE TABLE IF NOT EXISTS installed_packages ("
-                                            "package_id TEXT NOT NULL,"
+                                            "package_id TEXT NOT NULL PRIMARY KEY,"
                                             "repository_id TEXT NOT NULL,"
                                             "display_name TEXT NOT NULL,"
                                             "description TEXT NOT NULL,"
@@ -68,13 +68,12 @@ Database::Database(std::string path): db(path, SQLite::OPEN_READWRITE|SQLite::OP
                                             "version_name TEXT NOT NULL,"
                                             "version_number INTEGER NOT NULL,"
                                             "min_firmware TEXT NOT NULL,"
-                                            "max_firmware TEXT NOT NULL,"
-                                            "PRIMARY KEY(package_id, repository_id, version_number)"
+                                            "max_firmware TEXT NOT NULL"
                                             ") STRICT;");
     createInstalledPackagesTable.exec();
 
     SQLite::Statement createInstalledDependencyTable(db, "CREATE TABLE IF NOT EXISTS installed_package_dependencies ("
-                                            "dependent_package_id TEXT,"
+                                            "dependent_package_id TEXT PRIMARY KEY,"
                                             "dependent_repository_id TEXT,"
                                             "dependent_version_number INTEGER NOT NULL,"
                                             "dependent_architecture TEXT NOT NULL,"
@@ -82,8 +81,7 @@ Database::Database(std::string path): db(path, SQLite::OPEN_READWRITE|SQLite::OP
                                             "package_name TEXT NOT NULL,"
                                             "version_name TEXT NOT NULL,"
                                             "version_comparison_type INTEGER NOT NULL,"
-                                            "PRIMARY KEY(dependent_package_id, dependent_repository_id, dependent_version_number, dependent_architecture),"
-                                            "FOREIGN KEY (dependent_package_id, dependent_repository_id, dependent_version_number) REFERENCES installed_packages(package_id, repository_id, version_number) ON DELETE CASCADE"
+                                            "FOREIGN KEY (dependent_package_id) REFERENCES installed_packages(package_id) ON DELETE CASCADE"
                                             ") STRICT;");
     createInstalledDependencyTable.exec();
 }
