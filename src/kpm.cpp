@@ -141,6 +141,11 @@ int main(int argc, char* argv[]) {
             }
         }
     // Install a specific package
+    } else if (operation == "list-repos") {
+        std::vector<Repository> repositories = database.GetRepositories();
+        for (Repository repository : repositories) {
+            Log::I("%s (%s)", repository.id.c_str(), repository.url.c_str());
+        }
     } else if (operation == "install") {
         std::vector<PackageInstallCandidate> packagesToInstall;
 

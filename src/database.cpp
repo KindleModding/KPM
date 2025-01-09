@@ -2,7 +2,6 @@
 #include "SQLiteCpp/Database.h"
 #include "SQLiteCpp/Statement.h"
 #include "flags.hpp"
-#include "log.hpp"
 #include "utils.hpp"
 #include <cstring>
 #include <vector>
