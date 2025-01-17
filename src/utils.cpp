@@ -293,7 +293,7 @@ bool installPackage(Database& database, const std::filesystem::path& packageFile
         .screenshots = screenshots,
         .version_number = manifest["version_number"],
         .version_name = manifest["version_name"],
-        .architecture = manifest["supported_arch"],
+        .architecture = manifest["architecture"],
         .min_firmware = manifest["min_firmware"],
         .max_firmware = manifest["max_firmware"]
     });

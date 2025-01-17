@@ -36,7 +36,7 @@ print("Building Package:")
 print(f"id: [{buildData["id"]}]")
 print(f"name: [{buildData["display_name"]}]")
 print(f"version: [{buildData["version_name"]}]")
-print(f"arch: [{buildData["supported_arch"]}]")
+print(f"arch: [{buildData["architecture"]}]")
 
 if ("install" in buildData.keys()):
     if (not path.exists(path.join(packagePath, buildData["install"]))):
@@ -56,7 +56,7 @@ if ("mount" in buildData.keys()):
 print("\n\n")
 
 print("Writing package file")
-tar = tarfile.open(packagePath.parents[0].joinpath(buildData["id"] + '_' + buildData["version_name"] + '_' + buildData["supported_arch"] + '.kpkg'), 'x:gz')
+tar = tarfile.open(packagePath.parents[0].joinpath(buildData["id"] + '_' + buildData["version_name"] + '_' + buildData["architecture"] + '.kpkg'), 'x:gz')
 for item in os.listdir(packagePath):
     tar.add(path.abspath(path.join(packagePath, item)), arcname=item)
 tar.close()

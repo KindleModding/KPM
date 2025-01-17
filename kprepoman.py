@@ -101,7 +101,7 @@ elif (args.operator == "add_package"):
             "min_firmware": packageManifest["min_firmware"],
             "max_firmware": packageManifest["max_firmware"],
             "dependencies": packageManifest["dependencies"],
-            "supported_arch": packageManifest["supported_arch"]
+            "architecture": packageManifest["architecture"]
         })
         versionIndex = len(repoManifest["packages"][packageIndex]["versions"]) - 1
     else:
@@ -110,7 +110,7 @@ elif (args.operator == "add_package"):
         repoManifest["packages"][packageIndex]["versions"][versionIndex]["min_firmware"] = packageManifest["min_firmware"]
         repoManifest["packages"][packageIndex]["versions"][versionIndex]["max_firmware"] = packageManifest["max_firmware"]
         repoManifest["packages"][packageIndex]["versions"][versionIndex]["dependencies"] = packageManifest["dependencies"]
-        repoManifest["packages"][packageIndex]["versions"][versionIndex]["supported_arch"] = packageManifest["supported_arch"]
+        repoManifest["packages"][packageIndex]["versions"][versionIndex]["architecture"] = packageManifest["architecture"]
     
     print("* Creating folder")
     os.makedirs(args.repopath.joinpath("packages").joinpath(packageManifest["id"]).joinpath(packageManifest["version_name"]), exist_ok=True)
@@ -132,10 +132,10 @@ elif (args.operator == "add_package"):
 
     print("* Copying package")
     try:
-        os.remove(args.repopath.joinpath("packages").joinpath(packageManifest["id"]).joinpath(packageManifest["version_name"]).joinpath(f"{packageManifest["id"]}_{packageManifest["version_name"]}_{packageManifest["supported_arch"]}.kpkg"))
+        os.remove(args.repopath.joinpath("packages").joinpath(packageManifest["id"]).joinpath(packageManifest["version_name"]).joinpath(f"{packageManifest["id"]}_{packageManifest["version_name"]}_{packageManifest["architecture"]}.kpkg"))
     except:
         pass
-    shutil.copy(args.target, args.repopath.joinpath("packages").joinpath(packageManifest["id"]).joinpath(packageManifest["version_name"]).joinpath(f"{packageManifest["id"]}_{packageManifest["version_name"]}_{packageManifest["supported_arch"]}.kpkg"))
+    shutil.copy(args.target, args.repopath.joinpath("packages").joinpath(packageManifest["id"]).joinpath(packageManifest["version_name"]).joinpath(f"{packageManifest["id"]}_{packageManifest["version_name"]}_{packageManifest["architecture"]}.kpkg"))
 
     print("* Writing repo manifest")
     with open(args.repopath.joinpath("manifest.json"), 'w', encoding='utf-8') as file:

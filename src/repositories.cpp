@@ -99,7 +99,7 @@ int Repositories::updateRepository(Database& db, const std::string& id) {
                 .repository_id = repo.id,
                 .version_name = version["version_name"],
                 .version_number = version["version_number"],
-                .architecture = version["supported_arch"],
+                .architecture = version["architecture"],
                 .min_firmware = version["min_firmware"],
                 .max_firmware = version["max_firmware"]
             });
@@ -111,7 +111,7 @@ int Repositories::updateRepository(Database& db, const std::string& id) {
                     .dependent_package_id = package["id"],
                     .dependent_repository_id = repo.id,
                     .dependent_version_number = version["version_number"],
-                    .dependent_architecture = version["supported_arch"],
+                    .dependent_architecture = version["architecture"],
                     .repository_id = parsedTarget.repository_id,
                     .package_name = parsedTarget.package_name,
                     .version_name = parsedTarget.version_name,
