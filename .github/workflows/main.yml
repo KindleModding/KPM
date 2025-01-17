@@ -21,7 +21,8 @@ jobs:
     - name: "Setup kindle-sdk"
       run: |
           sudo apt-get install -y curl
-          sh ./kindle-sdk/gen-sdk.sh kindlepw2
+          cd ./kindle-sdk/
+          sh gen-sdk.sh kindlepw2
 
     - uses: actions/checkout@v4
       with:
@@ -51,7 +52,8 @@ jobs:
     - name: "Setup kindle-sdk"
       run: |
           sudo apt-get install -y curl
-          sh ./kindle-sdk/gen-sdk.sh kindlehf
+          cd ./kindle-sdk/
+          sh gen-sdk.sh kindlehf
 
     - uses: actions/checkout@v4
       with:
