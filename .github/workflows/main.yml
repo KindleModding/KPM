@@ -20,7 +20,7 @@ jobs:
         path: kindle-sdk
     - name: "Setup kindle-sdk"
       run: |
-          sudo apt-get install -y zlib1g-dev libarchive-dev nettle-dev curl
+          sudo apt-get install -y curl
           sh ./kindle-sdk/gen-sdk.sh kindlepw2
 
     - uses: actions/checkout@v4
@@ -50,7 +50,7 @@ jobs:
         path: kindle-sdk
     - name: "Setup kindle-sdk"
       run: |
-          sudo apt-get install -y zlib1g-dev libarchive-dev nettle-dev curl
+          sudo apt-get install -y curl
           sh ./kindle-sdk/gen-sdk.sh kindlehf
 
     - uses: actions/checkout@v4
