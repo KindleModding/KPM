@@ -8,6 +8,9 @@
 #include <fstream>
 #include <string>
 #include <filesystem>
+#include <sys/select.h>
+#include <sys/time.h>
+#include <unistd.h>
 
 MultiDownload::MultiDownload(std::vector<DownloadTarget> &targets) : targets(targets)
 {
@@ -156,18 +159,39 @@ bool MultiDownload::execute()
             return false;
         }
 
-        // Add a timeout using curl_multi_wait to prevent hanging
+        // Add a timeout to prevent hanging when waiting for activity
         if (stillAlive)
         {
-            CURLMcode mc;
-            int numfds;
+            fd_set fdread;
+            fd_set fdwrite;
+            fd_set fdexcep;
+            int maxfd = -1;
 
-            // Wait for activity with a reasonable timeout (100ms)
-            mc = curl_multi_wait(curlMultiHandle, NULL, 0, 100, &numfds);
+            FD_ZERO(&fdread);
+            FD_ZERO(&fdwrite);
+            FD_ZERO(&fdexcep);
+
+            // Get file descriptors from the multi handle
+            CURLMcode mc = curl_multi_fdset(curlMultiHandle, &fdread, &fdwrite, &fdexcep, &maxfd);
             if (mc != CURLM_OK)
             {
-                Log::E("curl_multi_wait() failed: %s", curl_multi_strerror(mc));
+                Log::E("curl_multi_fdset() failed: %s", curl_multi_strerror(mc));
                 return false;
+            }
+
+            struct timeval timeout;
+            timeout.tv_sec = 0;
+            timeout.tv_usec = 100000; // 100ms timeout
+
+            if (maxfd == -1)
+            {
+                // No file descriptors to wait for, just sleep a bit
+                usleep(100000); // Sleep for 100ms
+            }
+            else
+            {
+                // Wait for activity on the file descriptors
+                select(maxfd + 1, &fdread, &fdwrite, &fdexcep, &timeout);
             }
         }
     }
