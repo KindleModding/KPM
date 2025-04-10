@@ -98,7 +98,7 @@ ParsedPackageTarget parsePackageTarget(const std::string& target) {
     } else if (EQIndex - LTIndex == 1 && GTIndex == -1) { // <=
         packageNameEndIndex = LTIndex;
         versionNameStartIndex = EQIndex+1;
-        parsedTarget.version_comparison_type = VersionComparisonType::GTEQ;
+        parsedTarget.version_comparison_type = VersionComparisonType::LTEQ;
     }
 
     parsedTarget.package_name = target.substr(packageNameIndex, packageNameEndIndex - packageNameIndex);
