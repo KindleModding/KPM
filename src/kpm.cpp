@@ -3,7 +3,7 @@
 #include <curl/curl.h>
 #include <filesystem>
 #include <vector>
-
+#include <algorithm>
 #include "multiDownload.hpp"
 #include "repositories.hpp"
 #include "database.hpp"
