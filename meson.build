@@ -14,3 +14,4 @@ libarchive_dep = dependency('libarchive', static: true)
 
 subdir('./stubs')
 subdir('./src')
+subdir('./tests')

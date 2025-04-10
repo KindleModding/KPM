@@ -12,7 +12,8 @@
 8. [Repository Format](#repository-format)
 9. [Command Line Interface](#command-line-interface)
 10. [Development Workflow](#development-workflow)
-11. [TODO List](#todo-list)
+11. [Common Issues and Solutions](#common-issues-and-solutions)
+12. [TODO List](#todo-list)
 
 ## Project Overview
 
@@ -135,6 +136,18 @@ meson setup builddir
 meson compile -C builddir
 ```
 
+To build specific test targets:
+
+```bash
+# Build and run the database tests
+meson compile -C builddir database_test
+builddir/tests/database_test
+
+# Build and run the utils tests
+meson compile -C builddir utils_test
+builddir/tests/utils_test
+```
+
 ### Cross-compiling for Kindle PW2
 
 ```bash
@@ -151,7 +164,35 @@ meson compile -C builddir_kindlehf
 
 ## Testing
 
-KPM includes tools for testing package management operations:
+KPM includes automated tests using the Catch2 framework and tools for testing package management operations:
+
+### Running Tests
+
+To build and run all tests:
+
+```bash
+meson test -C builddir
+```
+
+To run specific test cases:
+
+```bash
+# Run database tests
+builddir/tests/database_test
+
+# Run utils tests
+builddir/tests/utils_test
+```
+
+### Test Dependencies
+
+The test suite requires several dependencies that are handled automatically by the build system:
+
+- Catch2: A modern C++ testing framework
+- SQLite: For database tests
+- lab126utils: Stubbed library for Kindle-specific functions (in stubs/ directory)
+
+If you encounter linking issues with the tests, make sure the tests/meson.build file includes all necessary dependencies and source files.
 
 ### Creating a Test Package
 
@@ -369,6 +410,39 @@ kpm [flags] <operation> [targets]
 - Use C++17 features where appropriate
 - Add comments for complex logic
 - Update relevant documentation when adding new features
+
+## Common Issues and Solutions
+
+### Build and Compilation Issues
+
+1. **Missing Dependency Errors**:
+   - Ensure all required libraries are installed
+   - Check that meson.build files correctly specify dependencies and source files
+   - Example: For utils_test, make sure multiDownload.cpp is included in the build
+
+2. **Linking Errors with Tests**:
+   - If you see undefined symbols in tests, check that all necessary implementation files are included
+   - The tests/meson.build file should include references to all necessary source files
+
+3. **Package Target Parsing**:
+   - The parsePackageTarget() function in utils.cpp handles various formats including:
+     - Regular package IDs: `com.example.package`
+     - Package with repository: `repo.id/com.example.package` 
+     - Package with version using @ symbol: `com.example.package@1.0`
+     - Package with version operators: `com.example.package@>=1.0`
+
+### Development Troubleshooting
+
+1. **Running on Different Architectures**:
+   - Always use `--force_architecture` and `--force_firmware` when testing on non-Kindle devices
+   
+2. **Debug Output**:
+   - Use the `-v` flag to enable verbose logging
+   - The logging levels in log.hpp can be adjusted for more detailed output
+
+3. **Database Issues**:
+   - Database files are stored in the KPM directory (`--kpm_dir`)
+   - For a fresh start, remove the database file and let KPM recreate it
 
 ## TODO List
 
