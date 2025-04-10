@@ -65,3 +65,31 @@ jobs:
       with:
         name: kpm-kindlehf
         path: builddir_kindlehf
+
+  run-tests:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y meson libcurl4-openssl-dev libarchive-dev zlib1g-dev libsqlite3-dev
+    
+    - name: Build and run tests
+      run: |
+        meson setup builddir
+        meson compile -C builddir
+        meson compile -C builddir database_test
+        meson compile -C builddir utils_test
+        meson test -C builddir -v
+        
+    - name: Upload test logs on failure
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-logs
+        path: builddir/meson-logs/testlog.txt
