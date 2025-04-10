@@ -10,86 +10,86 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Download toolchain
-      run: wget -q https://github.com/KindleModding/koxtoolchain/releases/latest/download/kindlepw2.tar.gz -O - | tar -xzf - -C ~
-    
-    - uses: actions/checkout@v4
-      with:
-        repository: KindleModding/kindle-sdk
-        submodules: recursive
-        path: kindle-sdk
-    - name: "Setup kindle-sdk"
-      run: |
+      - name: Download toolchain
+        run: wget -q https://github.com/KindleModding/koxtoolchain/releases/latest/download/kindlepw2.tar.gz -O - | tar -xzf - -C ~
+
+      - uses: actions/checkout@v4
+        with:
+          repository: KindleModding/kindle-sdk
+          submodules: recursive
+          path: kindle-sdk
+      - name: "Setup kindle-sdk"
+        run: |
           sudo apt-get install -y zlib1g-dev libarchive-dev nettle-dev curl
           sh ./kindle-sdk/gen-sdk.sh kindlepw2
 
-    - uses: actions/checkout@v4
-      with:
-        submodules: recursive
-    - name: build
-      run: |
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: build
+        run: |
           sudo apt-get install meson
           meson setup --cross-file ~/x-tools/arm-kindlepw2-linux-gnueabi/meson-crosscompile.txt builddir_kindlepw2
           meson compile -C builddir_kindlepw2
-    - uses: actions/upload-artifact@v4
-      with:
-        name: kpm-kindlepw2
-        path: builddir_kindlepw2
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kpm-kindlepw2
+          path: builddir_kindlepw2
 
   build-kindlehf:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Download toolchain
-      run: wget -q https://github.com/KindleModding/koxtoolchain/releases/latest/download/kindlehf.tar.gz -O - | tar -xzf - -C ~
-    
-    - uses: actions/checkout@v4
-      with:
-        repository: KindleModding/kindle-sdk
-        submodules: recursive
-        path: kindle-sdk
-    - name: "Setup kindle-sdk"
-      run: |
+      - name: Download toolchain
+        run: wget -q https://github.com/KindleModding/koxtoolchain/releases/latest/download/kindlehf.tar.gz -O - | tar -xzf - -C ~
+
+      - uses: actions/checkout@v4
+        with:
+          repository: KindleModding/kindle-sdk
+          submodules: recursive
+          path: kindle-sdk
+      - name: "Setup kindle-sdk"
+        run: |
           sudo apt-get install -y zlib1g-dev libarchive-dev nettle-dev curl
           sh ./kindle-sdk/gen-sdk.sh kindlehf
 
-    - uses: actions/checkout@v4
-      with:
-        submodules: recursive
-    - name: build
-      run: |
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: build
+        run: |
           sudo apt-get install meson
           meson setup --cross-file ~/x-tools/arm-kindlehf-linux-gnueabihf/meson-crosscompile.txt builddir_kindlehf
           meson compile -C builddir_kindlehf
-    - uses: actions/upload-artifact@v4
-      with:
-        name: kpm-kindlehf
-        path: builddir_kindlehf
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kpm-kindlehf
+          path: builddir_kindlehf
 
   run-tests:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: recursive
-    
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y meson libcurl4-openssl-dev libarchive-dev zlib1g-dev libsqlite3-dev
-    
-    - name: Build and run tests
-      run: |
-        meson setup builddir
-        meson compile -C builddir
-        meson compile -C builddir database_test
-        meson compile -C builddir utils_test
-        meson test -C builddir -v
-        
-    - name: Upload test logs on failure
-      if: failure()
-      uses: actions/upload-artifact@v4
-      with:
-        name: test-logs
-        path: builddir/meson-logs/testlog.txt
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y meson libcurl4-openssl-dev libarchive-dev zlib1g-dev libsqlite3-dev
+
+      - name: Build and run tests
+        run: |
+          meson setup builddir
+          meson compile -C builddir
+          meson compile -C builddir database_test
+          meson compile -C builddir utils_test
+          meson test -C builddir -v
+
+      - name: Upload test logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs
+          path: builddir/meson-logs/testlog.txt
