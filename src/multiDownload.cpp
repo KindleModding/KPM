@@ -1,5 +1,4 @@
 #include "multiDownload.hpp"
-#include "includes/curl_compat.h"
 #include "log.hpp"
 #include <cstddef>
 #include <cstring>
