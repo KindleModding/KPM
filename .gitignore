@@ -31,8 +31,68 @@
 *.out
 *.app
 
+# Build directories
 builddir/
+builddir_kindlepw2/
+builddir_kindlehf/
+
+# Subproject directories
 subprojects/*/
+
+# Test and build files
 kindlehf.txt
 kindlepw2.txt
 example_repo/
+test_repo/
+*.kpkg
+
+# KPM runtime directories
+**/kpm_folder/
+**/kpm_cache/
+
+# macOS specific
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+Icon?
+
+# VSCode
+.vscode/
+
+# JetBrains IDEs
+.idea/
+*.iml
+*.iws
+*.ipr
+cmake-build-*/
+
+# Temporary files
+*.swp
+*.swo
+*~
+\#*\#
+.#*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
