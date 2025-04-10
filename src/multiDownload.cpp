@@ -34,6 +34,10 @@ void MultiDownload::addTransfer(DownloadTarget &downloadTarget)
     catch (const std::filesystem::filesystem_error &e)
     {
         Log::E("Failed to create directory for download: %s", e.what());
+        errors.push_back({.url = downloadTarget.url,
+                          .error = std::string("Failed to create directory: ") + e.what(),
+                          .http_code = 0});
+        return;
     }
 
     // Create a file for writing
@@ -70,6 +74,13 @@ void MultiDownload::addTransfer(DownloadTarget &downloadTarget)
 bool MultiDownload::execute()
 {
     int stillAlive = 1;
+
+    // If we already have errors from addTransfer, don't proceed with the download
+    if (!errors.empty())
+    {
+        return false;
+    }
+
     errors.clear();
 
     while (completed < targets.size() && stillAlive)
