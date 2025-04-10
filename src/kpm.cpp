@@ -598,7 +598,7 @@ int main(int argc, char *argv[])
         {
             // Skip if we're not upgrading all and this package isn't explicitly requested
             if (!upgradeAll &&
-                std::find(packagesToUpgrade.begin(), packagesToUpgrade.end(), installedPkg.package_id) == packagesToUpgrade.end())
+                std::find(packagesToUpgrade.begin(), packagesToUpgrade.end(), std::string(installedPkg.package_id)) == packagesToUpgrade.end())
             {
                 continue;
             }
@@ -826,7 +826,7 @@ int main(int argc, char *argv[])
         Log::I("Upgrade complete: %d of %zu packages successfully upgraded.",
                successCount, packagesNeedingUpgrade.size());
 
-        if (successCount < packagesNeedingUpgrade.size())
+        if (successCount < static_cast<int>(packagesNeedingUpgrade.size()))
         {
             Log::W("Some packages could not be upgraded.");
             return 1;
