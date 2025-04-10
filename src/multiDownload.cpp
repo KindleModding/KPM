@@ -69,7 +69,7 @@ bool MultiDownload::execute()
     int stillAlive = 1;
     errors.clear();
 
-    while (completed < targets.size())
+    while (completed < targets.size() && stillAlive)
     {
         curl_multi_perform(this->curlMultiHandle, &stillAlive);
 
@@ -154,6 +154,21 @@ bool MultiDownload::execute()
         if (!errors.empty() && completed >= targets.size())
         {
             return false;
+        }
+
+        // Add a timeout using curl_multi_wait to prevent hanging
+        if (stillAlive)
+        {
+            CURLMcode mc;
+            int numfds;
+
+            // Wait for activity with a reasonable timeout (100ms)
+            mc = curl_multi_wait(curlMultiHandle, NULL, 0, 100, &numfds);
+            if (mc != CURLM_OK)
+            {
+                Log::E("curl_multi_wait() failed: %s", curl_multi_strerror(mc));
+                return false;
+            }
         }
     }
 
