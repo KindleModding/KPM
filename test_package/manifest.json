@@ -1,0 +1,13 @@
+{
+  "id": "com.test.helloworld",
+  "display_name": "Hello World",
+  "alias": "helloworld",
+  "description": "A simple test package for KPM",
+  "version_name": "1.0",
+  "version_number": 100,
+  "min_firmware": "5.0.0",
+  "max_firmware": "",
+  "architecture": "kindlepw2",
+  "dependencies": [],
+  "install": "install.sh"
+}
