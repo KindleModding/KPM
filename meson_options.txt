@@ -1,0 +1,1 @@
+option('curl_compat', type: 'boolean', value: false, description: 'Add compatibility layer for older libcurl versions')
