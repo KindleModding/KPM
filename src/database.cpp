@@ -6,92 +6,95 @@
 #include <cstring>
 #include <vector>
 
-Database::Database(std::string path): db(path, SQLite::OPEN_READWRITE|SQLite::OPEN_CREATE) {
+Database::Database(std::string path) : db(path, SQLite::OPEN_READWRITE | SQLite::OPEN_CREATE)
+{
     /**
      * @brief Initialises the database object and creates the database file with the required tables as needed
-     * 
+     *
      */
     SQLite::Statement setup(db, "PRAGMA foreign_keys = ON;");
     setup.exec();
 
     SQLite::Statement createReposTable(db, "CREATE TABLE IF NOT EXISTS repositories ("
-                                            "id TEXT NOT NULL PRIMARY KEY,"
-                                            "url TEXT NOT NULL"
-                                            ") STRICT;");
+                                           "id TEXT NOT NULL PRIMARY KEY,"
+                                           "url TEXT NOT NULL"
+                                           ") STRICT;");
     createReposTable.exec();
 
     SQLite::Statement createPackageIndexTable(db, "CREATE TABLE IF NOT EXISTS package_index ("
-                                            "id TEXT NOT NULL,"
-                                            "alias TEXT NOT NULL,"
-                                            "repository_id TEXT REFERENCES repositories(id) ON DELETE CASCADE,"
-                                            "display_name TEXT NOT NULL,"
-                                            "description TEXT NOT NULL,"
-                                            "screenshots INTEGER NOT NULL,"
-                                            "PRIMARY KEY(id, repository_id)"
-                                            ") STRICT;");
+                                                  "id TEXT NOT NULL,"
+                                                  "alias TEXT NOT NULL,"
+                                                  "repository_id TEXT REFERENCES repositories(id) ON DELETE CASCADE,"
+                                                  "display_name TEXT NOT NULL,"
+                                                  "description TEXT NOT NULL,"
+                                                  "screenshots INTEGER NOT NULL,"
+                                                  "PRIMARY KEY(id, repository_id)"
+                                                  ") STRICT;");
     createPackageIndexTable.exec();
 
     SQLite::Statement createVersionIndexTable(db, "CREATE TABLE IF NOT EXISTS version_index ("
-                                            "package_id TEXT,"
-                                            "repository_id TEXT,"
-                                            "version_name TEXT NOT NULL,"
-                                            "version_number INTEGER NOT NULL,"
-                                            "architecture TEXT NOT NULL,"
-                                            "min_firmware TEXT NOT NULL,"
-                                            "max_firmware TEXT NOT NULL,"
-                                            "PRIMARY KEY(package_id, repository_id, version_number, architecture),"
-                                            "FOREIGN KEY (package_id, repository_id) REFERENCES package_index(id, repository_id) ON DELETE CASCADE"
-                                            ") STRICT;");
+                                                  "package_id TEXT,"
+                                                  "repository_id TEXT,"
+                                                  "version_name TEXT NOT NULL,"
+                                                  "version_number INTEGER NOT NULL,"
+                                                  "architecture TEXT NOT NULL,"
+                                                  "min_firmware TEXT NOT NULL,"
+                                                  "max_firmware TEXT NOT NULL,"
+                                                  "PRIMARY KEY(package_id, repository_id, version_number, architecture),"
+                                                  "FOREIGN KEY (package_id, repository_id) REFERENCES package_index(id, repository_id) ON DELETE CASCADE"
+                                                  ") STRICT;");
     createVersionIndexTable.exec();
 
     SQLite::Statement createDependencyIndexTable(db, "CREATE TABLE IF NOT EXISTS dependency_index ("
-                                            "dependent_package_id TEXT,"
-                                            "dependent_repository_id TEXT,"
-                                            "dependent_version_number INTEGER NOT NULL,"
-                                            "dependent_architecture TEXT NOT NULL,"
-                                            "repository_id TEXT NOT NULL,"
-                                            "package_name TEXT NOT NULL,"
-                                            "version_name TEXT NOT NULL,"
-                                            "version_comparison_type INTEGER NOT NULL,"
-                                            "PRIMARY KEY(dependent_package_id, dependent_repository_id, dependent_version_number, dependent_architecture),"
-                                            "FOREIGN KEY (dependent_package_id, dependent_repository_id, dependent_version_number, dependent_architecture) REFERENCES version_index(package_id, repository_id, version_number, architecture) ON DELETE CASCADE"
-                                            ") STRICT;");
+                                                     "dependent_package_id TEXT,"
+                                                     "dependent_repository_id TEXT,"
+                                                     "dependent_version_number INTEGER NOT NULL,"
+                                                     "dependent_architecture TEXT NOT NULL,"
+                                                     "repository_id TEXT NOT NULL,"
+                                                     "package_name TEXT NOT NULL,"
+                                                     "version_name TEXT NOT NULL,"
+                                                     "version_comparison_type INTEGER NOT NULL,"
+                                                     "PRIMARY KEY(dependent_package_id, dependent_repository_id, dependent_version_number, dependent_architecture),"
+                                                     "FOREIGN KEY (dependent_package_id, dependent_repository_id, dependent_version_number, dependent_architecture) REFERENCES version_index(package_id, repository_id, version_number, architecture) ON DELETE CASCADE"
+                                                     ") STRICT;");
     createDependencyIndexTable.exec();
 
     SQLite::Statement createInstalledPackagesTable(db, "CREATE TABLE IF NOT EXISTS installed_packages ("
-                                            "package_id TEXT NOT NULL PRIMARY KEY,"
-                                            "repository_id TEXT NOT NULL,"
-                                            "display_name TEXT NOT NULL,"
-                                            "description TEXT NOT NULL,"
-                                            "screenshots INTEGER NOT NULL,"
-                                            "version_name TEXT NOT NULL,"
-                                            "version_number INTEGER NOT NULL,"
-                                            "min_firmware TEXT NOT NULL,"
-                                            "max_firmware TEXT NOT NULL"
-                                            ") STRICT;");
+                                                       "package_id TEXT NOT NULL PRIMARY KEY,"
+                                                       "repository_id TEXT NOT NULL,"
+                                                       "display_name TEXT NOT NULL,"
+                                                       "description TEXT NOT NULL,"
+                                                       "screenshots INTEGER NOT NULL,"
+                                                       "version_name TEXT NOT NULL,"
+                                                       "version_number INTEGER NOT NULL,"
+                                                       "min_firmware TEXT NOT NULL,"
+                                                       "max_firmware TEXT NOT NULL"
+                                                       ") STRICT;");
     createInstalledPackagesTable.exec();
 
     SQLite::Statement createInstalledDependencyTable(db, "CREATE TABLE IF NOT EXISTS installed_package_dependencies ("
-                                            "dependent_package_id TEXT PRIMARY KEY,"
-                                            "dependent_repository_id TEXT,"
-                                            "dependent_version_number INTEGER NOT NULL,"
-                                            "dependent_architecture TEXT NOT NULL,"
-                                            "repository_id TEXT NOT NULL,"
-                                            "package_name TEXT NOT NULL,"
-                                            "version_name TEXT NOT NULL,"
-                                            "version_comparison_type INTEGER NOT NULL,"
-                                            "FOREIGN KEY (dependent_package_id) REFERENCES installed_packages(package_id) ON DELETE CASCADE"
-                                            ") STRICT;");
+                                                         "dependent_package_id TEXT PRIMARY KEY,"
+                                                         "dependent_repository_id TEXT,"
+                                                         "dependent_version_number INTEGER NOT NULL,"
+                                                         "dependent_architecture TEXT NOT NULL,"
+                                                         "repository_id TEXT NOT NULL,"
+                                                         "package_name TEXT NOT NULL,"
+                                                         "version_name TEXT NOT NULL,"
+                                                         "version_comparison_type INTEGER NOT NULL,"
+                                                         "FOREIGN KEY (dependent_package_id) REFERENCES installed_packages(package_id) ON DELETE CASCADE"
+                                                         ") STRICT;");
     createInstalledDependencyTable.exec();
 }
 
-void Database::Begin() {
+void Database::Begin()
+{
     /**
      * @brief Begin a transaction on the database
-     * 
+     *
      */
 
-    if (isTransaction) {
+    if (isTransaction)
+    {
         return;
     }
 
@@ -99,66 +102,74 @@ void Database::Begin() {
     isTransaction = true;
 }
 
-void Database::End(bool rollback) {
+void Database::End(bool rollback)
+{
     /**
      * @brief End a transaction on the database, rolling back if applicable
-     * 
+     *
      */
-    if (!isTransaction) {
+    if (!isTransaction)
+    {
         return;
     }
 
-    if (rollback) {
+    if (rollback)
+    {
         db.exec("ROLLBACK");
-    } else {
+    }
+    else
+    {
         db.exec("COMMIT");
     }
     isTransaction = false;
 }
 
-std::vector<Repository> Database::GetRepositories() {
+std::vector<Repository> Database::GetRepositories()
+{
     /**
      * @brief Return a list of Repository objects from the repository list on the database
-     * 
+     *
      */
     SQLite::Statement query(db, "SELECT * FROM repositories;");
     std::vector<Repository> repositories;
-    while (query.executeStep()) {
-        repositories.push_back({
-            .id = query.getColumn("id"),
-            .url = query.getColumn("url")
-        });
+    while (query.executeStep())
+    {
+        repositories.push_back({.id = query.getColumn("id"),
+                                .url = query.getColumn("url")});
     }
 
     return repositories;
 }
 
-Repository Database::GetRepository(const std::string& id) {
+Repository Database::GetRepository(const std::string &id)
+{
     /**
      * @brief Get a single repository from its ID
-     * 
+     *
      */
     SQLite::Statement query(db, "SELECT * FROM repositories WHERE id=? LIMIT 1;");
     query.bind(1, id);
     const bool hasResult = query.executeStep();
 
-    if (hasResult) {
+    if (hasResult)
+    {
         return {
             .id = query.getColumn("id"),
-            .url = query.getColumn("url")
-        };
-    } else {
+            .url = query.getColumn("url")};
+    }
+    else
+    {
         return {
             .id = "",
-            .url = ""
-        };
+            .url = ""};
     }
 }
 
-int Database::AddRepository(Repository repository) {
+int Database::AddRepository(Repository repository)
+{
     /**
      * @brief Insert a single repository into the repositories table
-     * 
+     *
      */
     SQLite::Statement query(db, "INSERT INTO repositories (id, url) VALUES (?, ?);");
     query.bind(1, repository.id);
@@ -166,27 +177,30 @@ int Database::AddRepository(Repository repository) {
     return query.exec();
 }
 
-int Database::DeleteRepository(const std::string& id) {
+int Database::DeleteRepository(const std::string &id)
+{
     /**
      * @brief Remove a single repository from the repositories repo by its ID
-     * 
+     *
      */
     SQLite::Statement query(db, "DELETE FROM repositories WHERE id=?;");
     query.bind(1, id);
     return query.exec();
 }
 
-int Database::DeleteRepositoryPackages(const std::string& id) {
+int Database::DeleteRepositoryPackages(const std::string &id)
+{
     /**
      * @brief Clear all packages in the package_index of a certain repository by its id (cascades to other tables)
-     * 
+     *
      */
     SQLite::Statement query(db, "DELETE FROM package_index WHERE repository_id=?;");
     query.bind(1, id);
     return query.exec();
 }
 
-void Database::AddPackage(const Package& package) {
+void Database::AddPackage(const Package &package)
+{
     SQLite::Statement query(db, "INSERT INTO package_index (id, alias, repository_id, display_name, description, screenshots) VALUES (?, ?, ?, ?, ?, ?);");
     query.bind(1, package.id);
     query.bind(2, package.alias);
@@ -197,7 +211,8 @@ void Database::AddPackage(const Package& package) {
     query.exec();
 }
 
-void Database::AddPackageVersion(const PackageVersion& packageVersion) {
+void Database::AddPackageVersion(const PackageVersion &packageVersion)
+{
     SQLite::Statement query(db, "INSERT INTO version_index (package_id, repository_id, version_name, version_number, architecture, min_firmware, max_firmware) VALUES (?, ?, ?, ?, ?, ?, ?)");
     query.bind(1, packageVersion.package_id);
     query.bind(2, packageVersion.repository_id);
@@ -209,7 +224,8 @@ void Database::AddPackageVersion(const PackageVersion& packageVersion) {
     query.exec();
 }
 
-void Database::AddPackageDependency(const PackageDependency& packageDependency) {
+void Database::AddPackageDependency(const PackageDependency &packageDependency)
+{
     SQLite::Statement query(db, "INSERT INTO dependency_index VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
     query.bind(1, packageDependency.dependent_package_id);
     query.bind(2, packageDependency.dependent_repository_id);
@@ -222,32 +238,36 @@ void Database::AddPackageDependency(const PackageDependency& packageDependency) 
     query.exec();
 }
 
-std::vector<PackageInstallCandidate> Database::FindInstallationCandidates(const ParsedPackageTarget& parsedTarget) {
+std::vector<PackageInstallCandidate> Database::FindInstallationCandidates(const ParsedPackageTarget &parsedTarget)
+{
     std::string queryString = "SELECT package_index.*, version_index.*, repositories.url repository_url FROM package_index JOIN repositories ON repositories.id=package_index.repository_id JOIN version_index ON version_index.package_id=package_index.id WHERE package_index.id=?1 OR package_index.alias=?1 AND version_index.architecture=?2";
-    if (parsedTarget.repository_id.length() != 0) {
+    if (parsedTarget.repository_id.length() != 0)
+    {
         queryString += " AND package_index.repository_id=?3";
     }
 
-    if (parsedTarget.version_comparison_type != VersionComparisonType::NONE) {
+    if (parsedTarget.version_comparison_type != VersionComparisonType::NONE)
+    {
         queryString += " AND version_index.version_number ";
-        switch (parsedTarget.version_comparison_type) {
-            case VersionComparisonType::EQ:
-                queryString += '=';
-                break;
-            case VersionComparisonType::GT:
-                queryString += '>';
-                break;
-            case VersionComparisonType::LT:
-                queryString += '<';
-                break;
-            case VersionComparisonType::GTEQ:
-                queryString += ">=";
-                break;
-            case VersionComparisonType::LTEQ:
-                queryString += "<=";
-                break;
-            default:
-                break;
+        switch (parsedTarget.version_comparison_type)
+        {
+        case VersionComparisonType::EQ:
+            queryString += '=';
+            break;
+        case VersionComparisonType::GT:
+            queryString += '>';
+            break;
+        case VersionComparisonType::LT:
+            queryString += '<';
+            break;
+        case VersionComparisonType::GTEQ:
+            queryString += ">=";
+            break;
+        case VersionComparisonType::LTEQ:
+            queryString += "<=";
+            break;
+        default:
+            break;
         }
         queryString += " (SELECT version_number FROM version_index search_version_index WHERE search_version_index.package_id=version_index.package_id AND search_version_index.repository_id=version_index.repository_id AND search_version_index.version_name=?4 LIMIT 1)";
     }
@@ -255,38 +275,41 @@ std::vector<PackageInstallCandidate> Database::FindInstallationCandidates(const 
     SQLite::Statement query(db, queryString + "ORDER BY version_index.version_number DESC");
     query.bind(1, parsedTarget.package_name);
     query.bind(2, Flags::GetInstance()->architecture);
-    if (parsedTarget.repository_id.length() != 0) {
+    if (parsedTarget.repository_id.length() != 0)
+    {
         query.bind(3, parsedTarget.repository_id);
     }
 
-    if (parsedTarget.version_comparison_type != VersionComparisonType::NONE) {
+    if (parsedTarget.version_comparison_type != VersionComparisonType::NONE)
+    {
         query.bind(4, parsedTarget.version_name);
     }
 
     std::vector<PackageInstallCandidate> candidates;
-    while (query.executeStep()) {
-        if (firmwareWithinRange(Flags::GetInstance()->firmware_version, query.getColumn("min_firmware").getString(), query.getColumn("max_firmware").getString())) {
-            candidates.push_back({
-                .package_id = query.getColumn("package_id"),
-                .alias = query.getColumn("alias"),
-                .repository_id = query.getColumn("repository_id"),
-                .repository_url = query.getColumn("repository_url"),
-                .display_name = query.getColumn("display_name"),
-                .description = query.getColumn("description"),
-                .screenshots = query.getColumn("screenshots"),
-                .version_number = query.getColumn("version_number"),
-                .version_name = query.getColumn("version_name"),
-                .architecture = query.getColumn("architecture"),
-                .min_firmware = query.getColumn("min_firmware"),
-                .max_firmware = query.getColumn("max_firmware")
-            });
+    while (query.executeStep())
+    {
+        if (firmwareWithinRange(Flags::GetInstance()->firmware_version, query.getColumn("min_firmware").getString(), query.getColumn("max_firmware").getString()))
+        {
+            candidates.push_back({.package_id = query.getColumn("package_id"),
+                                  .alias = query.getColumn("alias"),
+                                  .repository_id = query.getColumn("repository_id"),
+                                  .repository_url = query.getColumn("repository_url"),
+                                  .display_name = query.getColumn("display_name"),
+                                  .description = query.getColumn("description"),
+                                  .screenshots = query.getColumn("screenshots"),
+                                  .version_number = query.getColumn("version_number"),
+                                  .version_name = query.getColumn("version_name"),
+                                  .architecture = query.getColumn("architecture"),
+                                  .min_firmware = query.getColumn("min_firmware"),
+                                  .max_firmware = query.getColumn("max_firmware")});
         }
     }
 
     return candidates;
 }
 
-std::vector<PackageDependency> Database::GetPackageDependencies(const PackageVersion& packageVersion) {
+std::vector<PackageDependency> Database::GetPackageDependencies(const PackageVersion &packageVersion)
+{
     SQLite::Statement query(db, "SELECT * FROM dependency_index WHERE dependent_package_id=? AND dependent_repository_id=? AND dependent_version_number=? AND dependent_architecture=?;");
     query.bind(1, packageVersion.package_id);
     query.bind(2, packageVersion.repository_id);
@@ -294,28 +317,29 @@ std::vector<PackageDependency> Database::GetPackageDependencies(const PackageVer
     query.bind(4, packageVersion.architecture);
 
     std::vector<PackageDependency> dependencies;
-    while (query.executeStep()) {
-        dependencies.push_back({
-            .dependent_package_id = query.getColumn("dependent_package_id"),
-            .dependent_repository_id = query.getColumn("dependent_repository_id"),
-            .dependent_version_number = query.getColumn("dependent_version_number"),
-            .dependent_architecture = query.getColumn("dependent_architecture"),
-            .repository_id = query.getColumn("repository_id"),
-            .package_name = query.getColumn("package_name"),
-            .version_name = query.getColumn("version_name"),
-            .version_comparison_type = static_cast<VersionComparisonType>(query.getColumn("version_comparison_type").getInt())
-        });
+    while (query.executeStep())
+    {
+        dependencies.push_back({.dependent_package_id = query.getColumn("dependent_package_id"),
+                                .dependent_repository_id = query.getColumn("dependent_repository_id"),
+                                .dependent_version_number = query.getColumn("dependent_version_number"),
+                                .dependent_architecture = query.getColumn("dependent_architecture"),
+                                .repository_id = query.getColumn("repository_id"),
+                                .package_name = query.getColumn("package_name"),
+                                .version_name = query.getColumn("version_name"),
+                                .version_comparison_type = static_cast<VersionComparisonType>(query.getColumn("version_comparison_type").getInt())});
     }
 
     return dependencies;
 }
 
-InstalledPackage Database::GetInstalledPackage(const std::string& package_id) {
+InstalledPackage Database::GetInstalledPackage(const std::string &package_id)
+{
     SQLite::Statement query(db, "SELECT * FROM installed_packages WHERE package_id=? LIMIT 1;");
     query.bind(1, package_id);
     const bool hasResult = query.executeStep();
 
-    if (hasResult) {
+    if (hasResult)
+    {
         return {
             .package_id = query.getColumn("package_id"),
             .repository_id = query.getColumn("repository_id"),
@@ -325,9 +349,10 @@ InstalledPackage Database::GetInstalledPackage(const std::string& package_id) {
             .version_name = query.getColumn("version_name"),
             .version_number = query.getColumn("version_number"),
             .min_firmware = query.getColumn("min_firmware"),
-            .max_firmware = query.getColumn("max_firmware")
-        };
-    } else {
+            .max_firmware = query.getColumn("max_firmware")};
+    }
+    else
+    {
         return {
             .package_id = "",
             .repository_id = "",
@@ -337,34 +362,34 @@ InstalledPackage Database::GetInstalledPackage(const std::string& package_id) {
             .version_name = "",
             .version_number = 0,
             .min_firmware = "",
-            .max_firmware = ""
-        };
-    }   
+            .max_firmware = ""};
+    }
 }
 
-std::vector<PackageDependency> Database::GetInstalledPackageDependenciesFromDependencyID(const std::string& package_id, const std::string& package_alias) {
+std::vector<PackageDependency> Database::GetInstalledPackageDependenciesFromDependencyID(const std::string &package_id, const std::string &package_alias)
+{
     SQLite::Statement query(db, "SELECT * FROM installed_package_dependencies WHERE package_name=? OR package_name=? LIMIT 1;");
     query.bind(1, package_id);
     query.bind(1, package_alias);
 
     std::vector<PackageDependency> dependencies;
-    while (query.executeStep()) {
-        dependencies.push_back({
-            .dependent_package_id = query.getColumn("dependent_package_id"),
-            .dependent_repository_id = query.getColumn("dependent_repository_id"),
-            .dependent_version_number = query.getColumn("dependent_version_number"),
-            .dependent_architecture = query.getColumn("dependent_architecture"),
-            .repository_id = query.getColumn("repository_id"),
-            .package_name = query.getColumn("package_name"),
-            .version_name = query.getColumn("version_name"),
-            .version_comparison_type = static_cast<VersionComparisonType>(query.getColumn("version_comparison_type").getInt())
-        });
+    while (query.executeStep())
+    {
+        dependencies.push_back({.dependent_package_id = query.getColumn("dependent_package_id"),
+                                .dependent_repository_id = query.getColumn("dependent_repository_id"),
+                                .dependent_version_number = query.getColumn("dependent_version_number"),
+                                .dependent_architecture = query.getColumn("dependent_architecture"),
+                                .repository_id = query.getColumn("repository_id"),
+                                .package_name = query.getColumn("package_name"),
+                                .version_name = query.getColumn("version_name"),
+                                .version_comparison_type = static_cast<VersionComparisonType>(query.getColumn("version_comparison_type").getInt())});
     }
-    
+
     return dependencies;
 }
 
-void Database::InstallPackage(PackageInstallCandidate package) {
+void Database::InstallPackage(PackageInstallCandidate package)
+{
     // Add the package as an installed package
     SQLite::Statement query(db, "INSERT OR REPLACE INTO installed_packages (package_id, repository_id, display_name, description, screenshots, version_name, version_number, min_firmware, max_firmware) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
     query.bind(1, package.package_id);
@@ -393,4 +418,157 @@ void Database::InstallPackage(PackageInstallCandidate package) {
     depQuery.bind(3, package.version_number);
     depQuery.bind(4, package.architecture);
     depQuery.exec();
+}
+
+bool Database::UninstallPackage(const std::string &package_id)
+{
+    // First, check if the package is installed
+    InstalledPackage package = GetInstalledPackage(package_id);
+    if (package.package_id.empty())
+    {
+        // Package not found, can't uninstall
+        return false;
+    }
+
+    // Delete package from installed_packages table (this will cascade to dependencies due to foreign key constraints)
+    SQLite::Statement query(db, "DELETE FROM installed_packages WHERE package_id = ?");
+    query.bind(1, package_id);
+    return query.exec() > 0;
+}
+
+std::vector<InstalledPackage> Database::GetInstalledPackages()
+{
+    SQLite::Statement query(db, "SELECT * FROM installed_packages ORDER BY display_name;");
+    std::vector<InstalledPackage> installedPackages;
+    while (query.executeStep())
+    {
+        installedPackages.push_back({.package_id = query.getColumn("package_id"),
+                                     .repository_id = query.getColumn("repository_id"),
+                                     .display_name = query.getColumn("display_name"),
+                                     .description = query.getColumn("description"),
+                                     .screenshots = query.getColumn("screenshots"),
+                                     .version_name = query.getColumn("version_name"),
+                                     .version_number = query.getColumn("version_number"),
+                                     .min_firmware = query.getColumn("min_firmware"),
+                                     .max_firmware = query.getColumn("max_firmware")});
+    }
+
+    return installedPackages;
+}
+
+std::vector<AvailablePackage> Database::GetAvailablePackages()
+{
+    // Get all available packages for the current architecture
+    SQLite::Statement query(db,
+                            "SELECT "
+                            "  p.id AS package_id, "
+                            "  p.alias, "
+                            "  p.repository_id, "
+                            "  p.display_name, "
+                            "  p.description, "
+                            "  p.screenshots, "
+                            "  v.version_name, "
+                            "  v.version_number, "
+                            "  v.architecture, "
+                            "  v.min_firmware, "
+                            "  v.max_firmware "
+                            "FROM package_index p "
+                            "JOIN ( "
+                            "  SELECT package_id, repository_id, MAX(version_number) as max_version "
+                            "  FROM version_index "
+                            "  WHERE architecture = ? "
+                            "  GROUP BY package_id, repository_id "
+                            ") latest ON p.id = latest.package_id AND p.repository_id = latest.repository_id "
+                            "JOIN version_index v ON p.id = v.package_id AND p.repository_id = v.repository_id AND latest.max_version = v.version_number "
+                            "ORDER BY p.display_name");
+
+    query.bind(1, Flags::GetInstance()->architecture);
+
+    std::vector<AvailablePackage> availablePackages;
+    while (query.executeStep())
+    {
+        // Only include packages compatible with the current firmware
+        if (firmwareWithinRange(Flags::GetInstance()->firmware_version,
+                                query.getColumn("min_firmware").getString(),
+                                query.getColumn("max_firmware").getString()))
+        {
+            availablePackages.push_back({.package_id = query.getColumn("package_id"),
+                                         .alias = query.getColumn("alias"),
+                                         .repository_id = query.getColumn("repository_id"),
+                                         .display_name = query.getColumn("display_name"),
+                                         .description = query.getColumn("description"),
+                                         .screenshots = query.getColumn("screenshots"),
+                                         .version_name = query.getColumn("version_name"),
+                                         .version_number = query.getColumn("version_number"),
+                                         .architecture = query.getColumn("architecture"),
+                                         .min_firmware = query.getColumn("min_firmware"),
+                                         .max_firmware = query.getColumn("max_firmware")});
+        }
+    }
+
+    return availablePackages;
+}
+
+std::vector<AvailablePackage> Database::SearchPackages(const std::string &query)
+{
+    // Search for packages by name or description that match the query
+    SQLite::Statement searchQuery(db,
+                                  "SELECT "
+                                  "  p.id AS package_id, "
+                                  "  p.alias, "
+                                  "  p.repository_id, "
+                                  "  p.display_name, "
+                                  "  p.description, "
+                                  "  p.screenshots, "
+                                  "  v.version_name, "
+                                  "  v.version_number, "
+                                  "  v.architecture, "
+                                  "  v.min_firmware, "
+                                  "  v.max_firmware "
+                                  "FROM package_index p "
+                                  "JOIN ( "
+                                  "  SELECT package_id, repository_id, MAX(version_number) as max_version "
+                                  "  FROM version_index "
+                                  "  WHERE architecture = ? "
+                                  "  GROUP BY package_id, repository_id "
+                                  ") latest ON p.id = latest.package_id AND p.repository_id = latest.repository_id "
+                                  "JOIN version_index v ON p.id = v.package_id AND p.repository_id = v.repository_id AND latest.max_version = v.version_number "
+                                  "WHERE v.architecture = ? AND "
+                                  "(LOWER(p.display_name) LIKE LOWER(?) OR "
+                                  " LOWER(p.description) LIKE LOWER(?) OR "
+                                  " LOWER(p.id) LIKE LOWER(?) OR "
+                                  " LOWER(p.alias) LIKE LOWER(?)) "
+                                  "ORDER BY p.display_name");
+
+    std::string searchPattern = "%" + query + "%";
+    searchQuery.bind(1, Flags::GetInstance()->architecture);
+    searchQuery.bind(2, Flags::GetInstance()->architecture);
+    searchQuery.bind(3, searchPattern); // Search in display_name
+    searchQuery.bind(4, searchPattern); // Search in description
+    searchQuery.bind(5, searchPattern); // Search in package_id
+    searchQuery.bind(6, searchPattern); // Search in alias
+
+    std::vector<AvailablePackage> searchResults;
+    while (searchQuery.executeStep())
+    {
+        // Only include packages compatible with the current firmware
+        if (firmwareWithinRange(Flags::GetInstance()->firmware_version,
+                                searchQuery.getColumn("min_firmware").getString(),
+                                searchQuery.getColumn("max_firmware").getString()))
+        {
+            searchResults.push_back({.package_id = searchQuery.getColumn("package_id"),
+                                     .alias = searchQuery.getColumn("alias"),
+                                     .repository_id = searchQuery.getColumn("repository_id"),
+                                     .display_name = searchQuery.getColumn("display_name"),
+                                     .description = searchQuery.getColumn("description"),
+                                     .screenshots = searchQuery.getColumn("screenshots"),
+                                     .version_name = searchQuery.getColumn("version_name"),
+                                     .version_number = searchQuery.getColumn("version_number"),
+                                     .architecture = searchQuery.getColumn("architecture"),
+                                     .min_firmware = searchQuery.getColumn("min_firmware"),
+                                     .max_firmware = searchQuery.getColumn("max_firmware")});
+        }
+    }
+
+    return searchResults;
 }

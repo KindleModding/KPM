@@ -416,18 +416,20 @@ kpm [flags] <operation> [targets]
 ### Build and Compilation Issues
 
 1. **Missing Dependency Errors**:
+
    - Ensure all required libraries are installed
    - Check that meson.build files correctly specify dependencies and source files
    - Example: For utils_test, make sure multiDownload.cpp is included in the build
 
 2. **Linking Errors with Tests**:
+
    - If you see undefined symbols in tests, check that all necessary implementation files are included
    - The tests/meson.build file should include references to all necessary source files
 
 3. **Package Target Parsing**:
    - The parsePackageTarget() function in utils.cpp handles various formats including:
      - Regular package IDs: `com.example.package`
-     - Package with repository: `repo.id/com.example.package` 
+     - Package with repository: `repo.id/com.example.package`
      - Package with version using @ symbol: `com.example.package@1.0`
      - Package with version operators: `com.example.package@>=1.0`
 
@@ -435,8 +437,8 @@ kpm [flags] <operation> [targets]
 
 1. **Running on Different Architectures**:
    - Always use `--force_architecture` and `--force_firmware` when testing on non-Kindle devices
-   
 2. **Debug Output**:
+
    - Use the `-v` flag to enable verbose logging
    - The logging levels in log.hpp can be adjusted for more detailed output
 
@@ -456,7 +458,7 @@ kpm [flags] <operation> [targets]
 - Implement version pinning to prevent accidental package upgrades
 - Add package signing/verification for security
 - Add a `verify` command to check package integrity
-- Fix <= version comparison bug in parsePackageTarget() function (currently sets GTEQ instead of LTEQ)
+- ✅ Fix version comparison bug in parsePackageTarget() function (now properly handles @ symbol)
 - Add better error handling for network failures during downloads
 - Add progress indicators for long-running operations (downloads, installations)
 - Implement package caching to avoid re-downloading unchanged packages

@@ -12,42 +12,49 @@
 #include <archive.h>
 #include <archive_entry.h>
 
-bool compareSemverGTEQ(const std::string& a, const std::string& b) { // Will return true if a is greater than or equal to b
+bool compareSemverGTEQ(const std::string &a, const std::string &b)
+{ // Will return true if a is greater than or equal to b
     std::vector<uint> semverComponentsA;
     std::vector<uint> semverComponentsB;
 
     size_t startIndex = 0;
     // Parse A
-    while (true) {
+    while (true)
+    {
         size_t foundIndex = a.find('.', startIndex);
-        if (foundIndex == a.npos) {
-            semverComponentsA.push_back(atoi(a.substr(startIndex, a.length()-startIndex).c_str()));
+        if (foundIndex == a.npos)
+        {
+            semverComponentsA.push_back(atoi(a.substr(startIndex, a.length() - startIndex).c_str()));
             break;
         }
-        semverComponentsA.push_back(atoi(a.substr(startIndex, foundIndex-startIndex).c_str()));
-        startIndex = foundIndex+1;
+        semverComponentsA.push_back(atoi(a.substr(startIndex, foundIndex - startIndex).c_str()));
+        startIndex = foundIndex + 1;
     }
 
     // Parse B
     startIndex = 0;
-    while (true) {
+    while (true)
+    {
         size_t foundIndex = b.find('.', startIndex);
-        if (foundIndex == b.npos) {
-            semverComponentsB.push_back(atoi(b.substr(startIndex, b.length()-startIndex).c_str()));
+        if (foundIndex == b.npos)
+        {
+            semverComponentsB.push_back(atoi(b.substr(startIndex, b.length() - startIndex).c_str()));
             break;
         }
-        semverComponentsB.push_back(atoi(b.substr(startIndex, foundIndex-startIndex).c_str()));
-        startIndex = foundIndex+1;
+        semverComponentsB.push_back(atoi(b.substr(startIndex, foundIndex - startIndex).c_str()));
+        startIndex = foundIndex + 1;
     }
 
-    for (size_t i=0; i < semverComponentsB.size(); i++) {
+    for (size_t i = 0; i < semverComponentsB.size(); i++)
+    {
         if (i == semverComponentsA.size() || // If we reach the end of A but there are more elements in B, it means A was the same up to those extra elements, and since there are more, A is smaller
-            semverComponentsA[i] < semverComponentsB[i]) { // If any component of A is smaller than B since LTR, all previous were the same that means A is smaller
+            semverComponentsA[i] < semverComponentsB[i])
+        { // If any component of A is smaller than B since LTR, all previous were the same that means A is smaller
             return false;
         }
 
-
-        if (semverComponentsA[i] > semverComponentsB[i]) { // Since we are going LTR, the first component being larger means the overall semver is larger
+        if (semverComponentsA[i] > semverComponentsB[i])
+        { // Since we are going LTR, the first component being larger means the overall semver is larger
             return true;
         }
     }
@@ -55,126 +62,176 @@ bool compareSemverGTEQ(const std::string& a, const std::string& b) { // Will ret
     return true; // They are the same OR b is empty
 }
 
-bool firmwareWithinRange(const std::string &current, const std::string &min, const std::string &max) {
+bool firmwareWithinRange(const std::string &current, const std::string &min, const std::string &max)
+{
     return (min.size() == 0 || compareSemverGTEQ(current, min)) && (max.size() == 0 || compareSemverGTEQ(max, Flags::GetInstance()->firmware_version));
 }
 
-ParsedPackageTarget parsePackageTarget(const std::string& target) {
+ParsedPackageTarget parsePackageTarget(const std::string &target)
+{
     ParsedPackageTarget parsedTarget = {
         .repository_id = "",
         .version_name = "",
-        .version_comparison_type = VersionComparisonType::NONE
-    };
+        .version_comparison_type = VersionComparisonType::NONE};
 
     // Get the indices
     const int repoEndIndex = target.find('/');
+    // Check for @ symbol which separates package name from version
+    const int atIndex = target.find('@');
     const int LTIndex = target.find('<');
     const int GTIndex = target.find('>');
     const int EQIndex = target.find('=');
 
-    if (repoEndIndex != -1) {
+    if (repoEndIndex != -1)
+    {
         parsedTarget.repository_id = target.substr(0, repoEndIndex);
     }
 
-    int packageNameIndex = repoEndIndex+1;
+    int packageNameIndex = (repoEndIndex != -1) ? repoEndIndex + 1 : 0;
     size_t packageNameEndIndex = std::string::npos;
     int versionNameStartIndex = -1;
-    if (LTIndex != -1 && GTIndex == -1 && EQIndex == -1) { // <
-        packageNameEndIndex = LTIndex;
-        versionNameStartIndex = LTIndex+1;
-        parsedTarget.version_comparison_type = VersionComparisonType::LT;
-    } else if (GTIndex != -1 && LTIndex == -1 && EQIndex == -1) { // >
-        packageNameEndIndex = GTIndex;
-        versionNameStartIndex = GTIndex+1;
-        parsedTarget.version_comparison_type = VersionComparisonType::GT;
-    } else if (EQIndex != -1 && LTIndex == -1 && GTIndex == -1) { // =
-        packageNameEndIndex = EQIndex;
-        versionNameStartIndex = EQIndex+1;
-        parsedTarget.version_comparison_type = VersionComparisonType::EQ;
-    } else if (EQIndex - GTIndex == 1 && LTIndex == -1) { // >=
-        packageNameEndIndex = GTIndex;
-        versionNameStartIndex = EQIndex+1;
-        parsedTarget.version_comparison_type = VersionComparisonType::GTEQ;
-    } else if (EQIndex - LTIndex == 1 && GTIndex == -1) { // <=
-        packageNameEndIndex = LTIndex;
-        versionNameStartIndex = EQIndex+1;
-        parsedTarget.version_comparison_type = VersionComparisonType::LTEQ;
+
+    // First check if we have a version specifier with @
+    if (atIndex != -1)
+    {
+        packageNameEndIndex = atIndex;
+
+        // Check for version comparison operators after @
+        if (LTIndex == atIndex + 1 && EQIndex == atIndex + 2)
+        { // @<=
+            versionNameStartIndex = EQIndex + 1;
+            parsedTarget.version_comparison_type = VersionComparisonType::LTEQ;
+        }
+        else if (GTIndex == atIndex + 1 && EQIndex == atIndex + 2)
+        { // @>=
+            versionNameStartIndex = EQIndex + 1;
+            parsedTarget.version_comparison_type = VersionComparisonType::GTEQ;
+        }
+        else if (LTIndex == atIndex + 1)
+        { // @<
+            versionNameStartIndex = LTIndex + 1;
+            parsedTarget.version_comparison_type = VersionComparisonType::LT;
+        }
+        else if (GTIndex == atIndex + 1)
+        { // @>
+            versionNameStartIndex = GTIndex + 1;
+            parsedTarget.version_comparison_type = VersionComparisonType::GT;
+        }
+        else
+        { // Just @ with no other operators, equivalent to @=
+            versionNameStartIndex = atIndex + 1;
+            parsedTarget.version_comparison_type = VersionComparisonType::EQ;
+        }
+    }
+    else
+    {
+        // Original logic for handling <, >, = without @ symbol
+        if (LTIndex != -1 && GTIndex == -1 && EQIndex == -1)
+        { // <
+            packageNameEndIndex = LTIndex;
+            versionNameStartIndex = LTIndex + 1;
+            parsedTarget.version_comparison_type = VersionComparisonType::LT;
+        }
+        else if (GTIndex != -1 && LTIndex == -1 && EQIndex == -1)
+        { // >
+            packageNameEndIndex = GTIndex;
+            versionNameStartIndex = GTIndex + 1;
+            parsedTarget.version_comparison_type = VersionComparisonType::GT;
+        }
+        else if (EQIndex != -1 && LTIndex == -1 && GTIndex == -1)
+        { // =
+            packageNameEndIndex = EQIndex;
+            versionNameStartIndex = EQIndex + 1;
+            parsedTarget.version_comparison_type = VersionComparisonType::EQ;
+        }
+        else if (EQIndex - GTIndex == 1 && LTIndex == -1)
+        { // >=
+            packageNameEndIndex = GTIndex;
+            versionNameStartIndex = EQIndex + 1;
+            parsedTarget.version_comparison_type = VersionComparisonType::GTEQ;
+        }
+        else if (EQIndex - LTIndex == 1 && GTIndex == -1)
+        { // <=
+            packageNameEndIndex = LTIndex;
+            versionNameStartIndex = EQIndex + 1;
+            parsedTarget.version_comparison_type = VersionComparisonType::LTEQ;
+        }
     }
 
     parsedTarget.package_name = target.substr(packageNameIndex, packageNameEndIndex - packageNameIndex);
 
-    if (versionNameStartIndex != -1) {
+    if (versionNameStartIndex != -1)
+    {
         parsedTarget.version_name = target.substr(versionNameStartIndex);
     }
 
     return parsedTarget;
 }
 
-
-std::vector<PackageInstallCandidate> getRecursiveDependencies(Database& database, const PackageVersion& target) {
-    std::vector<PackageDependency> dependencies = database.GetPackageDependencies({
-        .package_id = target.package_id,
-        .repository_id = target.repository_id,
-        .version_name = target.version_name,
-        .version_number = target.version_number,
-        .architecture = target.architecture,
-        .min_firmware = target.min_firmware,
-        .max_firmware = target.max_firmware
-    });
+std::vector<PackageInstallCandidate> getRecursiveDependencies(Database &database, const PackageVersion &target)
+{
+    std::vector<PackageDependency> dependencies = database.GetPackageDependencies({.package_id = target.package_id,
+                                                                                   .repository_id = target.repository_id,
+                                                                                   .version_name = target.version_name,
+                                                                                   .version_number = target.version_number,
+                                                                                   .architecture = target.architecture,
+                                                                                   .min_firmware = target.min_firmware,
+                                                                                   .max_firmware = target.max_firmware});
 
     std::vector<PackageInstallCandidate> dependencyInstallCandidates;
-    for (PackageDependency dependency : dependencies) {
-        const std::vector<PackageInstallCandidate> installationCandidates = database.FindInstallationCandidates({
-            .repository_id = dependency.repository_id,
-            .package_name = dependency.package_name,
-            .version_name = dependency.version_name,
-            .version_comparison_type = dependency.version_comparison_type
-        });
-        if (installationCandidates.size() == 0) {
+    for (PackageDependency dependency : dependencies)
+    {
+        const std::vector<PackageInstallCandidate> installationCandidates = database.FindInstallationCandidates({.repository_id = dependency.repository_id,
+                                                                                                                 .package_name = dependency.package_name,
+                                                                                                                 .version_name = dependency.version_name,
+                                                                                                                 .version_comparison_type = dependency.version_comparison_type});
+        if (installationCandidates.size() == 0)
+        {
             Log::E("Could not find installation candidate for dependency %s!", dependency.package_name.c_str());
             exit(1);
         }
 
         int candidateIndex = 0;
-        if (installationCandidates.size() > 1) {
+        if (installationCandidates.size() > 1)
+        {
             // If multiple installation candidates are found we check if any of them are already installed and use that one
             // (safest option to avoid conflicts)
-            for (size_t i=0; i < installationCandidates.size(); i++) {
-                if (database.GetInstalledPackage(installationCandidates[i].package_id).package_id.length() != 0) {
+            for (size_t i = 0; i < installationCandidates.size(); i++)
+            {
+                if (database.GetInstalledPackage(installationCandidates[i].package_id).package_id.length() != 0)
+                {
                     candidateIndex = i;
                 }
             }
         }
 
         // Now add the dependencies for this to the list
-        const std::vector<PackageInstallCandidate> subDependencies = getRecursiveDependencies(database, {
-            .package_id = installationCandidates[candidateIndex].package_id,
-            .repository_id = installationCandidates[candidateIndex].repository_id,
-            .version_name = installationCandidates[candidateIndex].version_name,
-            .version_number = installationCandidates[candidateIndex].version_number,
-            .architecture = installationCandidates[candidateIndex].architecture,
-            .min_firmware = installationCandidates[candidateIndex].min_firmware,
-            .max_firmware = installationCandidates[candidateIndex].max_firmware
-        });
+        const std::vector<PackageInstallCandidate> subDependencies = getRecursiveDependencies(database, {.package_id = installationCandidates[candidateIndex].package_id,
+                                                                                                         .repository_id = installationCandidates[candidateIndex].repository_id,
+                                                                                                         .version_name = installationCandidates[candidateIndex].version_name,
+                                                                                                         .version_number = installationCandidates[candidateIndex].version_number,
+                                                                                                         .architecture = installationCandidates[candidateIndex].architecture,
+                                                                                                         .min_firmware = installationCandidates[candidateIndex].min_firmware,
+                                                                                                         .max_firmware = installationCandidates[candidateIndex].max_firmware});
         dependencyInstallCandidates.insert(dependencyInstallCandidates.end(), subDependencies.begin(), subDependencies.end()); // Add the dependency's dependencies
-        dependencyInstallCandidates.push_back(installationCandidates[candidateIndex]); // Add the dependency itself
+        dependencyInstallCandidates.push_back(installationCandidates[candidateIndex]);                                         // Add the dependency itself
     }
 
     return dependencyInstallCandidates;
 }
 
-bool installPackage(Database& database, const std::filesystem::path& packageFilePath, const Repository& repository) {
+bool installPackage(Database &database, const std::filesystem::path &packageFilePath, const Repository &repository)
+{
     // Assume checks have been done beforehand and that the kpkg file exists in our cache
     Log::I("Installing %s", packageFilePath.c_str());
-    std::string tmpPath = Flags::GetInstance()->kpm_dir + "/tmp/" + packageFilePath.filename().string();//"/tmp/kpm/" + packageFilePath.filename().string();
+    std::string tmpPath = Flags::GetInstance()->kpm_dir + "/tmp/" + packageFilePath.filename().string(); //"/tmp/kpm/" + packageFilePath.filename().string();
     std::filesystem::remove_all(tmpPath);
     std::filesystem::create_directories(tmpPath);
-    
 
     Log::D("Unpacking %s", packageFilePath.c_str());
-    struct archive* a;
-    struct archive* ext;
-    struct archive_entry* entry;
+    struct archive *a;
+    struct archive *ext;
+    struct archive_entry *entry;
     int flags;
     int r;
 
@@ -189,50 +246,67 @@ bool installPackage(Database& database, const std::filesystem::path& packageFile
     ext = archive_write_disk_new();
     archive_write_disk_set_options(ext, flags);
     archive_write_disk_set_standard_lookup(ext);
-    if ((r = archive_read_open_filename(a, packageFilePath.c_str(), 10240))) {
+    if ((r = archive_read_open_filename(a, packageFilePath.c_str(), 10240)))
+    {
         return false;
     }
 
-    while (true) {
+    while (true)
+    {
         r = archive_read_next_header(a, &entry);
-        if (r == ARCHIVE_EOF) {
+        if (r == ARCHIVE_EOF)
+        {
             break;
         }
 
-        if (r < ARCHIVE_OK && r >= ARCHIVE_WARN) {
+        if (r < ARCHIVE_OK && r >= ARCHIVE_WARN)
+        {
             Log::W("Reading kpkg: %s", archive_error_string(a));
-        } else if (r < ARCHIVE_WARN) {
+        }
+        else if (r < ARCHIVE_WARN)
+        {
             Log::E("Failed to read kpkg: %s", archive_error_string(a));
             return false;
         }
 
         archive_entry_set_pathname(entry, (tmpPath + '/' + archive_entry_pathname(entry)).c_str());
         r = archive_write_header(ext, entry);
-        if (r < ARCHIVE_OK && r >= ARCHIVE_WARN) {
+        if (r < ARCHIVE_OK && r >= ARCHIVE_WARN)
+        {
             Log::W("Reading kpkg: %s", archive_error_string(ext));
-        } else if (r < ARCHIVE_WARN) {
+        }
+        else if (r < ARCHIVE_WARN)
+        {
             Log::E("Failed to read kpkg header: %s", archive_error_string(ext));
             return false;
-        } else if (archive_entry_size(entry) > 0) {
+        }
+        else if (archive_entry_size(entry) > 0)
+        {
             // Copy archive data to location
-            while (true) {
-                const void* buff;
+            while (true)
+            {
+                const void *buff;
                 size_t size;
                 la_int64_t offset;
                 r = archive_read_data_block(a, &buff, &size, &offset);
-                if (r == ARCHIVE_EOF) {
+                if (r == ARCHIVE_EOF)
+                {
                     break;
                 }
-                if (r < ARCHIVE_OK && r >= ARCHIVE_WARN) {
+                if (r < ARCHIVE_OK && r >= ARCHIVE_WARN)
+                {
                     Log::W("Reading kpkg: %s", archive_error_string(a));
-                } else if (r < ARCHIVE_WARN) {
+                }
+                else if (r < ARCHIVE_WARN)
+                {
                     Log::E("Failed to read kpkg data block: %s", archive_error_string(a));
                     return false;
                 }
 
                 // Write the data
                 r = archive_write_data_block(ext, buff, size, offset);
-                if (r < ARCHIVE_OK) {
+                if (r < ARCHIVE_OK)
+                {
                     Log::E("Failed to write kpkg data block: %s", archive_error_string(ext));
                     return false;
                 }
@@ -240,9 +314,12 @@ bool installPackage(Database& database, const std::filesystem::path& packageFile
         }
 
         r = archive_write_finish_entry(ext);
-        if (r < ARCHIVE_OK && r >= ARCHIVE_WARN) {
+        if (r < ARCHIVE_OK && r >= ARCHIVE_WARN)
+        {
             Log::W("Reading kpkg: %s", archive_error_string(ext));
-        } else if (r < ARCHIVE_WARN) {
+        }
+        else if (r < ARCHIVE_WARN)
+        {
             Log::E("Failed to read kpkg: %s", archive_error_string(ext));
             return false;
         }
@@ -253,7 +330,6 @@ bool installPackage(Database& database, const std::filesystem::path& packageFile
     archive_write_close(ext);
     archive_write_free(ext);
 
-    
     Log::D("Reading manifest.");
     std::ifstream manifestFile((tmpPath + "/manifest.json").c_str());
     nlohmann::json manifest = nlohmann::json::parse(manifestFile);
@@ -263,39 +339,92 @@ bool installPackage(Database& database, const std::filesystem::path& packageFile
     std::filesystem::rename(tmpPath, installPath);
 
     Log::D("Running install actions");
-    if (std::filesystem::exists(installPath + "/install.sh")) {
+    if (std::filesystem::exists(installPath + "/install.sh"))
+    {
         int returnCode = system(("/bin/sh \"" + installPath + "/install.sh\"").c_str());
-        if (returnCode != 0) {
+        if (returnCode != 0)
+        {
             Log::E("An error occured whilst running install actions for %s", manifest["id"].get<std::string>().c_str());
             std::filesystem::remove_all(installPath);
             return false;
         }
-    } else {
+    }
+    else
+    {
         Log::D("No install actions to run for this package.");
     }
 
     Log::D("Adding package to database");
 
     uint screenshots = 0;
-    for (const std::filesystem::directory_entry& dir_entry : std::filesystem::directory_iterator(installPath + "/screenshots")) {
-        if (dir_entry.is_regular_file()) {
+    for (const std::filesystem::directory_entry &dir_entry : std::filesystem::directory_iterator(installPath + "/screenshots"))
+    {
+        if (dir_entry.is_regular_file())
+        {
             screenshots++;
         }
     }
 
-    database.InstallPackage({
-        .package_id = manifest["id"],
-        .alias = manifest["alias"].is_null() ? "" : manifest["alias"].get<std::string>(),
-        .repository_id = repository.id,
-        .repository_url = repository.url,
-        .display_name = manifest["display_name"],
-        .description = manifest["description"],
-        .screenshots = screenshots,
-        .version_number = manifest["version_number"],
-        .version_name = manifest["version_name"],
-        .architecture = manifest["architecture"],
-        .min_firmware = manifest["min_firmware"],
-        .max_firmware = manifest["max_firmware"]
-    });
+    database.InstallPackage({.package_id = manifest["id"],
+                             .alias = manifest["alias"].is_null() ? "" : manifest["alias"].get<std::string>(),
+                             .repository_id = repository.id,
+                             .repository_url = repository.url,
+                             .display_name = manifest["display_name"],
+                             .description = manifest["description"],
+                             .screenshots = screenshots,
+                             .version_number = manifest["version_number"],
+                             .version_name = manifest["version_name"],
+                             .architecture = manifest["architecture"],
+                             .min_firmware = manifest["min_firmware"],
+                             .max_firmware = manifest["max_firmware"]});
     return true;
+}
+
+bool uninstallPackage(Database &database, const std::string &package_id)
+{
+    // First, get the package info
+    InstalledPackage package = database.GetInstalledPackage(package_id);
+    if (package.package_id.empty())
+    {
+        return false;
+    }
+
+    // Path to the installed package files
+    std::string installPath = Flags::GetInstance()->kpm_dir + "/packages/" + package_id;
+
+    // Check if there's an uninstall script and run it if present
+    if (std::filesystem::exists(installPath + "/uninstall.sh"))
+    {
+        Log::I("Running uninstall script for %s", package_id.c_str());
+        int returnCode = system(("/bin/sh \"" + installPath + "/uninstall.sh\"").c_str());
+        if (returnCode != 0)
+        {
+            Log::E("Error running uninstall script for %s - Return code: %d", package_id.c_str(), returnCode);
+            return false;
+        }
+    }
+    else
+    {
+        Log::D("No uninstall script found for %s", package_id.c_str());
+    }
+
+    // Remove the package from the database
+    bool dbRemoved = database.UninstallPackage(package_id);
+
+    // Remove the package files
+    try
+    {
+        if (std::filesystem::exists(installPath))
+        {
+            std::filesystem::remove_all(installPath);
+            Log::D("Removed package files for %s", package_id.c_str());
+        }
+    }
+    catch (const std::filesystem::filesystem_error &e)
+    {
+        Log::E("Error removing package files: %s", e.what());
+        return false;
+    }
+
+    return dbRemoved;
 }
