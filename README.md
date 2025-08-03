@@ -19,6 +19,39 @@ KPM is a lightweight package manager for Kindles
         - 4.png
 ```
 
+index.json:  
+```json
+{
+    "version": 1,
+    "id": "com.kindlemodding.repo",
+    "packages":
+    {
+        "com.kindlemodding.example":
+        {
+            "name": "Example Package",
+            "description": "KMC's example app is an example of all time",
+            "supported_arch": [ "armhf", "armel" ],
+            "supported_kindle": [],
+            "artifacts":
+            [
+                {
+                    "path": "/packages/com.kindlemodding.example/armhf/package_v1.0.0.kpkg",
+                    "version": [ 1, 0, 0 ],
+                    "supported_arch": [ "armhf" ],
+                    "supported_kindle": []
+                },
+                {
+                    "path": "/packages/com.kindlemodding.example/armel/package_v1.0.0.kpkg",
+                    "version": [ 1, 0, 0 ],
+                    "supported_arch": [ "armel" ],
+                    "supported_kindle": []
+                }
+            ]
+        }
+    }
+}
+```
+
 Note: Screenshots are OPTIONAL but may be beneficial when graphical package managers such as `KindleForge` are used  
 A `screenshots.json` file can be provided storing a list of every screenshot a package displays, ie:  
 ```json
@@ -44,11 +77,12 @@ Example Package Format:
 ### manifest.json format
 ```json
 {
+    "version": 1,
     "id": "com.kindlemodding.example",
     "name": "Example Package",
     "description": "KMC's example app is an example app of all time",
     "version": [ 1, 0, 0 ],
-    "supported_arch": [ "armhf", "armel" ],
+    "supported_arch": [ "armhf" ],
     "supported_kindle": [ "" ],
     "entrypoint": "app_binary"
 }
@@ -56,6 +90,7 @@ Example Package Format:
 
 Explanation:
 ```
+version - The manifest format version (should be 1)
 id - The ID of the app, should be a reverse DNS format similar to Android packages and Java class paths
 name - The display name of the app
 description - A human-readalbe description of an app
