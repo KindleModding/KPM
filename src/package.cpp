@@ -6,14 +6,14 @@ Package::Package(
     const std::string& description,
     const SemVer version,
     const std::vector<Arch>& supported_arch,
-    const std::vector<std::string>& supported_kindle,
+    const std::vector<std::string>& supported_kindles,
     const std::string& entrypoint
 ): id(id),
     name(name),
     description(description),
     version(version),
     supported_arch(supported_arch),
-    supported_kindle(supported_kindle),
+    supported_kindles(supported_kindles),
     entrypoint(entrypoint)
 {}
 
@@ -25,7 +25,7 @@ Package Package::FromJSON(const nlohmann::json& json)
         json["description"],
         SemVer(json["version"][0], json["version"][1], json["version"][2]),
         json["supported_arch"],
-        json["supported_kindle"], // @TODO: Should be optional
+        json["supported_kindles"], // @TODO: Should be optional
         json["entrypoint"]
     );
 }
@@ -44,5 +44,5 @@ bool Package::ValidateJSON(const nlohmann::json& json)
             json.at("version").at(2).is_number() &&
             json.at("supported_arch").is_array() &&
             json.at("supported_arch").size() > 0 &&
-            json.at("entrypoint").is_string(); // @TODO: Check supported_kindle
+            json.at("entrypoint").is_string(); // @TODO: Check supported_kindles
 }

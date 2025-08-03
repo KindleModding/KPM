@@ -1,3 +1,5 @@
+#pragma once
+
 #include <nlohmann/json.hpp>
 #include <string>
 #include <vector>
@@ -19,8 +21,7 @@ public:
         const std::string& description,
         const SemVer version,
         const std::vector<Arch>& supported_arch,
-        const std::vector<std::string>& supported_kindle,
-        const std::string& entrypoint
+        const std::vector<std::string>& supported_kindles
     );
 
     static Package FromJSON(const nlohmann::json& json);
@@ -42,10 +43,10 @@ public:
         }
         return false;
     };
-    inline std::vector<std::string> GetSupportedKindle() { return supported_kindle; };
+    inline std::vector<std::string> GetSupportedKindle() { return supported_kindles; };
     inline bool CheckSupportsKindle(const std::string& checkKindle)
     {
-        for (const std::string& kindle : supported_kindle)
+        for (const std::string& kindle : supported_kindles)
         {
             if (kindle == checkKindle)
             {
@@ -54,13 +55,11 @@ public:
         }
         return false;
     };
-    inline std::string GetEntrypoint() { return entrypoint; };
 private:
     const std::string id;
     const std::string name;
     const std::string description;
     const SemVer version;
     const std::vector<Arch> supported_arch;
-    const std::vector<std::string> supported_kindle; // ~TODO: Move to enum?
-    const std::string entrypoint;
+    const std::vector<std::string> supported_kindles; // ~TODO: Move to enum?
 };

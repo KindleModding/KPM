@@ -39,20 +39,20 @@ index.json:
             "description": "KMC's example app is an example of all time",
             "icon": "/packages/com.kindlemodding.example/icon.png",
             "supported_arch": [ "armhf", "armel" ],
-            "supported_kindle": [],
+            "supported_kindles": [],
             "artifacts":
             [
                 {
-                    "path": "/packages/com.kindlemodding.example/armhf/package_v1.0.0.kpkg",
+                    "uri": "/packages/com.kindlemodding.example/armhf/package_v1.0.0.kpkg",
                     "version": [ 1, 0, 0 ],
                     "supported_arch": [ "armhf" ],
-                    "supported_kindle": []
+                    "supported_kindles": []
                 },
                 {
-                    "path": "/packages/com.kindlemodding.example/armel/package_v1.0.0.kpkg",
+                    "uri": "/packages/com.kindlemodding.example/armel/package_v1.0.0.kpkg",
                     "version": [ 1, 0, 0 ],
                     "supported_arch": [ "armel" ],
-                    "supported_kindle": []
+                    "supported_kindles": []
                 }
             ]
         }
@@ -91,7 +91,7 @@ Example Package Format:
     "description": "KMC's example app is an example app of all time",
     "version": [ 1, 0, 0 ],
     "supported_arch": [ "armhf" ],
-    "supported_kindle": [ "" ]
+    "supported_kindles": [ "" ]
 }
 ```
 
@@ -103,7 +103,7 @@ name - The display name of the app
 description - A human-readalbe description of an app
 version - The version number of an app in JSON-serialised semver format, IE: `v1.2.3 -> [ 1, 2, 3 ]`
 supported_arch - A list of compatible architectures supported (currently just `armhf` and `armel`)
-supported_kindle - OPTIONAL - A list of Kindles that this app supports (see `generation_nickname` field under `models.json`) - an empty list is treated the same as this being omitted
+supported_kindles - OPTIONAL - A list of Kindles that this app supports (see `generation_nickname` field under `models.json`) - an empty list is treated the same as this being omitted
 ```
 
 ### hooks
