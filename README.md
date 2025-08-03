@@ -10,6 +10,7 @@ Note: You should not be managing a repository manually, instead use the `kprepo.
 - index.json
 - packages
     - com.kindlemodding.example
+        - icon.png
         - armhf
             - package_v1.0.0.kpkg
         - armel
@@ -36,6 +37,7 @@ index.json:
         {
             "name": "Example Package",
             "description": "KMC's example app is an example of all time",
+            "icon": "/packages/com.kindlemodding.example/icon.png",
             "supported_arch": [ "armhf", "armel" ],
             "supported_kindle": [],
             "artifacts":
@@ -89,8 +91,7 @@ Example Package Format:
     "description": "KMC's example app is an example app of all time",
     "version": [ 1, 0, 0 ],
     "supported_arch": [ "armhf" ],
-    "supported_kindle": [ "" ],
-    "entrypoint": "app_binary"
+    "supported_kindle": [ "" ]
 }
 ```
 
@@ -103,13 +104,12 @@ description - A human-readalbe description of an app
 version - The version number of an app in JSON-serialised semver format, IE: `v1.2.3 -> [ 1, 2, 3 ]`
 supported_arch - A list of compatible architectures supported (currently just `armhf` and `armel`)
 supported_kindle - OPTIONAL - A list of Kindles that this app supports (see `generation_nickname` field under `models.json`)
-entrypoint - The command to run when this app is executed
-actions - See menu actions section 
 ```
 
 ### hooks
 The following scripts placed at the _root_ of the package will be called under certain events:  
 - install.sh - called once the package has been downloaded and extracted
+- launch.sh - called if launched from a launcher (NOTE: Apps are expected to manage THEIR OWN SCRIPTLETS via `install.sh` & `uninstall.sh`)
 - uninstall.sh - called before the package is deleted
 
 All of these scripts will be executed via `sh` NOT `bash`
