@@ -32,7 +32,9 @@ Package Package::FromJSON(const nlohmann::json& json)
 
 bool Package::ValidateJSON(const nlohmann::json& json)
 {
-    return json.at("id").is_string() &&
+    return json.at("version").is_number() &&
+            json.at("version") == 1 &&
+            json.at("id").is_string() &&
             json.at("name").is_string() &&
             json.at("description").is_string() &&
             json.at("version").is_array() &&
