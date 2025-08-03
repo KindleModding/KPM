@@ -1,7 +1,11 @@
 # KPM
-KPM is a lightweight package manager for Kindles
+KPM is a lightweight package manager for Kindles  
+
+The contents of this file are licensed under the `CC0` license.
 
 ### Repository Format
+Note: You should not be managing a repository manually, instead use the `kprepo.py` script provided with `KPM`
+
 ```
 - index.json
 - packages
@@ -24,6 +28,8 @@ index.json:
 {
     "version": 1,
     "id": "com.kindlemodding.repo",
+    "name": "KindleModding Repository",
+    "description": "The official KindleModding repository",
     "packages":
     {
         "com.kindlemodding.example":
