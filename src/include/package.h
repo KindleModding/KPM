@@ -1,4 +1,4 @@
-#include <nlohmann/json_fwd.hpp>
+#include <nlohmann/json.hpp>
 #include <string>
 #include <vector>
 
@@ -13,7 +13,18 @@ enum class Arch
 class Package
 {
 public:
-    Package(nlohmann::json json); // Parse package from JSON
+    Package(
+        const std::string& id,
+        const std::string& name,
+        const std::string& description,
+        const SemVer version,
+        const std::vector<Arch>& supported_arch,
+        const std::vector<std::string>& supported_kindle,
+        const std::string& entrypoint
+    );
+
+    static Package FromJSON(const nlohmann::json& json);
+    static bool ValidateJSON(const nlohmann::json& json);
 
     inline std::string GetId() { return id; };
     inline std::string GetName() { return name; };
@@ -45,11 +56,11 @@ public:
     };
     inline std::string GetEntrypoint() { return entrypoint; };
 private:
-    std::string id;
-    std::string name;
-    std::string description;
-    SemVer version;
-    std::vector<Arch> supported_arch;
-    std::vector<std::string> supported_kindle; // ~TODO: Move to enum?
-    std::string entrypoint;
+    const std::string id;
+    const std::string name;
+    const std::string description;
+    const SemVer version;
+    const std::vector<Arch> supported_arch;
+    const std::vector<std::string> supported_kindle; // ~TODO: Move to enum?
+    const std::string entrypoint;
 };
