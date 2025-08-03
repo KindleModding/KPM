@@ -103,7 +103,7 @@ name - The display name of the app
 description - A human-readalbe description of an app
 version - The version number of an app in JSON-serialised semver format, IE: `v1.2.3 -> [ 1, 2, 3 ]`
 supported_arch - A list of compatible architectures supported (currently just `armhf` and `armel`)
-supported_kindle - OPTIONAL - A list of Kindles that this app supports (see `generation_nickname` field under `models.json`)
+supported_kindle - OPTIONAL - A list of Kindles that this app supports (see `generation_nickname` field under `models.json`) - an empty list is treated the same as this being omitted
 ```
 
 ### hooks
