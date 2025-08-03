@@ -107,7 +107,7 @@ supported_kindle - OPTIONAL - A list of Kindles that this app supports (see `gen
 ```
 
 ### hooks
-The following scripts placed at the _root_ of the package will be called under certain events:  
+The following scripts are all optional and can be placed at the _root_ of the package will be called under certain events:  
 - install.sh - called once the package has been downloaded and extracted
 - launch.sh - called if launched from a launcher (NOTE: Apps are expected to manage THEIR OWN SCRIPTLETS via `install.sh` & `uninstall.sh`)
 - uninstall.sh - called before the package is deleted
