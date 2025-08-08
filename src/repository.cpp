@@ -31,3 +31,31 @@ std::vector<Repository> KPM::ListRepositories()
     sqlite3_finalize(statement);
     return result;
 }
+
+Repository KPM::GetRepository(const std::string& repositoryID)
+{
+    Repository result;
+
+    const std::string zSQL = "SELCT * FROM repositories WHERE id=$0 LIMIT=1;";
+    sqlite3_stmt* statement;
+    sqlite3_prepare_v2(db, zSQL.c_str(), zSQL.size(), &statement, NULL);
+    sqlite3_bind_text(statement, 0, repositoryID.c_str(), repositoryID.size(), SQLITE_STATIC);
+
+    while (true)
+    {
+        if (sqlite3_step(statement) != SQLITE_ROW)
+        {
+            break;
+        }
+
+        result = {
+            .id = std::string(reinterpret_cast<const char*> (sqlite3_column_text(statement, 0))),
+            .url = std::string(reinterpret_cast<const char*> (sqlite3_column_text(statement, 1))),
+            .name = std::string(reinterpret_cast<const char*> (sqlite3_column_text(statement, 2))),
+            .description = std::string(reinterpret_cast<const char*> (sqlite3_column_text(statement, 3)))
+        };
+    }
+
+    sqlite3_finalize(statement);
+    return result;
+}
