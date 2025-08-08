@@ -1,7 +1,7 @@
 #include <nlohmann/json.hpp>
 
-#include "kpm.h"
-#include "simpleGET.h"
+#include "kpm.hpp"
+#include "simpleGET.hpp"
 
 /**
  * @brief List the repositories that KPM is using
