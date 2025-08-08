@@ -1,5 +1,15 @@
 #pragma once
 
+/**
+ * @file kpm.h
+ * @author Hackerdude (hackerdude@hackerdude.tech)
+ * @brief The main KPM header
+ * @version 0.1
+ * @date 2025-08-08
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
 
 #include <filesystem>
 #include <string>
@@ -8,74 +18,97 @@
 
 #include "semver.h"
 
+/**
+ * @brief Type of dependency version
+ * 
+ */
 enum class DependencyType
 {
-    NONE, // No dependency
-    LESS_THAN,
-    LESS_THAN_OR_EQUAL_TO,
-    EQUAL_TO,
-    GREATER_THAN_OR_EQUAL_TO,
-    GREATER_THAN
+    NONE, /**< No version-specific dependency */
+    LESS_THAN, /**< Installed package must be less than dependent version */
+    LESS_THAN_OR_EQUAL_TO, /**< Installed package must be greater than or equal to dependent version */
+    EQUAL_TO, /**< Installed package must be equal to dependent version */
+    GREATER_THAN_OR_EQUAL_TO, /**< Installed package must be greater than or equal to dependent version */
+    GREATER_THAN /**< Installed package must be greater than dependent version */
 };
 
+/**
+ * @brief A repository that KPM is using
+ * 
+ */
 struct Repository
 {
-    std::string id;
-    std::string url;
+    std::string id; /**< The repository's ID */
+    std::string url; /**< The url of the repository */
+    std::string name; /**< The repository's name */
+    std::string description; /**< The repository's description */
 };
 
-struct IndexedRepository
-{
-    std::string id;
-    std::string name;
-    std::string description;
-};
-
+/**
+ * @brief A package that KPM has indexed
+ * 
+ */
 struct IndexedPackage
 {
-    std::string repository;
-    std::string id;
-    std::string name;
-    std::string description;
-    std::string author;
-    std::string icon;
+    std::string repository; /**< The repository ID */
+    std::string id; /**< The package ID */
+    std::string name; /**< The name of the package */
+    std::string description; /**< The description of the package */
+    std::string author; /**< The author of the package */
+    std::string icon; /**< The package's icon */
 };
 
+/**
+ * @brief An artifact KPM has indexed
+ * 
+ */
 struct IndexedArtifact
 {
-    std::string url; // URL of the artifact - primary key
-    std::string repository;
-    std::string id;
-    int version_major;
-    int version_minor;
-    int version_patch;
-    std::vector<std::string> supported_arch;
-    std::vector<std::string> supported_kindles;
+    std::string url; /**< URL of the artifact - primary key */
+    std::string repository; /**< The repository ID */
+    std::string id; /**< The package ID */
+    SemVer version; /**< The version of this artifact */
+    std::vector<std::string> supported_arch; /**< List of supported architectures */
+    std::vector<std::string> supported_kindles; /**< List of supported Kindles */
 };
 
+/**
+ * @brief A dependency of an artifact KPM has indexed
+ * 
+ */
 struct IndexedArtifactDependency
 {
-    std::string artifact; // URL of the artifact
-    std::string repository;
-    std::string id;
-    std::string type;
-    SemVer version;
+    std::string artifact; /**< URL of the artifact */
+    std::string repository; /**< The repository ID */
+    std::string id; /**< The package ID */
+    DependencyType type; /**< The type of dependency */
+    SemVer version; /**< The version of the dependency */
 };
 
+/**
+ * @brief A package KPM has installed
+ * 
+ */
 struct InstalledPackage
 {
-    std::string id;
-    std::string name;
-    std::string author;
-    SemVer version;
+    std::string id; /**< The package ID */
+    std::string name; /**< The package name */
+    std::string author; /**< The package author */
+    std::string description; /**< The package description */
+    SemVer version; /**< The package version */
 };
 
+/**
+ * @brief A dependency of a package KPM has installed
+ * 
+ */
 struct Dependency
 {
-    std::string dependent; // ID of installed package
-    std::string dependency; // Name of installed package
-    DependencyType dependency_type;
-    SemVer version;
+    std::string dependent; /**< ID of installed package */
+    std::string dependency_repository; /**< ID of the repository of the dependency */
+    std::string dependency_id; /**< ID of the dependency */
+    DependencyType dependency_type; /**< The type of dependency */
+    SemVer version; /**< The dependency's version */
 };
 
 
@@ -90,17 +123,10 @@ public:
     {
         sqlite3_open(dbPath.c_str(), &db);
 
-        // Create tables if needed
         sqlite3_exec(db, R"(
             CREATE TABLE IF NOT EXISTS repositories (
                 id TEXT PRIMARY KEY NOT NULL,
-                url TEXT NOT NULL
-            )
-        )", NULL, NULL, NULL);
-
-        sqlite3_exec(db, R"(
-            CREATE TABLE IF NOT EXISTS repository_index (
-                id TEXT PRIMARY KEY NOT NULL,
+                url TEXT NOT NULL,
                 name TEXT NOT NULL,
                 description TEXT NOT NULL,
                 FOREIGN KEY(id) REFERENCES repositories(id)
@@ -129,19 +155,21 @@ public:
                 version_minor INTEGER NOT NULL,
                 version_patch INTEGER NOT NULL,
                 supported_arch TEXT NOT NULL,
-                supported_kindles TEXT NOT NULL
+                supported_kindles TEXT NOT NULL,
+                FOREIGN KEY (repository, id) REFERENCES package_index(repository, id)
             )
         )", NULL, NULL, NULL);
 
         sqlite3_exec(db, R"(
             CREATE TABLE IF NOT EXISTS artifact_dependency_index (
-                artifact TEXT PRIMAR KEY NOT NULL,
+                artifact TEXT NOT NULL,
                 repository TEXT,
                 id TEXT NOT NULL,
-                type TEXT NOT NULL,
+                type INTEGER NOT NULL,
                 version_major INTEGER,
                 version_minor INTEGER,
                 version_patch INTEGER,
+                PRIMARY KEY (artifact, repository, id),
                 FOREIGN KEY(artifact) REFERENCES artifact_index(url)
             )
         )", NULL, NULL, NULL);
@@ -161,7 +189,8 @@ public:
         sqlite3_exec(db, R"(
             CREATE TABLE IF NOT EXISTS dependencies (
                 dependent TEXT NOT NULL,
-                dependency TEXT NOT NULL,
+                dependency_repository TEXT NOT NULL,
+                dependency_id TEXT NOT NULL,
                 dependency_type TEXT NOT NULL,
                 version_major INTEGER NOT NULL,
                 version_minor INTEGER NOT NULL,
@@ -177,21 +206,24 @@ public:
     }
 
     // Repo management functions
+    std::vector<Repository> ListRepositories();
+    Repository GetRepository(const std::string& repositoryID);
     Repository AddRepository(const std::string& url);
     bool RemoveRepository(const std::string& id);
-    std::vector<Repository> GetRepositories();
-    std::vector<Package> GetRepositoryPackages(Repository repository);
-    std::vector<Artifact> GetPackageArtifacts(Repository repository, Package package);
+    std::vector<IndexedPackage> ListRepositoryPackages(Repository repository);
+
+    IndexedPackage GetPackage(const std::string& installString);
+    std::vector<IndexedArtifact> GetArtifacts(IndexedPackage package);
+    bool InstallArtifact(IndexedArtifact artifact);
 
     // Internet functions
-    bool UpdateIndices();
-    bool DownloadPackage(const std::string& installString, const std::filesystem::path& path); // installString is generally a package ID but MAY contain a repo prefix
-    
+    bool UpdateIndex();
+    bool InstallPackage(const std::string& installString); // installString is generally a package ID but MAY contain a repo prefix
 
     // Local package functions
-    std::vector<Artifact> GetInstalledPackages();
+    std::vector<InstalledPackage> GetInstalledPackages();
     bool InstallPackage(const std::filesystem::path& package);
-    bool UninstallPackage(std::string id);
+    bool UninstallPackage(InstalledPackage package);
 private:
     sqlite3* db;
 };
