@@ -6,7 +6,7 @@
 /**
  * @brief List the repositories that KPM is using
  * 
- * @return std::vector<Repository> 
+ * @return std::vector<Repository> A list of indexed repositories
  */
 std::vector<KPM::Repository> KPM::KPM::ListRepositories()
 {
@@ -35,6 +35,12 @@ std::vector<KPM::Repository> KPM::KPM::ListRepositories()
     return result;
 }
 
+/**
+ * @brief Get a Repository object from the index given an ID
+ * 
+ * @param repositoryID The ID of the repository to get
+ * @return KPM::Repository The repository for the given ID
+ */
 KPM::Repository KPM::KPM::GetRepository(const std::string& repositoryID)
 {
     Repository result;
@@ -63,6 +69,12 @@ KPM::Repository KPM::KPM::GetRepository(const std::string& repositoryID)
     return result;
 }
 
+/**
+ * @brief Add a repository to the repository index given a URL (NOTE: This does NOT update the index)
+ * 
+ * @param url The URL to the manifest.json file of the repository
+ * @return KPM::Repository The added repository object
+ */
 KPM::Repository KPM::KPM::AddRepository(const std::string& url)
 {
     SimpleGET request(url.c_str());
@@ -112,6 +124,11 @@ KPM::Repository KPM::KPM::AddRepository(const std::string& url)
 }
 
 
+/**
+ * @brief Remove a repository from the index
+ * 
+ * @param repository The repository to remove
+ */
 void KPM::KPM::RemoveRepository(Repository repository)
 {
     const std::string zSQL = "DELETE FROM repositories WHERE id=?;";
@@ -128,6 +145,12 @@ void KPM::KPM::RemoveRepository(Repository repository)
     sqlite3_finalize(statement);
 }
 
+/**
+ * @brief List a repository's indexed packages
+ * 
+ * @param repository 
+ * @return std::vector<KPM::IndexedPackage> 
+ */
 std::vector<KPM::IndexedPackage> KPM::KPM::ListRepositoryPackages(Repository repository)
 {
     std::vector<IndexedPackage> result;
