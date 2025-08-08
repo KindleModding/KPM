@@ -1,0 +1,86 @@
+\chapter{KPKG }
+\hypertarget{md_Package}{}\label{md_Package}\index{KPKG@{KPKG}}
+\label{md_Package_autotoc_md0}%
+\Hypertarget{md_Package_autotoc_md0}%
+
+
+A \doxylink{classKPM}{KPM} package is defined as a {\ttfamily gzipped tar file} with the {\ttfamily kpkg} extension. ~\newline
+
+
+The file {\ttfamily must} have a {\ttfamily manifest.\+json} in its root.\hypertarget{md_Package_autotoc_md1}{}\doxysection{\texorpdfstring{Manifest}{Manifest}}\label{md_Package_autotoc_md1}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\{}
+\DoxyCodeLine{\ \ \ \ "{}id"{}:\ "{}koreader"{},}
+\DoxyCodeLine{\ \ \ \ "{}name"{}:\ "{}KOReader"{},}
+\DoxyCodeLine{\ \ \ \ "{}author"{}:\ "{}KOReader\ Team"{},}
+\DoxyCodeLine{\ \ \ \ "{}description"{}:\ "{}KOReader\ is\ a\ feature-\/rich\ eBook\ reader"{},}
+\DoxyCodeLine{\ \ \ \ "{}version"{}:\ [\ 1,\ 2,\ 0\ ],}
+\DoxyCodeLine{\ \ \ \ "{}supported\_arch"{}:\ [\ "{}armhf"{}\ ],}
+\DoxyCodeLine{\ \ \ \ "{}dependencies"{}:}
+\DoxyCodeLine{\ \ \ \ \{}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ "{}fbink"{}:}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ "{}repository"{}:\ "{}org.kindlemodding.repo"{},}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ "{}type"{}:\ "{}<"{},}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ "{}version"{}:\ [\ 3,\ 0,\ 0\ ]}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\ \ \ \ \},}
+\DoxyCodeLine{\}}
+
+\end{DoxyCode}
+
+
+This manifest file defines a package with the id of {\ttfamily koreader} (it would installed with {\ttfamily kpm install koreader}). ~\newline
+ The package has a version of {\ttfamily 1.\+2.\+0} and depends on {\ttfamily fbink} (any version below {\ttfamily 3.\+0.\+0} specifically from the {\ttfamily org.\+kindlemodding.\+repo} repository.) ~\newline
+\hypertarget{md_Package_autotoc_md2}{}\doxysubsection{\texorpdfstring{Manifest Spec}{Manifest Spec}}\label{md_Package_autotoc_md2}
+Strings should not contain non-\/\+ASCII chars. ~\newline
+
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{id\ -\/\ The\ id\ of\ the\ package,\ must\ be\ lowercase}
+\DoxyCodeLine{name\ -\/\ The\ display\ name\ of\ the\ package}
+\DoxyCodeLine{author\ -\/\ The\ author\ of\ the\ package}
+\DoxyCodeLine{description\ -\/\ The\ description\ of\ the\ package}
+\DoxyCodeLine{version\ -\/\ The\ version\ of\ the\ package}
+\DoxyCodeLine{supported\_arch\ -\/\ List\ of\ supported\ architectures\ MUST\ BE\ a\ list\ containing\ only\ \`{}armel`,\ \`{}armhf`\ or\ any\ combination\ of\ the\ two}
+\DoxyCodeLine{supported\_kindle\ -\/\ OPTIONAL,\ List\ of\ supported\ Kindles}
+\DoxyCodeLine{dependencies\ -\/\ A\ list\ of\ package\ dependencies}
+
+\end{DoxyCode}
+\hypertarget{md_Package_autotoc_md3}{}\doxysubsection{\texorpdfstring{Dependencies}{Dependencies}}\label{md_Package_autotoc_md3}
+Dependencies are stored with an object, where the key is the id of the dependency (ie\+: {\ttfamily fbink}).
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{repository\ -\/\ OPTIONAL,\ specify\ a\ specific\ repository\ ID\ to\ obtain\ this\ package,\ avoid\ using\ this\ if\ you\ can}
+\DoxyCodeLine{type\ -\/\ OPTIONAL,\ The\ type\ of\ dependency\ version\ comparison,\ can\ be\ \`{}<`,\ \`{}>`,\ \`{}=`,\ \`{}<=`\ or\ \`{}>=`}
+\DoxyCodeLine{version\ -\/\ The\ version\ to\ compare,\ required\ only\ if\ \`{}type`\ is\ specified\ and\ vice-\/versa}
+
+\end{DoxyCode}
+\hypertarget{md_Package_autotoc_md4}{}\doxysection{\texorpdfstring{Hooks}{Hooks}}\label{md_Package_autotoc_md4}
+Script files can be included in the root of the package file and will be run under certain events based on their name. ~\newline
+ All scripts must run under {\ttfamily sh}. ~\newline
+
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{install.sh\ -\/\ Ran\ when\ the\ package\ is\ installed}
+\DoxyCodeLine{uninstall.sh\ -\/\ Ran\ when\ the\ package\ is\ being\ uninstalled}
+\DoxyCodeLine{launch.sh\ -\/\ Ran\ when\ the\ package\ is\ launched}
+
+\end{DoxyCode}
+\hypertarget{md_Package_autotoc_md5}{}\doxysection{\texorpdfstring{Example Repository structure\+:}{Example Repository structure\+:}}\label{md_Package_autotoc_md5}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{-\/\ manifest.json}
+\DoxyCodeLine{-\/\ launch.sh}
+\DoxyCodeLine{-\/\ app\_binary}
+\DoxyCodeLine{-\/\ app\_files/}
+\DoxyCodeLine{\ \ \ \ -\/\ asset1.bin}
+\DoxyCodeLine{\ \ \ \ -\/\ asset2.bin}
+\DoxyCodeLine{\ \ \ \ -\/\ asset3.bin}
+
+\end{DoxyCode}
+ 

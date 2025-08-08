@@ -1,0 +1,25 @@
+\doxysection{simple\+GET.\+h}
+\hypertarget{simpleGET_8h_source}{}\label{simpleGET_8h_source}\index{src/include/simpleGET.h@{src/include/simpleGET.h}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00002\ }
+\DoxyCodeLine{00003\ \textcolor{preprocessor}{\#include\ <curl/curl.h>}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{keyword}{class\ }SimpleGET}
+\DoxyCodeLine{00006\ \{}
+\DoxyCodeLine{00007\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00008\ \ \ \ \ SimpleGET(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ url);}
+\DoxyCodeLine{00009\ \ \ \ \ \string~SimpleGET();}
+\DoxyCodeLine{00010\ }
+\DoxyCodeLine{00011\ \ \ \ \ CURLcode\ Perform();}
+\DoxyCodeLine{00012\ \ \ \ \ \textcolor{keywordtype}{char}*\ GetBuffer();}
+\DoxyCodeLine{00013\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ GetSize();}
+\DoxyCodeLine{00014\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00015\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{size\_t}\ write\_callback(\textcolor{keywordtype}{char}*\ ptr,\ \textcolor{keywordtype}{size\_t}\ size,\ \textcolor{keywordtype}{size\_t}\ nmemb,\ \textcolor{keywordtype}{void}*\ userdata);}
+\DoxyCodeLine{00016\ \ \ \ \ CURL*\ curl;}
+\DoxyCodeLine{00017\ \ \ \ \ \textcolor{keywordtype}{char}*\ buffer;}
+\DoxyCodeLine{00018\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ size;}
+\DoxyCodeLine{00019\ \};}
+
+\end{DoxyCode}

@@ -1,0 +1,56 @@
+\doxysection{KPM Class Reference}
+\hypertarget{classKPM}{}\label{classKPM}\index{KPM@{KPM}}
+
+
+This is the \doxylink{classKPM}{KPM} class you initialise to interact with \doxylink{classKPM}{KPM}.  
+
+
+
+
+{\ttfamily \#include $<$kpm.\+h$>$}
+
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{classKPM_afa56a24ce1ba5ce8534dac284328bf83}\label{classKPM_afa56a24ce1ba5ce8534dac284328bf83} 
+{\bfseries KPM} (const std\+::filesystem\+::path db\+Path)
+\item 
+\Hypertarget{classKPM_aed4dd2fe2d31101971a3fc1f066f00ed}\label{classKPM_aed4dd2fe2d31101971a3fc1f066f00ed} 
+\mbox{\hyperlink{structRepository}{Repository}} {\bfseries Add\+Repository} (const std\+::string \&url)
+\item 
+\Hypertarget{classKPM_a38e96349b5a036b9ca91347fe2531738}\label{classKPM_a38e96349b5a036b9ca91347fe2531738} 
+bool {\bfseries Remove\+Repository} (const std\+::string \&id)
+\item 
+\Hypertarget{classKPM_a7590f88ebe1aa4ee96a5db4ca6e59829}\label{classKPM_a7590f88ebe1aa4ee96a5db4ca6e59829} 
+std\+::vector$<$ \mbox{\hyperlink{structRepository}{Repository}} $>$ {\bfseries Get\+Repositories} ()
+\item 
+\Hypertarget{classKPM_ac30c1c3f8a5147274b686eac961d03e2}\label{classKPM_ac30c1c3f8a5147274b686eac961d03e2} 
+std\+::vector$<$ Package $>$ {\bfseries Get\+Repository\+Packages} (\mbox{\hyperlink{structRepository}{Repository}} repository)
+\item 
+\Hypertarget{classKPM_a4bfc59511e533bcd6c5f259e482c77ec}\label{classKPM_a4bfc59511e533bcd6c5f259e482c77ec} 
+std\+::vector$<$ Artifact $>$ {\bfseries Get\+Package\+Artifacts} (\mbox{\hyperlink{structRepository}{Repository}} repository, Package package)
+\item 
+\Hypertarget{classKPM_a71c6d1cd572b8e7b08e34c0645e03e48}\label{classKPM_a71c6d1cd572b8e7b08e34c0645e03e48} 
+bool {\bfseries Update\+Indices} ()
+\item 
+\Hypertarget{classKPM_ac679a103d72b69291a2f662b996d0a6c}\label{classKPM_ac679a103d72b69291a2f662b996d0a6c} 
+bool {\bfseries Download\+Package} (const std\+::string \&install\+String, const std\+::filesystem\+::path \&path)
+\item 
+\Hypertarget{classKPM_a3558526c8ccf8966da527bd1a6e44134}\label{classKPM_a3558526c8ccf8966da527bd1a6e44134} 
+std\+::vector$<$ Artifact $>$ {\bfseries Get\+Installed\+Packages} ()
+\item 
+\Hypertarget{classKPM_a29e95d5c05f79a1f5c71b9aced9f7330}\label{classKPM_a29e95d5c05f79a1f5c71b9aced9f7330} 
+bool {\bfseries Install\+Package} (const std\+::filesystem\+::path \&package)
+\item 
+\Hypertarget{classKPM_a5b15e2f39f2963f4e46047aa368e1715}\label{classKPM_a5b15e2f39f2963f4e46047aa368e1715} 
+bool {\bfseries Uninstall\+Package} (std\+::string id)
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+This is the \doxylink{classKPM}{KPM} class you initialise to interact with \doxylink{classKPM}{KPM}. 
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+src/include/\mbox{\hyperlink{kpm_8h}{kpm.\+h}}\item 
+src/repository.\+cpp\end{DoxyCompactItemize}

@@ -1,0 +1,201 @@
+\doxysection{kpm.\+h}
+\hypertarget{kpm_8h_source}{}\label{kpm_8h_source}\index{src/include/kpm.h@{src/include/kpm.h}}
+\mbox{\hyperlink{kpm_8h}{Go to the documentation of this file.}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00002\ }
+\DoxyCodeLine{00013\ }
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <filesystem>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <sqlite3.h>}}
+\DoxyCodeLine{00018\ }
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ "{}semver.h"{}}}
+\DoxyCodeLine{00020\ }
+\DoxyCodeLine{00025\ \textcolor{keyword}{enum\ class}\ \mbox{\hyperlink{kpm_8h_a32a9df8204905869318d78e338240fc4}{DependencyType}}}
+\DoxyCodeLine{00026\ \{}
+\DoxyCodeLine{00027\ \ \ \ \ \mbox{\hyperlink{kpm_8h_a32a9df8204905869318d78e338240fc4ab50339a10e1de285ac99d4c3990b8693}{NONE}},\ }
+\DoxyCodeLine{00028\ \ \ \ \ \mbox{\hyperlink{kpm_8h_a32a9df8204905869318d78e338240fc4aa327176a0a845c117bdfadec134a95e9}{LESS\_THAN}},\ }
+\DoxyCodeLine{00029\ \ \ \ \ \mbox{\hyperlink{kpm_8h_a32a9df8204905869318d78e338240fc4a65fdda75d6d9ba052225e222d77a85d3}{LESS\_THAN\_OR\_EQUAL\_TO}},\ }
+\DoxyCodeLine{00030\ \ \ \ \ \mbox{\hyperlink{kpm_8h_a32a9df8204905869318d78e338240fc4a52b88e097f0d16f711b174a6b576cc3b}{EQUAL\_TO}},\ }
+\DoxyCodeLine{00031\ \ \ \ \ \mbox{\hyperlink{kpm_8h_a32a9df8204905869318d78e338240fc4ab1057e560ae9cfb4f451e53341af1114}{GREATER\_THAN\_OR\_EQUAL\_TO}},\ }
+\DoxyCodeLine{00032\ \ \ \ \ \mbox{\hyperlink{kpm_8h_a32a9df8204905869318d78e338240fc4a1625ef4fe09f68fa20d3ff6e02cd5c8e}{GREATER\_THAN}}\ }
+\DoxyCodeLine{00033\ \};}
+\DoxyCodeLine{00034\ }
+\DoxyCodeLine{00039\ \textcolor{keyword}{struct\ }\mbox{\hyperlink{structRepository}{Repository}}}
+\DoxyCodeLine{00040\ \{}
+\DoxyCodeLine{00041\ \ \ \ \ std::string\ \mbox{\hyperlink{structRepository_a9c45d6310f1df353ec9a317fea5660ce}{id}};\ }
+\DoxyCodeLine{00042\ \ \ \ \ std::string\ \mbox{\hyperlink{structRepository_aaecdb6451a3a501b7ec50212d7bdcef6}{url}};\ }
+\DoxyCodeLine{00043\ \};}
+\DoxyCodeLine{00044\ }
+\DoxyCodeLine{00049\ \textcolor{keyword}{struct\ }\mbox{\hyperlink{structIndexedRepository}{IndexedRepository}}}
+\DoxyCodeLine{00050\ \{}
+\DoxyCodeLine{00051\ \ \ \ \ std::string\ \mbox{\hyperlink{structIndexedRepository_a50da94744f531e02684acaa9a63abdb7}{id}};\ }
+\DoxyCodeLine{00052\ \ \ \ \ std::string\ \mbox{\hyperlink{structIndexedRepository_a6259aacab66def11041c0310a094492d}{name}};\ }
+\DoxyCodeLine{00053\ \};}
+\DoxyCodeLine{00054\ }
+\DoxyCodeLine{00059\ \textcolor{keyword}{struct\ }\mbox{\hyperlink{structIndexedPackage}{IndexedPackage}}}
+\DoxyCodeLine{00060\ \{}
+\DoxyCodeLine{00061\ \ \ \ \ std::string\ \mbox{\hyperlink{structIndexedPackage_a0a9af34a9be98157caf3a1958dd8c8f4}{repository}};\ }
+\DoxyCodeLine{00062\ \ \ \ \ std::string\ \mbox{\hyperlink{structIndexedPackage_a0a083702a67ce22a747569ddb8ed9fdc}{id}};\ }
+\DoxyCodeLine{00063\ \ \ \ \ std::string\ \mbox{\hyperlink{structIndexedPackage_a8e63b16e76a80d8e9b512f2f0088eab3}{name}};\ }
+\DoxyCodeLine{00064\ \ \ \ \ std::string\ \mbox{\hyperlink{structIndexedPackage_ad4ee38e7d691278c956e35628e5b777d}{description}};\ }
+\DoxyCodeLine{00065\ \ \ \ \ std::string\ \mbox{\hyperlink{structIndexedPackage_a423a35772ce5d152597c83f721d39f7e}{author}};\ }
+\DoxyCodeLine{00066\ \ \ \ \ std::string\ \mbox{\hyperlink{structIndexedPackage_ae492ffeca40b2ae9b2a7c76f9ec40182}{icon}};\ }
+\DoxyCodeLine{00067\ \};}
+\DoxyCodeLine{00068\ }
+\DoxyCodeLine{00073\ \textcolor{keyword}{struct\ }\mbox{\hyperlink{structIndexedArtifact}{IndexedArtifact}}}
+\DoxyCodeLine{00074\ \{}
+\DoxyCodeLine{00075\ \ \ \ \ std::string\ \mbox{\hyperlink{structIndexedArtifact_a3c9e92c6a9dc3d3233658b5ea06c3203}{url}};\ }
+\DoxyCodeLine{00076\ \ \ \ \ std::string\ \mbox{\hyperlink{structIndexedArtifact_ac2207c348597e7849a4449fbc2a9d792}{repository}};\ }
+\DoxyCodeLine{00077\ \ \ \ \ std::string\ \mbox{\hyperlink{structIndexedArtifact_a170deadaad53b43a387d454eb9a340e7}{id}};\ }
+\DoxyCodeLine{00078\ \ \ \ \ \mbox{\hyperlink{classSemVer}{SemVer}}\ \mbox{\hyperlink{structIndexedArtifact_ad054e014a495997c7f41d18407bca5a3}{version}};\ }
+\DoxyCodeLine{00079\ \ \ \ \ std::vector<std::string>\ \mbox{\hyperlink{structIndexedArtifact_a23dd73c55f195c5d6b0c5767bfcc6222}{supported\_arch}};\ }
+\DoxyCodeLine{00080\ \ \ \ \ std::vector<std::string>\ \mbox{\hyperlink{structIndexedArtifact_a54beb5a1c600928bbbe90fb020b6af11}{supported\_kindles}};\ }
+\DoxyCodeLine{00081\ \};}
+\DoxyCodeLine{00082\ }
+\DoxyCodeLine{00087\ \textcolor{keyword}{struct\ }\mbox{\hyperlink{structIndexedArtifactDependency}{IndexedArtifactDependency}}}
+\DoxyCodeLine{00088\ \{}
+\DoxyCodeLine{00089\ \ \ \ \ std::string\ \mbox{\hyperlink{structIndexedArtifactDependency_a08d433fa47347d4a34268e2c3fea72bf}{artifact}};\ }
+\DoxyCodeLine{00090\ \ \ \ \ std::string\ \mbox{\hyperlink{structIndexedArtifactDependency_acef5a5efc0ad04f1b033444753a13f22}{repository}};\ }
+\DoxyCodeLine{00091\ \ \ \ \ std::string\ \mbox{\hyperlink{structIndexedArtifactDependency_ad2451d4b11383cdf2a039ff9c55e11f2}{id}};\ }
+\DoxyCodeLine{00092\ \ \ \ \ \mbox{\hyperlink{kpm_8h_a32a9df8204905869318d78e338240fc4}{DependencyType}}\ \mbox{\hyperlink{structIndexedArtifactDependency_ab81684cc08cdb5c3e980fc72fec8f21d}{type}};\ }
+\DoxyCodeLine{00093\ \ \ \ \ \mbox{\hyperlink{classSemVer}{SemVer}}\ \mbox{\hyperlink{structIndexedArtifactDependency_a8e39bd1e9f8da1d9e09bf6d3cb4d0134}{version}};\ }
+\DoxyCodeLine{00094\ \};}
+\DoxyCodeLine{00095\ }
+\DoxyCodeLine{00100\ \textcolor{keyword}{struct\ }\mbox{\hyperlink{structInstalledPackage}{InstalledPackage}}}
+\DoxyCodeLine{00101\ \{}
+\DoxyCodeLine{00102\ \ \ \ \ std::string\ \mbox{\hyperlink{structInstalledPackage_ae1275de247da4ab93ab46a20d3c3d1d2}{id}};\ }
+\DoxyCodeLine{00103\ \ \ \ \ std::string\ \mbox{\hyperlink{structInstalledPackage_a7790dfae0c9ea843ff06c935d6efdae2}{name}};\ }
+\DoxyCodeLine{00104\ \ \ \ \ std::string\ \mbox{\hyperlink{structInstalledPackage_aff5e84e01207e51af9a9b8de276db50d}{author}};\ }
+\DoxyCodeLine{00105\ \ \ \ \ std::string\ \mbox{\hyperlink{structInstalledPackage_a83c662eac8fda6d93659fddb4b088721}{description}};\ }
+\DoxyCodeLine{00106\ \ \ \ \ \mbox{\hyperlink{classSemVer}{SemVer}}\ \mbox{\hyperlink{structInstalledPackage_aedd58ddfeaf372239520adcba54ea56a}{version}};\ }
+\DoxyCodeLine{00107\ \};}
+\DoxyCodeLine{00108\ }
+\DoxyCodeLine{00113\ \textcolor{keyword}{struct\ }\mbox{\hyperlink{structDependency}{Dependency}}}
+\DoxyCodeLine{00114\ \{}
+\DoxyCodeLine{00115\ \ \ \ \ std::string\ \mbox{\hyperlink{structDependency_ad3d9c3c164cbc134ae0376e98e1ba484}{dependent}};\ }
+\DoxyCodeLine{00116\ \ \ \ \ std::string\ \mbox{\hyperlink{structDependency_ac7ce3479adfdeb46bfd932a89929a9d6}{dependency\_repository}};\ }
+\DoxyCodeLine{00117\ \ \ \ \ std::string\ \mbox{\hyperlink{structDependency_ad46d6e22c836541c14be3d54b6a40855}{dependency\_id}};\ }
+\DoxyCodeLine{00118\ \ \ \ \ \mbox{\hyperlink{kpm_8h_a32a9df8204905869318d78e338240fc4}{DependencyType}}\ \mbox{\hyperlink{structDependency_ae007f3a93319a8ce90c8f52ab5c36887}{dependency\_type}};\ }
+\DoxyCodeLine{00119\ \ \ \ \ \mbox{\hyperlink{classSemVer}{SemVer}}\ \mbox{\hyperlink{structDependency_ace73440b4001327596ab51872e721d67}{version}};\ }
+\DoxyCodeLine{00120\ \};}
+\DoxyCodeLine{00121\ }
+\DoxyCodeLine{00122\ }
+\DoxyCodeLine{00127\ \textcolor{keyword}{class\ }KPM}
+\DoxyCodeLine{00128\ \{}
+\DoxyCodeLine{00129\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00130\ \ \ \ \ KPM(\textcolor{keyword}{const}\ std::filesystem::path\ dbPath)}
+\DoxyCodeLine{00131\ \ \ \ \ \{}
+\DoxyCodeLine{00132\ \ \ \ \ \ \ \ \ sqlite3\_open(dbPath.c\_str(),\ \&db);}
+\DoxyCodeLine{00133\ }
+\DoxyCodeLine{00134\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Create\ tables\ if\ needed}}
+\DoxyCodeLine{00135\ \ \ \ \ \ \ \ \ sqlite3\_exec(db,\ R\textcolor{stringliteral}{"{}(}}
+\DoxyCodeLine{00136\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ CREATE\ TABLE\ IF\ NOT\ EXISTS\ repositories\ (}}
+\DoxyCodeLine{00137\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ id\ TEXT\ PRIMARY\ KEY\ NOT\ NULL,}}
+\DoxyCodeLine{00138\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ url\ TEXT\ NOT\ NULL}}
+\DoxyCodeLine{00139\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ )}}
+\DoxyCodeLine{00140\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ )"{},\ NULL,\ NULL,\ NULL);}}
+\DoxyCodeLine{00141\ \textcolor{stringliteral}{}}
+\DoxyCodeLine{00142\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ sqlite3\_exec(db,\ R}\textcolor{stringliteral}{"{}(}}
+\DoxyCodeLine{00143\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ CREATE\ TABLE\ IF\ NOT\ EXISTS\ repository\_index\ (}}
+\DoxyCodeLine{00144\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ id\ TEXT\ PRIMARY\ KEY\ NOT\ NULL,}}
+\DoxyCodeLine{00145\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ name\ TEXT\ NOT\ NULL,}}
+\DoxyCodeLine{00146\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ description\ TEXT\ NOT\ NULL,}}
+\DoxyCodeLine{00147\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ FOREIGN\ KEY(id)\ REFERENCES\ repositories(id)}}
+\DoxyCodeLine{00148\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ )}}
+\DoxyCodeLine{00149\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ )"{},\ NULL,\ NULL,\ NULL);}}
+\DoxyCodeLine{00150\ \textcolor{stringliteral}{}}
+\DoxyCodeLine{00151\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ sqlite3\_exec(db,\ R}\textcolor{stringliteral}{"{}(}}
+\DoxyCodeLine{00152\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ CREATE\ TABLE\ IF\ NOT\ EXISTS\ package\_index\ (}}
+\DoxyCodeLine{00153\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ repository\ TEXT\ NOT\ NULL,}}
+\DoxyCodeLine{00154\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ id\ TEXT\ NOT\ NULL,}}
+\DoxyCodeLine{00155\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ name\ TEXT\ NOT\ NULL,}}
+\DoxyCodeLine{00156\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ description\ TEXT\ NOT\ NULL,}}
+\DoxyCodeLine{00157\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ author\ TEXT\ NOT\ NULL,}}
+\DoxyCodeLine{00158\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ icon\ TEXT\ NOT\ NULL,}}
+\DoxyCodeLine{00159\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ PRIMARY\ KEY\ (repository,\ id),}}
+\DoxyCodeLine{00160\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ FOREIGN\ KEY(repository)\ REFERENCES\ repositories(id)}}
+\DoxyCodeLine{00161\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ )}}
+\DoxyCodeLine{00162\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ )"{},\ NULL,\ NULL,\ NULL);}}
+\DoxyCodeLine{00163\ \textcolor{stringliteral}{}}
+\DoxyCodeLine{00164\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ sqlite3\_exec(db,\ R}\textcolor{stringliteral}{"{}(}}
+\DoxyCodeLine{00165\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ CREATE\ TABLE\ IF\ NOT\ EXISTS\ artifact\_index\ (}}
+\DoxyCodeLine{00166\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ url\ TEXT\ PRIMARY\ KEY\ NOT\ NULL,}}
+\DoxyCodeLine{00167\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ repository\ TEXT\ NOT\ NULL,}}
+\DoxyCodeLine{00168\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ id\ TEXT\ NOT\ NULL,}}
+\DoxyCodeLine{00169\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ version\_major\ INTEGER\ NOT\ NULL,}}
+\DoxyCodeLine{00170\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ version\_minor\ INTEGER\ NOT\ NULL,}}
+\DoxyCodeLine{00171\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ version\_patch\ INTEGER\ NOT\ NULL,}}
+\DoxyCodeLine{00172\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ supported\_arch\ TEXT\ NOT\ NULL,}}
+\DoxyCodeLine{00173\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ supported\_kindles\ TEXT\ NOT\ NULL,}}
+\DoxyCodeLine{00174\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ FOREIGN\ KEY\ (repository,\ id)\ REFERENCES\ package\_index(repository,\ id)}}
+\DoxyCodeLine{00175\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ )}}
+\DoxyCodeLine{00176\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ )"{},\ NULL,\ NULL,\ NULL);}}
+\DoxyCodeLine{00177\ \textcolor{stringliteral}{}}
+\DoxyCodeLine{00178\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ sqlite3\_exec(db,\ R}\textcolor{stringliteral}{"{}(}}
+\DoxyCodeLine{00179\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ CREATE\ TABLE\ IF\ NOT\ EXISTS\ artifact\_dependency\_index\ (}}
+\DoxyCodeLine{00180\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ artifact\ TEXT\ NOT\ NULL,}}
+\DoxyCodeLine{00181\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ repository\ TEXT,}}
+\DoxyCodeLine{00182\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ id\ TEXT\ NOT\ NULL,}}
+\DoxyCodeLine{00183\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ type\ INTEGER\ NOT\ NULL,}}
+\DoxyCodeLine{00184\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ version\_major\ INTEGER,}}
+\DoxyCodeLine{00185\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ version\_minor\ INTEGER,}}
+\DoxyCodeLine{00186\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ version\_patch\ INTEGER,}}
+\DoxyCodeLine{00187\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ PRIMARY\ KEY\ (artifact,\ repository,\ id),}}
+\DoxyCodeLine{00188\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ FOREIGN\ KEY(artifact)\ REFERENCES\ artifact\_index(url)}}
+\DoxyCodeLine{00189\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ )}}
+\DoxyCodeLine{00190\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ )"{},\ NULL,\ NULL,\ NULL);}}
+\DoxyCodeLine{00191\ \textcolor{stringliteral}{}}
+\DoxyCodeLine{00192\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ sqlite3\_exec(db,\ R}\textcolor{stringliteral}{"{}(}}
+\DoxyCodeLine{00193\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ CREATE\ TABLE\ IF\ NOT\ EXISTS\ installed\_packages\ (}}
+\DoxyCodeLine{00194\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ id\ TEXT\ PRIMARY\ KEY\ NOT\ NULL,}}
+\DoxyCodeLine{00195\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ name\ TEXT\ NOT\ NULL,}}
+\DoxyCodeLine{00196\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ author\ TEXT\ NOT\ NULL,}}
+\DoxyCodeLine{00197\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ description\ TEXT\ NOT\ NULL,}}
+\DoxyCodeLine{00198\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ version\_major\ INTEGER,}}
+\DoxyCodeLine{00199\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ version\_minor\ INTEGER,}}
+\DoxyCodeLine{00200\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ version\_patch\ INTEGER}}
+\DoxyCodeLine{00201\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ )}}
+\DoxyCodeLine{00202\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ )"{},\ NULL,\ NULL,\ NULL);}}
+\DoxyCodeLine{00203\ \textcolor{stringliteral}{}}
+\DoxyCodeLine{00204\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ sqlite3\_exec(db,\ R}\textcolor{stringliteral}{"{}(}}
+\DoxyCodeLine{00205\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ CREATE\ TABLE\ IF\ NOT\ EXISTS\ dependencies\ (}}
+\DoxyCodeLine{00206\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ dependent\ TEXT\ NOT\ NULL,}}
+\DoxyCodeLine{00207\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ dependency\_repository\ TEXT\ NOT\ NULL,}}
+\DoxyCodeLine{00208\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ dependency\_id\ TEXT\ NOT\ NULL,}}
+\DoxyCodeLine{00209\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ dependency\_type\ TEXT\ NOT\ NULL,}}
+\DoxyCodeLine{00210\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ version\_major\ INTEGER\ NOT\ NULL,}}
+\DoxyCodeLine{00211\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ version\_minor\ INTEGER\ NOT\ NULL,}}
+\DoxyCodeLine{00212\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ version\_patch\ INTEGER\ NOT\ NULL,}}
+\DoxyCodeLine{00213\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ FOREIGN\ KEY(dependent)\ REFERENCES\ installed\_packages(id)}}
+\DoxyCodeLine{00214\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ \ \ \ \ )}}
+\DoxyCodeLine{00215\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ )"{},\ NULL,\ NULL,\ NULL);}}
+\DoxyCodeLine{00216\ \textcolor{stringliteral}{\ \ \ \ \};}}
+\DoxyCodeLine{00217\ \textcolor{stringliteral}{}}
+\DoxyCodeLine{00218\ \textcolor{stringliteral}{\ \ \ \ \string~KPM()}}
+\DoxyCodeLine{00219\ \textcolor{stringliteral}{\ \ \ \ \{}}
+\DoxyCodeLine{00220\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ sqlite3\_close(db);}}
+\DoxyCodeLine{00221\ \textcolor{stringliteral}{\ \ \ \ \}}}
+\DoxyCodeLine{00222\ \textcolor{stringliteral}{}}
+\DoxyCodeLine{00223\ \textcolor{stringliteral}{\ \ \ \ }\textcolor{comment}{//\ Repo\ management\ functions}}
+\DoxyCodeLine{00224\ \ \ \ \ \mbox{\hyperlink{structRepository}{Repository}}\ AddRepository(\textcolor{keyword}{const}\ std::string\&\ url);}
+\DoxyCodeLine{00225\ \ \ \ \ \textcolor{keywordtype}{bool}\ RemoveRepository(\textcolor{keyword}{const}\ std::string\&\ \textcolor{keywordtype}{id});}
+\DoxyCodeLine{00226\ \ \ \ \ std::vector<Repository>\ GetRepositories();}
+\DoxyCodeLine{00227\ \ \ \ \ std::vector<Package>\ GetRepositoryPackages(\mbox{\hyperlink{structRepository}{Repository}}\ repository);}
+\DoxyCodeLine{00228\ \ \ \ \ std::vector<Artifact>\ GetPackageArtifacts(\mbox{\hyperlink{structRepository}{Repository}}\ repository,\ Package\ package);}
+\DoxyCodeLine{00229\ }
+\DoxyCodeLine{00230\ \ \ \ \ \textcolor{comment}{//\ Internet\ functions}}
+\DoxyCodeLine{00231\ \ \ \ \ \textcolor{keywordtype}{bool}\ UpdateIndices();}
+\DoxyCodeLine{00232\ \ \ \ \ \textcolor{keywordtype}{bool}\ DownloadPackage(\textcolor{keyword}{const}\ std::string\&\ installString,\ \textcolor{keyword}{const}\ std::filesystem::path\&\ path);\ \textcolor{comment}{//\ installString\ is\ generally\ a\ package\ ID\ but\ MAY\ contain\ a\ repo\ prefix}}
+\DoxyCodeLine{00233\ \ \ \ \ }
+\DoxyCodeLine{00234\ }
+\DoxyCodeLine{00235\ \ \ \ \ \textcolor{comment}{//\ Local\ package\ functions}}
+\DoxyCodeLine{00236\ \ \ \ \ std::vector<Artifact>\ GetInstalledPackages();}
+\DoxyCodeLine{00237\ \ \ \ \ \textcolor{keywordtype}{bool}\ InstallPackage(\textcolor{keyword}{const}\ std::filesystem::path\&\ package);}
+\DoxyCodeLine{00238\ \ \ \ \ \textcolor{keywordtype}{bool}\ UninstallPackage(std::string\ \textcolor{keywordtype}{id});}
+\DoxyCodeLine{00239\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00240\ \ \ \ \ sqlite3*\ db;}
+\DoxyCodeLine{00241\ \};}
+
+\end{DoxyCode}

@@ -37,19 +37,22 @@ index.json:
         {
             "name": "Example Package",
             "description": "KMC's example app is an example of all time",
+            "author": "HackerDude",
             "icon": "/packages/com.kindlemodding.example/icon.png",
             "supported_arch": [ "armhf", "armel" ],
             "supported_kindles": [],
             "artifacts":
             [
                 {
-                    "uri": "/packages/com.kindlemodding.example/armhf/package_v1.0.0.kpkg",
+                    "url": "/packages/com.kindlemodding.example/armhf/package_v1.0.0.kpkg",
+                    "depencencies": [],
                     "version": [ 1, 0, 0 ],
                     "supported_arch": [ "armhf" ],
                     "supported_kindles": []
                 },
                 {
-                    "uri": "/packages/com.kindlemodding.example/armel/package_v1.0.0.kpkg",
+                    "url": "/packages/com.kindlemodding.example/armel/package_v1.0.0.kpkg",
+                    "depencencies": [],
                     "version": [ 1, 0, 0 ],
                     "supported_arch": [ "armel" ],
                     "supported_kindles": []
@@ -88,7 +91,16 @@ Example Package Format:
     "version": 1,
     "id": "com.kindlemodding.example",
     "name": "Example Package",
+    "author": "HackerDude",
     "description": "KMC's example app is an example app of all time",
+    "dependencies": [
+        {
+            "repository": "com.kindlemodding.repo",
+            "id": "com.kindlemodding.fbink",
+            "type": "<",
+            "version": [ 1, 0, 0 ]
+        }
+    ],
     "version": [ 1, 0, 0 ],
     "supported_arch": [ "armhf" ],
     "supported_kindles": [ "" ]
@@ -104,6 +116,14 @@ description - A human-readalbe description of an app
 version - The version number of an app in JSON-serialised semver format, IE: `v1.2.3 -> [ 1, 2, 3 ]`
 supported_arch - A list of compatible architectures supported (currently just `armhf` and `armel`)
 supported_kindles - OPTIONAL - A list of Kindles that this app supports (see `generation_nickname` field under `models.json`) - an empty list is treated the same as this being omitted
+```
+
+## Dependency object
+```
+repository - String ID of the repo - can be omitted or null
+id - The id of the package
+type - "<=" or ">=" or "<" or ">" or "=" (can be omitted)
+version - semver (can be omitted if type is omitted)
 ```
 
 ### hooks
