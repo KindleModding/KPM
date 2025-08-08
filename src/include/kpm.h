@@ -18,10 +18,13 @@
 
 #include "semver.h"
 
+namespace KPM
+{
+
 /**
- * @brief Type of dependency version
- * 
- */
+* @brief Type of dependency version
+* 
+*/
 enum class DependencyType
 {
     NONE, /**< No version-specific dependency */
@@ -33,9 +36,9 @@ enum class DependencyType
 };
 
 /**
- * @brief A repository that KPM is using
- * 
- */
+* @brief A repository that KPM is using
+* 
+*/
 struct Repository
 {
     std::string id; /**< The repository's ID */
@@ -45,9 +48,9 @@ struct Repository
 };
 
 /**
- * @brief A package that KPM has indexed
- * 
- */
+* @brief A package that KPM has indexed
+* 
+*/
 struct IndexedPackage
 {
     std::string repository; /**< The repository ID */
@@ -59,9 +62,9 @@ struct IndexedPackage
 };
 
 /**
- * @brief An artifact KPM has indexed
- * 
- */
+* @brief An artifact KPM has indexed
+* 
+*/
 struct IndexedArtifact
 {
     std::string url; /**< URL of the artifact - primary key */
@@ -73,9 +76,9 @@ struct IndexedArtifact
 };
 
 /**
- * @brief A dependency of an artifact KPM has indexed
- * 
- */
+* @brief A dependency of an artifact KPM has indexed
+* 
+*/
 struct IndexedArtifactDependency
 {
     std::string artifact; /**< URL of the artifact */
@@ -86,9 +89,9 @@ struct IndexedArtifactDependency
 };
 
 /**
- * @brief A package KPM has installed
- * 
- */
+* @brief A package KPM has installed
+* 
+*/
 struct InstalledPackage
 {
     std::string id; /**< The package ID */
@@ -99,9 +102,9 @@ struct InstalledPackage
 };
 
 /**
- * @brief A dependency of a package KPM has installed
- * 
- */
+* @brief A dependency of a package KPM has installed
+* 
+*/
 struct Dependency
 {
     std::string dependent; /**< ID of installed package */
@@ -111,6 +114,32 @@ struct Dependency
     SemVer version; /**< The dependency's version */
 };
 
+namespace Exceptions
+{
+    class HTTPError: public std::exception
+    {
+        virtual const char* what() const throw()
+        {
+            return "Connection error.";
+        }
+    };
+
+    class ManifestError: public std::exception
+    {
+        virtual const char* what() const throw()
+        {
+            return "Manifest format error.";
+        }
+    };
+
+    class SQLiteError: public std::exception
+    {
+        virtual const char* what() const throw()
+        {
+            return "Unknown SQLite error.";
+        }
+    };
+};
 
 /**
  * @brief This is the KPM class you initialise to interact with KPM
@@ -134,7 +163,7 @@ public:
         )", NULL, NULL, NULL);
 
         sqlite3_exec(db, R"(
-            CREATE TABLE IF NOT EXISTS package_index (
+            CREATE TABLE IF NOT EXISTS packages (
                 repository TEXT NOT NULL,
                 id TEXT NOT NULL,
                 name TEXT NOT NULL,
@@ -147,7 +176,7 @@ public:
         )", NULL, NULL, NULL);
 
         sqlite3_exec(db, R"(
-            CREATE TABLE IF NOT EXISTS artifact_index (
+            CREATE TABLE IF NOT EXISTS artifacts (
                 url TEXT PRIMARY KEY NOT NULL,
                 repository TEXT NOT NULL,
                 id TEXT NOT NULL,
@@ -156,12 +185,12 @@ public:
                 version_patch INTEGER NOT NULL,
                 supported_arch TEXT NOT NULL,
                 supported_kindles TEXT NOT NULL,
-                FOREIGN KEY (repository, id) REFERENCES package_index(repository, id)
+                FOREIGN KEY (repository, id) REFERENCES packages(repository, id)
             )
         )", NULL, NULL, NULL);
 
         sqlite3_exec(db, R"(
-            CREATE TABLE IF NOT EXISTS artifact_dependency_index (
+            CREATE TABLE IF NOT EXISTS artifact_dependencies (
                 artifact TEXT NOT NULL,
                 repository TEXT,
                 id TEXT NOT NULL,
@@ -170,7 +199,7 @@ public:
                 version_minor INTEGER,
                 version_patch INTEGER,
                 PRIMARY KEY (artifact, repository, id),
-                FOREIGN KEY(artifact) REFERENCES artifact_index(url)
+                FOREIGN KEY(artifact) REFERENCES artifacts(url)
             )
         )", NULL, NULL, NULL);
 
@@ -209,7 +238,7 @@ public:
     std::vector<Repository> ListRepositories();
     Repository GetRepository(const std::string& repositoryID);
     Repository AddRepository(const std::string& url);
-    bool RemoveRepository(const std::string& id);
+    void RemoveRepository(Repository repository);
     std::vector<IndexedPackage> ListRepositoryPackages(Repository repository);
 
     IndexedPackage GetPackage(const std::string& installString);
@@ -226,4 +255,6 @@ public:
     bool UninstallPackage(InstalledPackage package);
 private:
     sqlite3* db;
+};
+
 };

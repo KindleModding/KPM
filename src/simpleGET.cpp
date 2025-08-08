@@ -34,6 +34,13 @@ size_t SimpleGET::GetSize()
     return size;
 }
 
+int SimpleGET::GetResponseCode()
+{
+    int response_code;
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
+    return response_code;
+}
+
 size_t SimpleGET::write_callback(char* ptr, size_t size, size_t nmemb, void* userdata)
 {
     size_t realsize = size * nmemb;
