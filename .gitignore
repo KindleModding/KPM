@@ -1,2 +1,4 @@
 builddir/
 docs/
+subprojects/
+!subprojects/*.wrap

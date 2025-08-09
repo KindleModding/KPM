@@ -85,7 +85,7 @@ KPM::Repository KPM::KPM::AddRepository(const std::string& url)
         throw Exceptions::HTTPError();
     }
 
-    nlohmann::json json = nlohmann::json::parse(request);
+    nlohmann::json json = nlohmann::json::parse(request.GetBuffer());
     if (
         !json.contains("id") ||
         !json.contains("name") ||

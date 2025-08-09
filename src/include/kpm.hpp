@@ -16,7 +16,7 @@
 #include <vector>
 #include <sqlite3.h>
 
-#include "semver.h"
+#include "semver.hpp"
 
 namespace KPM
 {
@@ -241,7 +241,7 @@ public:
     void RemoveRepository(Repository repository);
     std::vector<IndexedPackage> ListRepositoryPackages(Repository repository);
 
-    IndexedPackage GetPackage(const std::string& installString);
+    /*IndexedPackage GetPackage(const std::string& installString);
     std::vector<IndexedArtifact> GetArtifacts(IndexedPackage package);
     bool InstallArtifact(IndexedArtifact artifact);
 
@@ -252,7 +252,7 @@ public:
     // Local package functions
     std::vector<InstalledPackage> GetInstalledPackages();
     bool InstallPackage(const std::filesystem::path& package);
-    bool UninstallPackage(InstalledPackage package);
+    bool UninstallPackage(InstalledPackage package);*/
 private:
     sqlite3* db;
 };
