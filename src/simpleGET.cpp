@@ -11,6 +11,8 @@ SimpleGET::SimpleGET(const char* url)
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, this->write_callback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)this); // This _should_ work
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, CURLFOLLOW_ALL);
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, "kpm/1.0.0");
 }
 
 SimpleGET::~SimpleGET()
@@ -26,6 +28,11 @@ CURLcode SimpleGET::Perform()
 
 char* SimpleGET::GetBuffer()
 {
+    if (!buffer)
+    {
+        return ""; // We'd rather return an empty string than NULL?
+    }
+
     return buffer;
 }
 
