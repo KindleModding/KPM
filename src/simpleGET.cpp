@@ -13,6 +13,9 @@ SimpleGET::SimpleGET(const char* url)
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)this); // This _should_ work
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, CURLFOLLOW_ALL);
     curl_easy_setopt(curl, CURLOPT_USERAGENT, "kpm/1.0.0");
+    curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, (long)CURL_HTTP_VERSION_2TLS);
+    curl_easy_setopt(curl, CURLOPT_FTP_SKIP_PASV_IP, 1L);
+    curl_easy_setopt(curl, CURLOPT_TCP_KEEPALIVE, 1L);
 }
 
 SimpleGET::~SimpleGET()
@@ -30,7 +33,9 @@ char* SimpleGET::GetBuffer()
 {
     if (!buffer)
     {
-        return ""; // We'd rather return an empty string than NULL?
+        // Allocate empty string rather than return NULL
+        buffer = static_cast<char*>(malloc(1));
+        buffer[0] = 0;
     }
 
     return buffer;
