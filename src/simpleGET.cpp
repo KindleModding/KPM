@@ -34,9 +34,9 @@ size_t SimpleGET::GetSize()
     return size;
 }
 
-int SimpleGET::GetResponseCode()
+long SimpleGET::GetResponseCode()
 {
-    int response_code;
+    long response_code;
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
     return response_code;
 }
@@ -44,10 +44,10 @@ int SimpleGET::GetResponseCode()
 size_t SimpleGET::write_callback(char* ptr, size_t size, size_t nmemb, void* userdata)
 {
     size_t realsize = size * nmemb;
-    SimpleGET* current = (SimpleGET*) userdata;
+    SimpleGET* current = static_cast<SimpleGET*>(userdata);
 
     char* newBuffer = (char*) realloc(current->buffer, current->size + realsize + 1);
-    if (!ptr)
+    if (!newBuffer)
     {
         return 0; // OOM
     }

@@ -78,14 +78,25 @@ KPM::Repository KPM::KPM::GetRepository(const std::string& repositoryID)
 KPM::Repository KPM::KPM::AddRepository(const std::string& url)
 {
     SimpleGET request(url.c_str());
-    request.Perform();
+    if (request.Perform() != CURLE_OK)
+    {
+        throw Exceptions::HTTPError();
+    }
+
     request.GetBuffer();
     if (request.GetResponseCode() != 200)
     {
         throw Exceptions::HTTPError();
     }
 
-    nlohmann::json json = nlohmann::json::parse(request.GetBuffer());
+
+    try {
+        nlohmann::json json = nlohmann::json::parse(request.GetBuffer());
+    } catch (std::exception& e)
+    {
+        throw Exceptions::ManifestError();
+    }
+
     if (
         !json.contains("id") ||
         !json.contains("name") ||

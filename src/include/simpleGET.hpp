@@ -11,10 +11,10 @@ public:
     CURLcode Perform();
     char* GetBuffer();
     size_t GetSize();
-    int GetResponseCode();
+    long GetResponseCode();
 private:
     static size_t write_callback(char* ptr, size_t size, size_t nmemb, void* userdata);
     CURL* curl;
-    char* buffer;
+    char* buffer = NULL;
     size_t size;
 };

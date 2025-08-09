@@ -9,16 +9,20 @@ int main()
     const std::string dbPath = "./repo_test.db";
     if (std::filesystem::exists(dbPath))
     {
+        fprintf(stderr, "Database exists - deleting\n");
         std::filesystem::remove(dbPath);
     }
     
     // Trigger db creation
+    fprintf(stderr, "Initialising KPM object\n");
     KPM::KPM kpm(dbPath);
 
     // Check this db
+    fprintf(stderr, "Opening database\n");
     sqlite3* db;
     sqlite3_open(dbPath.c_str(), &db);
 
+    fprintf(stderr, "Checking tables\n");
     const std::string statementString = "SELECT name FROM sqlite_schema WHERE type='table';";
     sqlite3_stmt* statement;
     sqlite3_prepare_v2(db, statementString.c_str(), statementString.size(), &statement, NULL);
