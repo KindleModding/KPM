@@ -1,6 +1,6 @@
 #include <nlohmann/json.hpp>
 
-#include "kpm.hpp"
+#include "kpm/kpm.hpp"
 #include "simpleGET.hpp"
 
 /**
