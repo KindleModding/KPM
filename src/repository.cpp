@@ -90,8 +90,9 @@ KPM::Repository KPM::KPM::AddRepository(const std::string& url)
     }
 
 
+    nlohmann::json json;
     try {
-        nlohmann::json json = nlohmann::json::parse(request.GetBuffer());
+        json = nlohmann::json::parse(request.GetBuffer());
     } catch (std::exception& e)
     {
         throw Exceptions::ManifestError();
