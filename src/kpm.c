@@ -1,10 +1,12 @@
-#include "kpm/kpm.hpp"
+#include <stddef.h>
 
-KPM::KPM::KPM(const std::filesystem::path& dbPath)
+#include "kpm/kpm.h"
+
+enum KPMResult KPM_Initialise(struct KPM *kpm, const char* dbPath)
 {
-    sqlite3_open(dbPath.c_str(), &db);
+    sqlite3_open(dbPath, &kpm->db);
 
-    sqlite3_exec(db, R"(
+    sqlite3_exec(kpm->db, R"(
         CREATE TABLE IF NOT EXISTS repositories (
             id TEXT PRIMARY KEY NOT NULL,
             url TEXT NOT NULL,
@@ -14,7 +16,7 @@ KPM::KPM::KPM(const std::filesystem::path& dbPath)
         )
     )", NULL, NULL, NULL);
 
-    sqlite3_exec(db, R"(
+    sqlite3_exec(kpm->db, R"(
         CREATE TABLE IF NOT EXISTS packages (
             repository TEXT NOT NULL,
             id TEXT NOT NULL,
@@ -27,7 +29,7 @@ KPM::KPM::KPM(const std::filesystem::path& dbPath)
         )
     )", NULL, NULL, NULL);
 
-    sqlite3_exec(db, R"(
+    sqlite3_exec(kpm->db, R"(
         CREATE TABLE IF NOT EXISTS artifacts (
             url TEXT PRIMARY KEY NOT NULL,
             repository TEXT NOT NULL,
@@ -41,7 +43,7 @@ KPM::KPM::KPM(const std::filesystem::path& dbPath)
         )
     )", NULL, NULL, NULL);
 
-    sqlite3_exec(db, R"(
+    sqlite3_exec(kpm->db, R"(
         CREATE TABLE IF NOT EXISTS artifact_dependencies (
             artifact TEXT NOT NULL,
             repository TEXT,
@@ -55,7 +57,7 @@ KPM::KPM::KPM(const std::filesystem::path& dbPath)
         )
     )", NULL, NULL, NULL);
 
-    sqlite3_exec(db, R"(
+    sqlite3_exec(kpm->db, R"(
         CREATE TABLE IF NOT EXISTS installed_packages (
             id TEXT PRIMARY KEY NOT NULL,
             name TEXT NOT NULL,
@@ -67,7 +69,7 @@ KPM::KPM::KPM(const std::filesystem::path& dbPath)
         )
     )", NULL, NULL, NULL);
 
-    sqlite3_exec(db, R"(
+    sqlite3_exec(kpm->db, R"(
         CREATE TABLE IF NOT EXISTS dependencies (
             dependent TEXT NOT NULL,
             dependency_repository TEXT NOT NULL,
@@ -79,9 +81,11 @@ KPM::KPM::KPM(const std::filesystem::path& dbPath)
             FOREIGN KEY(dependent) REFERENCES installed_packages(id)
         )
     )", NULL, NULL, NULL);
+
+    return KPM_OK;
 };
 
-KPM::KPM::~KPM()
+void KPM_Cleanup(struct KPM *kpm)
 {
-    sqlite3_close(db);
+    sqlite3_close(kpm->db);
 }

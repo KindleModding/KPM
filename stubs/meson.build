@@ -1,6 +1,6 @@
 lab126utils = library(
     'lab126utils',
-    'lab126utils/lab126utils.cpp',
+    'lab126utils/lab126utils.c',
     include_directories: ['lab126utils/'],
     name_prefix: 'lib',
     dependencies: [],
