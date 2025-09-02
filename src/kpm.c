@@ -2,6 +2,13 @@
 
 #include "kpm/kpm.h"
 
+/**
+ * @brief Initialise the KPM object
+ * 
+ * @param kpm A pointer to an uninitialised KPM struct
+ * @param dbPath The path to the KPM database file
+ * @return enum KPMResult 
+ */
 enum KPMResult KPM_Initialise(struct KPM *kpm, const char* dbPath)
 {
     sqlite3_open(dbPath, &kpm->db);
@@ -85,6 +92,11 @@ enum KPMResult KPM_Initialise(struct KPM *kpm, const char* dbPath)
     return KPM_OK;
 };
 
+/**
+ * @brief Cleanup a KPM object
+ * 
+ * @param kpm 
+ */
 void KPM_Cleanup(struct KPM *kpm)
 {
     sqlite3_close(kpm->db);

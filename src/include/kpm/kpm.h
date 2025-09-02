@@ -127,6 +127,7 @@ enum KPMResult KPM_Initialise(struct KPM *kpm, const char* dbPath);
 void KPM_Cleanup(struct KPM *kpm);
 
 void KPM_FreeRepository(struct Repository* repository);
+void KPM_FreeRepositoryList(size_t repositoryCount, struct Repository* repositories);
 
 // Repo management functions
 enum KPMResult KPM_ListRepositories(struct KPM* kpm, size_t* repositoryCount, struct Repository** repositories);
@@ -135,6 +136,8 @@ enum KPMResult KPM_AddRepository(struct KPM *kpm, const char *url, struct Reposi
 enum KPMResult KPM_RemoveRepository(struct KPM* kpm, const char* repositoryId);
 enum KPMResult KPM_ListRepositoryPackages(struct KPM* kpm, char* repositoryId, size_t* packageCount, struct IndexedPackage** packages);
 
+void KPM_FreeIndexedPackage(struct IndexedPackage* package);
+void KPM_FreeIndexedPackageList(size_t packageCount, struct IndexedPackage* packages);
     /*IndexedPackage GetPackage(const char*& installString);
     std::vector<IndexedArtifact> GetArtifacts(IndexedPackage package);
     bool InstallArtifact(IndexedArtifact artifact);
