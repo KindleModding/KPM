@@ -7,7 +7,7 @@ A repository requires a `manifest.json` file
 ## Manifest
 ```json
 {
-    "version": 1,
+    "manifest_version": 1,
     "id": "org.kindlemodding.repo",
     "name": "KindleModding Official Repository",
     "packages":

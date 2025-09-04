@@ -18,7 +18,7 @@ args = parser.parse_args()
 
 if (args.init):
     manifest = {
-        "version": 1
+        "manifest_version": 1
     }
 
     manifest["id"] = input("Enter repository id: ")
@@ -45,7 +45,7 @@ if (args.init):
 if (args.add):
     repositoryManifest = None
     with open(args.filepath, 'r') as file:
-        repositoryManifest = json.loads(manifest)
+        repositoryManifest = json.loads(file.read())
 
     print(f"Adding package {args.add} to the repository...")
     print("Reading manifest")
@@ -75,7 +75,27 @@ if (args.add):
 
     print("Adding artifact...")
     artifactFolder = "packages/artifacts"
-    artifactPath = f"{artifactFolder}/{manifest['id']}_{'.'.join(manifest['version'])}_{'-'.join(manifest['supported_arch'])}.kpkg"
+    artifactPath = f"{artifactFolder}/{manifest['id']}_{'.'.join(str(x) for x in manifest['version'])}_{'-'.join(manifest['supported_arch'])}.kpkg"
+
+    for artifact in repositoryManifest["packages"][manifest["id"]]["artifacts"]:
+        if (artifact["version"][0] == manifest["version"][0] and
+            artifact["version"][1] == manifest["version"][1] and
+            artifact["version"][2] == manifest["version"][2]):
+            different = False
+            for supported_arch in artifact["supported_arch"]:
+                if (not supported_arch in manifest["supported_arch"]):
+                    different = True
+            
+            if (not different):
+                print("[WARN] Artifact already in repository - would you like to replace it?")
+                answer = input("[y/N] ")
+                if (answer.upper() != 'Y'):
+                    print("Aborted.")
+                    exit(1)
+                
+                repositoryManifest["packages"][manifest["id"]]["artifacts"].remove(artifact)
+            
+
     repositoryManifest["packages"][manifest["id"]]["artifacts"].append({
         "url": artifactPath,
         "version": manifest["version"],
@@ -87,9 +107,11 @@ if (args.add):
         repositoryManifest["packages"][manifest["id"]]["artifacts"][-1]["supported_devices"] = manifest["supported_devices"]
 
     print("Copying artifact file...")
-    os.makedirs(artifactFolder, exist_ok=True)
+    os.makedirs(os.path.join(os.path.dirname(args.filepath), artifactFolder), exist_ok=True)
     shutil.copy(args.add, os.path.join(os.path.dirname(args.filepath), artifactPath))
 
     print("Writing updated manifest...")
     with open(args.filepath, 'w') as file:
         file.write(json.dumps(repositoryManifest, indent=2))
+
+    print("Done!")

@@ -27,7 +27,7 @@ Note: You should not be managing a repository manually, instead use the `kprepo.
 index.json:  
 ```json
 {
-    "version": 1,
+    "manifest_version": 1,
     "id": "com.kindlemodding.repo",
     "name": "KindleModding Repository",
     "description": "The official KindleModding repository",
@@ -72,39 +72,6 @@ A `screenshots.json` file can be provided storing a list of every screenshot a p
     "3.png",
     "4.png"
 ]
-```
-
-### Package Format
-Packages are tar files which may be gzipped.  
-They have a flexible structure however a `manifest.json` file and an `install.sh` file is required.  
-
-Example Package Format:
-```
-    - manifest.json
-    - install.sh
-    - app_binary
-```
-
-### manifest.json format
-```json
-{
-    "version": 1,
-    "id": "com.kindlemodding.example",
-    "name": "Example Package",
-    "author": "HackerDude",
-    "description": "KMC's example app is an example app of all time",
-    "dependencies": [
-        {
-            "repository": "com.kindlemodding.repo",
-            "id": "com.kindlemodding.fbink",
-            "type": "<",
-            "version": [ 1, 0, 0 ]
-        }
-    ],
-    "version": [ 1, 0, 0 ],
-    "supported_arch": [ "armhf" ],
-    "supported_kindles": [ "" ]
-}
 ```
 
 Explanation:

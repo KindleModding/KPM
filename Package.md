@@ -1,12 +1,13 @@
 # KPKG
 
-A KPM package is defined as a `gzipped tar file` with the `kpkg` extension.  
+A KPM package is defined as a `lzma-compressed tar file` with the `kpkg` extension.  
 
 The file `must` have a `manifest.json` in its root.
 
 ## Manifest
 ```json
 {
+    "manifest_version": 1,
     "id": "koreader",
     "name": "KOReader",
     "author": "KOReader Team",
@@ -14,14 +15,17 @@ The file `must` have a `manifest.json` in its root.
     "version": [ 1, 2, 0 ],
     "supported_arch": [ "armhf" ],
     "dependencies":
-    {
-        "fbink":
+    [
         {
+            "id": "fbink",
             "repository": "org.kindlemodding.repo",
             "type": "<",
             "version": [ 3, 0, 0 ]
+        },
+        {
+            "id": "fbinput"
         }
-    },
+    ]
 }
 ```
 
@@ -32,6 +36,7 @@ The package has a version of `1.2.0` and depends on `fbink` (any version below `
 Strings should not contain non-ASCII chars.  
 
 ```
+manifest_version - The manifest format version (currently: 1)
 id - The id of the package, must be lowercase
 name - The display name of the package
 author - The author of the package

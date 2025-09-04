@@ -24,7 +24,7 @@ print(f"Name: {manifest['name']}")
 print(f"Author: {manifest['author']}")
 print("Packing...")
 
-packageFilename = f"./{manifest['id']}_{'.'.join(manifest['version'])}_{'-'.join(manifest['supported_arch'])}.kpkg"
+packageFilename = f"./{manifest['id']}_{'.'.join(str(x) for x in manifest['version'])}_{'-'.join(manifest['supported_arch'])}.kpkg"
 with tarfile.open(packageFilename, "w|xz") as file:
     for source_item_name in os.listdir(args.path):
         print(f"- {source_item_name}")
