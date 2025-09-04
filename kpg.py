@@ -19,12 +19,12 @@ manifest = None
 with open(os.path.join(args.path, "manifest.json"), 'r') as file:
     manifest = json.loads(file.read())
 
-print(f"ID: {manifest["id"]}")
-print(f"Name: {manifest["name"]}")
-print(f"Author: {manifest["author"]}")
+print(f"ID: {manifest['id']}")
+print(f"Name: {manifest['name']}")
+print(f"Author: {manifest['author']}")
 print("Packing...")
 
-packageFilename = f"./{manifest["id"]}_{'.'.join(manifest["version"])}_{'-'.join(manifest["supported_arch"])}.kpkg"
+packageFilename = f"./{manifest['id']}_{'.'.join(manifest['version'])}_{'-'.join(manifest['supported_arch'])}.kpkg"
 with tarfile.open(packageFilename, "w|xz") as file:
     for source_item_name in os.listdir(args.path):
         print(f"- {source_item_name}")

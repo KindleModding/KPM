@@ -75,7 +75,7 @@ if (args.add):
 
     print("Adding artifact...")
     artifactFolder = "packages/artifacts"
-    artifactPath = f"{artifactFolder}/{manifest["id"]}_{'.'.join(manifest["version"])}_{'-'.join(manifest["supported_arch"])}.kpkg"
+    artifactPath = f"{artifactFolder}/{manifest['id']}_{'.'.join(manifest['version'])}_{'-'.join(manifest['supported_arch'])}.kpkg"
     repositoryManifest["packages"][manifest["id"]]["artifacts"].append({
         "url": artifactPath,
         "version": manifest["version"],
