@@ -10,7 +10,7 @@
       "description": "This is a test package",
       "artifacts": [
         {
-          "url": "packages/artifacts/com.kindlemodding.examplepackage_1.2.3_armhf-armel.kpkg",
+          "url": "packages/com.kindlemodding.examplepackage/artifacts/com.kindlemodding.examplepackage_1.2.3_armhf-armel.kpkg",
           "version": [
             1,
             2,

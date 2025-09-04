@@ -49,14 +49,21 @@ if (args.add):
 
     print(f"Adding package {args.add} to the repository...")
     print("Reading manifest")
+    iconData = None
+    manifest = None
     with tarfile.open(args.add, 'r') as file:
-        manifest = None
         try:
             with file.extractfile(file.getmember("manifest.json")) as manifestFile:
                 manifest = json.loads(manifestFile.read())
         except:
             print("[ERR] Could not open manifest.json file")
             exit(1)
+
+        try:
+            with file.extractfile(file.getmember("icon.png")) as iconFile:
+                iconData = iconFile.read()
+        except:
+            print("[WARN] Could not open icon.png file")
 
     if (not manifest["id"] in repositoryManifest["packages"]):
         repositoryManifest["packages"][manifest["id"]] = { "name": "", "author": "", "description": "", "artifacts": [] }
@@ -74,8 +81,9 @@ if (args.add):
         repositoryManifest["packages"][manifest["id"]]["description"] = manifest["description"]
 
     print("Adding artifact...")
-    artifactFolder = "packages/artifacts"
-    artifactPath = f"{artifactFolder}/{manifest['id']}_{'.'.join(str(x) for x in manifest['version'])}_{'-'.join(manifest['supported_arch'])}.kpkg"
+    packageFolder = os.path.join("packages", manifest['id'])
+    artifactFolder = os.path.join(packageFolder, "artifacts")
+    artifactPath = os.path.join(artifactFolder, f"{manifest['id']}_{'.'.join(str(x) for x in manifest['version'])}_{'-'.join(manifest['supported_arch'])}.kpkg")
 
     for artifact in repositoryManifest["packages"][manifest["id"]]["artifacts"]:
         if (artifact["version"][0] == manifest["version"][0] and
@@ -109,6 +117,11 @@ if (args.add):
     print("Copying artifact file...")
     os.makedirs(os.path.join(os.path.dirname(args.filepath), artifactFolder), exist_ok=True)
     shutil.copy(args.add, os.path.join(os.path.dirname(args.filepath), artifactPath))
+
+    if (iconData != None):
+        print("Writing icon.png")
+        with open(os.path.join(os.path.dirname(args.filepath), packageFolder, "icon.png"), 'wb') as file:
+            file.write(iconData)
 
     print("Writing updated manifest...")
     with open(args.filepath, 'w') as file:
