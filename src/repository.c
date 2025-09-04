@@ -58,19 +58,24 @@ enum KPMResult KPM_ListRepositories(struct KPM* kpm, size_t* repositoryCount, st
     sqlite3_prepare_v2(kpm->db, zSQL, strlen(zSQL), &statement, NULL);
   
     int status;
-    for (*repositoryCount = 0; (status = sqlite3_step(statement)) == SQLITE_ROW; (*repositoryCount)++)
+    for (int i=0; (status = sqlite3_step(statement)) == SQLITE_ROW; i++)
     {
+        if (i == 0)
+        {
+            *repositoryCount = sqlite3_column_int64(statement, 0);
+        }
+
         if (repositories != NULL)
         {
             if (*repositories == NULL)
             {
-                *repositories = malloc(sqlite3_column_int64(statement, 0) * sizeof(struct Repository));
+                *repositories = malloc(*repositoryCount * sizeof(struct Repository));
             }
 
-            (*repositories)[*repositoryCount].id = strdup((char*) sqlite3_column_text(statement, 1));
-            (*repositories)[*repositoryCount].url = strdup((char*) sqlite3_column_text(statement, 2));
-            (*repositories)[*repositoryCount].name = strdup((char*) sqlite3_column_text(statement,3));
-            (*repositories)[*repositoryCount].description = strdup((char*) sqlite3_column_text(statement, 4));
+            (*repositories)[i].id = strdup((char*) sqlite3_column_text(statement, 1));
+            (*repositories)[i].url = strdup((char*) sqlite3_column_text(statement, 2));
+            (*repositories)[i].name = strdup((char*) sqlite3_column_text(statement,3));
+            (*repositories)[i].description = strdup((char*) sqlite3_column_text(statement, 4));
         }
     }
 
@@ -135,7 +140,7 @@ enum KPMResult KPM_AddRepository(struct KPM *kpm, const char *url, struct Reposi
         return KPM_CURL_ERROR;
     }
 
-    if (request.response_code != 200)
+    if (request.response_code >= 400)
     {
         return KPM_INVALID_RESPONSE_CODE;
     }
@@ -148,7 +153,7 @@ enum KPMResult KPM_AddRepository(struct KPM *kpm, const char *url, struct Reposi
         !cJSON_IsString(cJSON_GetObjectItem(json, "id")) ||
         !cJSON_IsString(cJSON_GetObjectItem(json, "name")) ||
         !cJSON_IsString(cJSON_GetObjectItem(json, "description")) ||
-        !cJSON_IsArray(cJSON_GetObjectItem(json, "packages"))
+        !cJSON_IsObject(cJSON_GetObjectItem(json, "packages"))
     )
     {
         cJSON_Delete(json);
@@ -231,21 +236,26 @@ enum KPMResult KPM_ListRepositoryPackages(struct KPM* kpm, const char* repositor
     sqlite3_bind_text(statement, 1, repositoryId, strlen(repositoryId), SQLITE_STATIC);
 
     int status;
-    for (*packageCount=0; (status = sqlite3_step(statement)) == SQLITE_ROW; (*packageCount)++)
+    for (int i=0; (status = sqlite3_step(statement)) == SQLITE_ROW; i++)
     {
+        if (i == 0)
+        {
+            *packageCount = sqlite3_column_int64(statement, 0);
+        }
+
         if (packages != NULL)
         {
             if (!*packages)
             {
-                *packages = malloc(sqlite3_column_int64(statement, 0) * sizeof(struct IndexedPackage));
+                *packages = malloc(*packageCount * sizeof(struct IndexedPackage));
             }
 
-            (*packages)[*packageCount].repository = strdup((const char*) sqlite3_column_text(statement, 0));
-            (*packages)[*packageCount].id = strdup((const char*) sqlite3_column_text(statement, 1));
-            (*packages)[*packageCount].name = strdup((const char*) sqlite3_column_text(statement, 2));
-            (*packages)[*packageCount].description = strdup((const char*) sqlite3_column_text(statement, 3));
-            (*packages)[*packageCount].author = strdup((const char*) sqlite3_column_text(statement, 4));
-            (*packages)[*packageCount].icon = strdup((const char*) sqlite3_column_text(statement, 5));
+            (*packages)[i].repository = strdup((const char*) sqlite3_column_text(statement, 0));
+            (*packages)[i].id = strdup((const char*) sqlite3_column_text(statement, 1));
+            (*packages)[i].name = strdup((const char*) sqlite3_column_text(statement, 2));
+            (*packages)[i].description = strdup((const char*) sqlite3_column_text(statement, 3));
+            (*packages)[i].author = strdup((const char*) sqlite3_column_text(statement, 4));
+            (*packages)[i].icon = strdup((const char*) sqlite3_column_text(statement, 5));
         }
     }
 

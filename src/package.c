@@ -117,21 +117,26 @@ enum KPMResult KPM_SearchPackages(struct KPM* kpm, const char* query, size_t* pa
     sqlite3_bind_text(statement, 2, paddedQuery, strlen(paddedQuery), SQLITE_STATIC);
 
     int status;
-    for (*packageCount=0; (status = sqlite3_step(statement)) == SQLITE_ROW; (*packageCount)++)
+    for (int i=0; (status = sqlite3_step(statement)) == SQLITE_ROW; i++)
     {
+        if (i == 0)
+        {
+            *packageCount = sqlite3_column_int64(statement, 0);
+        }
+
         if (packages != NULL)
         {
             if (!*packages)
             {
-                *packages = malloc(sqlite3_column_int64(statement, 0) * sizeof(struct IndexedPackage));
+                *packages = malloc(*packageCount * sizeof(struct IndexedPackage));
             }
 
-            (*packages)[*packageCount].repository = strdup((const char*) sqlite3_column_text(statement, 0));
-            (*packages)[*packageCount].id = strdup((const char*) sqlite3_column_text(statement, 1));
-            (*packages)[*packageCount].name = strdup((const char*) sqlite3_column_text(statement, 2));
-            (*packages)[*packageCount].description = strdup((const char*) sqlite3_column_text(statement, 3));
-            (*packages)[*packageCount].author = strdup((const char*) sqlite3_column_text(statement, 4));
-            (*packages)[*packageCount].icon = strdup((const char*) sqlite3_column_text(statement, 5));
+            (*packages)[i].repository = strdup((const char*) sqlite3_column_text(statement, 0));
+            (*packages)[i].id = strdup((const char*) sqlite3_column_text(statement, 1));
+            (*packages)[i].name = strdup((const char*) sqlite3_column_text(statement, 2));
+            (*packages)[i].description = strdup((const char*) sqlite3_column_text(statement, 3));
+            (*packages)[i].author = strdup((const char*) sqlite3_column_text(statement, 4));
+            (*packages)[i].icon = strdup((const char*) sqlite3_column_text(statement, 5));
         }
     }
 
@@ -161,25 +166,30 @@ enum KPMResult KPM_GetPackageArtifacts(struct KPM* kpm, const char* repositoryId
     sqlite3_bind_text(statement, 2, packageId, strlen(repositoryId), SQLITE_STATIC);
 
     int status;
-    for (*artifactCount=0; (status = sqlite3_step(statement)) == SQLITE_ROW; (*artifactCount)++)
+    for (int i=0; (status = sqlite3_step(statement)) == SQLITE_ROW; i++)
     {
+        if (i == 0)
+        {
+            *artifactCount = sqlite3_column_int64(statement, 0);
+        }
+        
         if (artifacts != NULL)
         {
             if (!*artifacts)
             {
-                *artifacts = malloc(sqlite3_column_int64(statement, 0) * sizeof(struct IndexedPackage));
+                *artifacts = malloc(*artifactCount * sizeof(struct IndexedPackage));
             }
 
-            (*artifacts)[*artifactCount].url = strdup((const char*) sqlite3_column_text(statement, 0));
-            (*artifacts)[*artifactCount].repository = strdup((const char*) sqlite3_column_text(statement, 1));
-            (*artifacts)[*artifactCount].id = strdup((const char*) sqlite3_column_text(statement, 2));
+            (*artifacts)[i].url = strdup((const char*) sqlite3_column_text(statement, 0));
+            (*artifacts)[i].repository = strdup((const char*) sqlite3_column_text(statement, 1));
+            (*artifacts)[i].id = strdup((const char*) sqlite3_column_text(statement, 2));
 
-            (*artifacts)[*artifactCount].version.major = sqlite3_column_int64(statement, 3);
-            (*artifacts)[*artifactCount].version.minor = sqlite3_column_int64(statement, 4);
-            (*artifacts)[*artifactCount].version.patch = sqlite3_column_int64(statement, 5);
+            (*artifacts)[i].version.major = sqlite3_column_int64(statement, 3);
+            (*artifacts)[i].version.minor = sqlite3_column_int64(statement, 4);
+            (*artifacts)[i].version.patch = sqlite3_column_int64(statement, 5);
             
-            //(*artifacts)[*artifactCount].supported_arch = strdup((const char*) sqlite3_column_text(statement, 4));
-            //(*artifacts)[*artifactCount].supported_kindles = strdup((const char*) sqlite3_column_text(statement, 5));
+            //(*artifacts)[i].supported_arch = strdup((const char*) sqlite3_column_text(statement, 4));
+            //(*artifacts)[i].supported_kindles = strdup((const char*) sqlite3_column_text(statement, 5));
         }
     }
 
