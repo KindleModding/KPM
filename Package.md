@@ -41,29 +41,30 @@ id - The id of the package, must be lowercase
 name - The display name of the package
 author - The author of the package
 description - The description of the package
-version - The version of the package
+version - The version of the package (ie: `v1.2.3` -> `[1, 2, 3]`)
 supported_arch - List of supported architectures MUST BE a list containing only `armel`, `armhf` or any combination of the two
 supported_devices - OPTIONAL, List of supported Kindle device codes as integers
 dependencies - A list of package dependencies
 ```
 
 ### Dependencies
-Dependencies are stored with an object, where the key is the id of the dependency (ie: `fbink`).
 
 ```
-repository - OPTIONAL, specify a specific repository ID to obtain this package, avoid using this if you can
-type - OPTIONAL, The type of dependency version comparison, can be `<`, `>`, `=`, `<=` or `>=`
-version - The version to compare, required only if `type` is specified and vice-versa
+id - The id of the package
+repository - String ID of the repo - can be omitted or null
+type - "<=" or ">=" or "<" or ">" or "=" (can be omitted or null)
+version - semver object (can be omitted or null if type is omitted)
 ```
 
 ## Hooks
 Script files can be included in the root of the package file and will be run under certain events based on their name.  
 All scripts must run under `sh` rather than `bash` and usage of `awk` is discouraged due to unreliability under some firmware versions.  
+Hooks are run at the path in which they are placed - so you can reference relative paths in them
 
 ```
 install.sh - Ran when the package is installed
 uninstall.sh - Ran when the package is being uninstalled
-launch.sh - Ran when the package is launched
+launch.sh - Ran when the package is launched by a launcher
 ```
 
 ## Example Repository structure:
