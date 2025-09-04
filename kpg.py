@@ -1,45 +1,34 @@
-import json
 import argparse
+import tarfile
+import json
+import os
 
 parser = argparse.ArgumentParser(prog='KPG',
-                    description='Kindle Package Generator is used to generate and modify repository manifest files',
+                    description='Kindle Package Generator is used to pack folders into package files',
                     epilog='Created by Hackerdude (https://ko-fi.com/hackerdude)')
 
-parser.add_argument("--init", action='store_true', help="Create a new manifest.json file (interactive)")
-
-parser.add_argument("--add", help="Add an artifact to the repository")
-
-parser.add_argument("filepath", help="The path to the repository manifest file")
+parser.add_argument("path", help="The path to the package folder")
 
 args = parser.parse_args()
 
-if (args.init):
-    manifest = {
-        "version": 1
-    }
+if (not os.path.exists(os.path.join(args.path, "manifest.json"))):
+    print("[ERR] manifest.json file not found")
+    exit(1)
 
-    manifest["id"] = input("Enter repository id: ")
-    if (' ' in manifest["id"]):
-        print("Manifest id must not contain spaces")
-        exit(1)
-    if (not '.' in manifest["id"]):
-        print("Manifest id must be in reverse-domain format")
-        print("ie: com.example.repository")
-        exit(1)
-    if ("org.kindlemodding" in manifest["id"]):
-        print("[WARN] Do not use this namespace for your own repositories")
+manifest = None
+with open(os.path.join(args.path, "manifest.json"), 'r') as file:
+    manifest = json.loads(file.read())
 
-    manifest["name"] = input("Enter repository display name: ")
-    manifest["description"] = input("Enter repository description: ")
-    manifest["packages"] = []
+print(f"ID: {manifest["id"]}")
+print(f"Name: {manifest["name"]}")
+print(f"Author: {manifest["author"]}")
+print("Packing...")
 
-    with open(args.filepath, 'w') as file:
-        file.write(json.dumps(manifest, indent=2))
-    print(f"\n\nWrote manifest file to {args.filepath}")
-    print("\n")
-    print(json.dumps(manifest, indent=2))
+packageFilename = f"./{manifest["id"]}_{'.'.join(manifest["version"])}_{'-'.join(manifest["supported_arch"])}.kpkg"
+with tarfile.open(packageFilename, "w|xz") as file:
+    for source_item_name in os.listdir(args.path):
+        print(f"- {source_item_name}")
+        file.add(os.path.join(args.path, source_item_name), arcname=source_item_name)
 
-if (args.add):
-    print(f"Adding package {args.add} to the repository...")
-    print("Reading manifest")
-    
+print("Done!")
+print(f"Saved as {packageFilename}")

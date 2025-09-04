@@ -53,7 +53,7 @@ version - The version to compare, required only if `type` is specified and vice-
 
 ## Hooks
 Script files can be included in the root of the package file and will be run under certain events based on their name.  
-All scripts must run under `sh`.  
+All scripts must run under `sh` rather than `bash` and usage of `awk` is discouraged due to unreliability under some firmware versions.  
 
 ```
 install.sh - Ran when the package is installed
