@@ -21,8 +21,8 @@ enum KPMResult
     KPM_OK,
     KPM_SQLITE_ERROR,
     KPM_CURL_ERROR,
-    KPM_INVALID_RESPONSE_CODE,
-    KPM_INVALID_RESPONSE_CONTENT
+    KPM_INVALID_RESPONSE_CODE, /**< Non-200 response code from server */
+    KPM_INVALID_RESPONSE_CONTENT /**< Invalid content when parsing it (likely malformed JSON or repository manifest) */
 };
 
 /**
@@ -126,23 +126,25 @@ struct KPM
 enum KPMResult KPM_Initialise(struct KPM *kpm, const char* dbPath);
 void KPM_Cleanup(struct KPM *kpm);
 
+// Repo management functions
 void KPM_FreeRepository(struct Repository* repository);
 void KPM_FreeRepositoryList(size_t repositoryCount, struct Repository* repositories);
-
-// Repo management functions
 enum KPMResult KPM_ListRepositories(struct KPM* kpm, size_t* repositoryCount, struct Repository** repositories);
 enum KPMResult KPM_GetRepository(struct KPM *kpm, const char *repositoryId, struct Repository* repository);
 enum KPMResult KPM_AddRepository(struct KPM *kpm, const char *url, struct Repository* repository);
 enum KPMResult KPM_RemoveRepository(struct KPM* kpm, const char* repositoryId);
-enum KPMResult KPM_ListRepositoryPackages(struct KPM* kpm, char* repositoryId, size_t* packageCount, struct IndexedPackage** packages);
+enum KPMResult KPM_ListRepositoryPackages(struct KPM* kpm, const char* repositoryId, size_t* packageCount, struct IndexedPackage** packages);
 
+// Package management functions
 void KPM_FreeIndexedPackage(struct IndexedPackage* package);
 void KPM_FreeIndexedPackageList(size_t packageCount, struct IndexedPackage* packages);
-    /*IndexedPackage GetPackage(const char*& installString);
-    std::vector<IndexedArtifact> GetArtifacts(IndexedPackage package);
-    bool InstallArtifact(IndexedArtifact artifact);
+enum KPMResult KPM_GetPackage(struct KPM* kpm, const char* repositoryId, const char* packageId, struct IndexedPackage* package);
+enum KPMResult KPM_SearchPackages(struct KPM* kpm, const char* query, size_t* packageCount, struct IndexedPackage** packages);
+enum KPMResult KPM_GetPackageArtifacts(struct KPM* kpm, const char* repositoryId, const char* packageId, size_t* artifactCount, struct IndexedArtifact** artifacts);
 
-    // Internet functions
+// Artifact management functions
+
+/*    // Internet functions
     bool UpdateIndex();
     bool InstallPackage(const char*& installString); // installString is generally a package ID but MAY contain a repo prefix
 

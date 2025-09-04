@@ -7,12 +7,12 @@ A repository requires a `manifest.json` file
 ## Manifest
 ```json
 {
+    "version": 1,
     "id": "org.kindlemodding.repo",
     "name": "KindleModding Official Repository",
     "packages":
-    [
-        {
-            "id": "koreader",
+    {
+        "koreader": {
             "name": "KOReader",
             "author": "KOReader Team",
             "description": "KOReader is a feature-rich eBook reader",
@@ -46,7 +46,7 @@ A repository requires a `manifest.json` file
                 }
             ]
         }
-    ]
+    }
 }
 ```
 

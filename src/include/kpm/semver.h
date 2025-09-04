@@ -2,9 +2,9 @@
 
 struct SemVer
 {
-    unsigned int major;
-    unsigned int minor;
-    unsigned int patch;
+    unsigned long int major;
+    unsigned long int minor;
+    unsigned long int patch;
 };
 
 inline int SemVerCmp(struct SemVer a, struct SemVer b)

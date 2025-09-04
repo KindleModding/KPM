@@ -38,7 +38,7 @@ author - The author of the package
 description - The description of the package
 version - The version of the package
 supported_arch - List of supported architectures MUST BE a list containing only `armel`, `armhf` or any combination of the two
-supported_kindle - OPTIONAL, List of supported Kindles
+supported_devices - OPTIONAL, List of supported Kindle device codes as integers
 dependencies - A list of package dependencies
 ```
 

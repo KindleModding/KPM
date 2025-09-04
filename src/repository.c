@@ -218,14 +218,14 @@ enum KPMResult KPM_RemoveRepository(struct KPM *kpm, const char* repositoryId)
  * @param packages A pointer to allocate and return an array of packages - Must be freed with KPM_FreeIndexedPackageList - Can be NULL to return only a count
  * @return enum KPMResult 
  */
-enum KPMResult KPM_ListRepositoryPackages(struct KPM* kpm, char* repositoryId, size_t* packageCount, struct IndexedPackage** packages)
+enum KPMResult KPM_ListRepositoryPackages(struct KPM* kpm, const char* repositoryId, size_t* packageCount, struct IndexedPackage** packages)
 {
     if (packages != NULL)
     {
         *packages = NULL;
     }
     
-    const char* zSQL = "SELECT COUNT(id), * FROM packages WHERE repository=?;";
+    const char* zSQL = "SELECT COUNT(), repository, id, name, description, author, icon FROM packages WHERE repository=?;";
     sqlite3_stmt* statement;
     sqlite3_prepare_v2(kpm->db, zSQL, strlen(zSQL), &statement, NULL);
     sqlite3_bind_text(statement, 1, repositoryId, strlen(repositoryId), SQLITE_STATIC);
