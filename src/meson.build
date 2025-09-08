@@ -2,7 +2,8 @@ sources = files(
     './simpleGET.c',
     './kpm.c',
     './repository.c',
-    './package.c'
+    './package.c',
+    './index.c'
 )
 include_dir = include_directories('./include')
 

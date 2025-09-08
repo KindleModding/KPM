@@ -47,5 +47,8 @@ int main()
 
     assert(found == tableCount);    
 
+    sqlite3_finalize(statement);
+    sqlite3_close(db);
+
     return 0;
 }

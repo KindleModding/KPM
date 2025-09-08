@@ -1,6 +1,6 @@
 {
   "manifest_version": 1,
-  "id": "org.kindlemodding.example",
+  "id": "org.kindlemodding.examplerepo",
   "name": "Kindlemodding Example Repository",
   "description": "An example repository to demonstrate the manifest format",
   "packages": {

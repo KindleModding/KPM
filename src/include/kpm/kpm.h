@@ -13,12 +13,14 @@
 
 #include <sqlite3.h>
 #include <stddef.h>
+#include <sys/types.h>
 
 #include "semver.h"
 
 enum KPMResult
 {
     KPM_OK,
+    KPM_GENERIC_ERROR,
     KPM_SQLITE_ERROR,
     KPM_CURL_ERROR,
     KPM_INVALID_RESPONSE_CODE, /**< Non-200 response code from server */
@@ -60,9 +62,8 @@ struct IndexedPackage
     char* repository; /**< The repository ID */
     char* id; /**< The package ID */
     char* name; /**< The name of the package */
-    char* description; /**< The description of the package */
     char* author; /**< The author of the package */
-    char* icon; /**< The package's icon */
+    char* description; /**< The description of the package */
 };
 
 /**
@@ -75,8 +76,6 @@ struct IndexedArtifact
     char* repository; /**< The repository ID */
     char* id; /**< The package ID */
     struct SemVer version; /**< The version of this artifact */
-    char** supported_arch; /**< List of supported architectures */
-    char** supported_kindles; /**< List of supported Kindles */
 };
 
 /**
@@ -118,6 +117,14 @@ struct Dependency
     struct SemVer version; /**< The dependency's version */
 };
 
+enum Verbosity
+{
+    KPM_VERBOSITY_DEBUG,
+    KPM_VERBOSITY_INFO,
+    KPM_VERBOSITY_WARN,
+    KPM_VERBOSITY_ERROR
+};
+
 struct KPM
 {
     sqlite3* db;
@@ -140,7 +147,9 @@ void KPM_FreeIndexedPackage(struct IndexedPackage* package);
 void KPM_FreeIndexedPackageList(size_t packageCount, struct IndexedPackage* packages);
 enum KPMResult KPM_GetPackage(struct KPM* kpm, const char* repositoryId, const char* packageId, struct IndexedPackage* package);
 enum KPMResult KPM_SearchPackages(struct KPM* kpm, const char* query, size_t* packageCount, struct IndexedPackage** packages);
-enum KPMResult KPM_GetPackageArtifacts(struct KPM* kpm, const char* repositoryId, const char* packageId, size_t* artifactCount, struct IndexedArtifact** artifacts);
+enum KPMResult KPM_ListPackageArtifacts(struct KPM* kpm, const char* repositoryId, const char* packageId, size_t* artifactCount, struct IndexedArtifact** artifacts);
+
+enum KPMResult KPM_UpdateIndex(struct KPM *kpm, void (*statusCallback)(enum Verbosity verbosity, uint progress, char* details, ...));
 
 // Artifact management functions
 

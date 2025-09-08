@@ -48,6 +48,7 @@ void KPM_FreeRepositoryList(size_t repositoryCount, struct Repository* repositor
  */
 enum KPMResult KPM_ListRepositories(struct KPM* kpm, size_t* repositoryCount, struct Repository** repositories)
 {
+    *repositoryCount = 0;
     if (repositories != NULL)
     {
         *repositories = NULL;
@@ -65,7 +66,7 @@ enum KPMResult KPM_ListRepositories(struct KPM* kpm, size_t* repositoryCount, st
             *repositoryCount = sqlite3_column_int64(statement, 0);
         }
 
-        if (repositories != NULL)
+        if (repositories != NULL && *repositoryCount > 0)
         {
             if (*repositories == NULL)
             {
@@ -104,7 +105,7 @@ enum KPMResult KPM_GetRepository(struct KPM *kpm, const char *repositoryId, stru
     repository->name = NULL;
     repository->description = NULL;
 
-    const char* zSQL = "SELECT * FROM repositories WHERE id=? LIMIT=1;";
+    const char* zSQL = "SELECT id, url, name, description FROM repositories WHERE id=? LIMIT 1;";
     sqlite3_stmt* statement;
     sqlite3_prepare_v2(kpm->db, zSQL, strlen(zSQL), &statement, NULL);
     sqlite3_bind_text(statement, 1, repositoryId, strlen(repositoryId), SQLITE_STATIC);
@@ -161,6 +162,7 @@ enum KPMResult KPM_AddRepository(struct KPM *kpm, const char *url, struct Reposi
         return KPM_INVALID_RESPONSE_CONTENT;
     }
 
+    sqlite3_exec(kpm->db, "BEGIN", NULL, NULL, NULL);
     const char* zSQL = "INSERT INTO repositories (id, url, name, description) VALUES (?, ?, ?, ?);";
     sqlite3_stmt* statement;
     sqlite3_prepare_v2(kpm->db, zSQL, strlen(zSQL), &statement, NULL);
@@ -174,6 +176,7 @@ enum KPMResult KPM_AddRepository(struct KPM *kpm, const char *url, struct Reposi
         sqlite3_finalize(statement);
         cJSON_Delete(json);
         SimpleGET_Cleanup(&request);
+        sqlite3_exec(kpm->db, "ROLLBACK", NULL, NULL, NULL);
         return KPM_SQLITE_ERROR;
     }
 
@@ -187,6 +190,8 @@ enum KPMResult KPM_AddRepository(struct KPM *kpm, const char *url, struct Reposi
     }
     cJSON_Delete(json);
     SimpleGET_Cleanup(&request);
+
+    sqlite3_exec(kpm->db, "COMMIT", NULL, NULL, NULL);
     return KPM_OK;
 }
 
@@ -199,6 +204,7 @@ enum KPMResult KPM_AddRepository(struct KPM *kpm, const char *url, struct Reposi
  */
 enum KPMResult KPM_RemoveRepository(struct KPM *kpm, const char* repositoryId)
 {
+    sqlite3_exec(kpm->db, "BEGIN", NULL, NULL, NULL);
     const char* zSQL = "DELETE FROM repositories WHERE id=?;";
     sqlite3_stmt* statement;
     sqlite3_prepare_v2(kpm->db, zSQL, strlen(zSQL), &statement, NULL);
@@ -207,10 +213,12 @@ enum KPMResult KPM_RemoveRepository(struct KPM *kpm, const char* repositoryId)
     if (sqlite3_step(statement) != SQLITE_DONE)
     {
         sqlite3_finalize(statement);
+        sqlite3_exec(kpm->db, "ROLLBACK", NULL, NULL, NULL);
         return KPM_SQLITE_ERROR;
     }
 
     sqlite3_finalize(statement);
+    sqlite3_exec(kpm->db, "COMMIT", NULL, NULL, NULL);
     return KPM_OK;
 }
 
@@ -225,12 +233,13 @@ enum KPMResult KPM_RemoveRepository(struct KPM *kpm, const char* repositoryId)
  */
 enum KPMResult KPM_ListRepositoryPackages(struct KPM* kpm, const char* repositoryId, size_t* packageCount, struct IndexedPackage** packages)
 {
+    *packageCount = 0;
     if (packages != NULL)
     {
         *packages = NULL;
     }
     
-    const char* zSQL = "SELECT COUNT(), repository, id, name, description, author, icon FROM packages WHERE repository=?;";
+    const char* zSQL = "SELECT COUNT(), repository, id, name, author, description FROM packages WHERE repository=?;";
     sqlite3_stmt* statement;
     sqlite3_prepare_v2(kpm->db, zSQL, strlen(zSQL), &statement, NULL);
     sqlite3_bind_text(statement, 1, repositoryId, strlen(repositoryId), SQLITE_STATIC);
@@ -243,19 +252,18 @@ enum KPMResult KPM_ListRepositoryPackages(struct KPM* kpm, const char* repositor
             *packageCount = sqlite3_column_int64(statement, 0);
         }
 
-        if (packages != NULL)
+        if (packages != NULL && *packageCount > 0)
         {
             if (!*packages)
             {
                 *packages = malloc(*packageCount * sizeof(struct IndexedPackage));
             }
 
-            (*packages)[i].repository = strdup((const char*) sqlite3_column_text(statement, 0));
-            (*packages)[i].id = strdup((const char*) sqlite3_column_text(statement, 1));
-            (*packages)[i].name = strdup((const char*) sqlite3_column_text(statement, 2));
-            (*packages)[i].description = strdup((const char*) sqlite3_column_text(statement, 3));
+            (*packages)[i].repository = strdup((const char*) sqlite3_column_text(statement, 1));
+            (*packages)[i].id = strdup((const char*) sqlite3_column_text(statement, 2));
+            (*packages)[i].name = strdup((const char*) sqlite3_column_text(statement, 3));
             (*packages)[i].author = strdup((const char*) sqlite3_column_text(statement, 4));
-            (*packages)[i].icon = strdup((const char*) sqlite3_column_text(statement, 5));
+            (*packages)[i].description = strdup((const char*) sqlite3_column_text(statement, 5));
         }
     }
 

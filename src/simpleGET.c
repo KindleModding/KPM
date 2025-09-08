@@ -8,7 +8,7 @@ void SimpleGET_Initialise(struct SimpleGETRequest* request, const char* url)
 {
     request->buffer = NULL;
     request->size = 0;
-
+    request->response_code = 0;
     request->curl = curl_easy_init();
 
     curl_easy_setopt(request->curl, CURLOPT_URL, url);

@@ -28,9 +28,8 @@ enum KPMResult KPM_Initialise(struct KPM *kpm, const char* dbPath)
             repository TEXT NOT NULL,
             id TEXT NOT NULL,
             name TEXT NOT NULL,
-            description TEXT NOT NULL,
             author TEXT NOT NULL,
-            icon TEXT NOT NULL,
+            description TEXT NOT NULL,
             PRIMARY KEY (repository, id),
             FOREIGN KEY(repository) REFERENCES repositories(id)
         )
@@ -44,8 +43,6 @@ enum KPMResult KPM_Initialise(struct KPM *kpm, const char* dbPath)
             version_major INTEGER NOT NULL,
             version_minor INTEGER NOT NULL,
             version_patch INTEGER NOT NULL,
-            supported_arch TEXT NOT NULL,
-            supported_kindles TEXT NOT NULL,
             FOREIGN KEY (repository, id) REFERENCES packages(repository, id)
         )
     )", NULL, NULL, NULL);

@@ -1,6 +1,13 @@
 db_test = executable('db_test', 'db_test.c', dependencies: [kpm_dep, sqlite3_dep])
-repository_test = executable('repository_test', 'repository_test.c', dependencies: [kpm_dep])
+add_repository_test = executable('add_repository_test', 'add_repository_test.c', dependencies: [kpm_dep])
+index_test = executable('index_test', 'index_test.c', dependencies: [kpm_dep])
+index_test_empty = executable('index_test_empty', 'index_test_empty.c', dependencies: [kpm_dep])
+remove_repository_test = executable('remove_repository_test', 'remove_repository_test.c', dependencies: [kpm_dep])
 
 
 test('Database Test', db_test, is_parallel: false)
-test('Repository Test', repository_test, is_parallel: false)
+test('Add Repository Test', add_repository_test, is_parallel: false)
+test('Index Test', index_test, is_parallel: false)
+test('Index Test 2', index_test, is_parallel: false)
+test('Remove Repository Test', remove_repository_test, is_parallel: false)
+test('Index Test Empty', index_test_empty, is_parallel: false)

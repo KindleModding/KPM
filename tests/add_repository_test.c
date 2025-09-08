@@ -37,12 +37,8 @@ int main()
     KPM_ListRepositories(&kpm, &repositoryCount, NULL);
     assert(repositoryCount == 1);
 
-    fprintf(stderr, "Removing repository\n");
-    KPM_RemoveRepository(&kpm, repo.id);
-
-    fprintf(stderr, "Testing repository list is empty\n");
-    KPM_ListRepositories(&kpm, &repositoryCount, NULL);
-    assert(repositoryCount == 0);
+    fprintf(stderr, "Testing repository ID\n");
+    assert(strcmp(repo.id, "org.kindlemodding.examplerepo") == 0);
 
     KPM_FreeRepository(&repo);
     KPM_Cleanup(&kpm);
