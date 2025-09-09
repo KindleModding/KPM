@@ -151,6 +151,13 @@ bool indexPackage(struct KPM* kpm, char* repositoryId, cJSON* package, KPMStatus
     return true;
 }
 
+/**
+ * @brief Update the local index of package by downloading repository manifests
+ * 
+ * @param kpm The KPM object
+ * @param statusCallback A callback for progress information
+ * @return enum KPMResult 
+ */
 enum KPMResult KPM_UpdateIndex(struct KPM *kpm, KPMStatusCallback* statusCallback)
 {
     if (statusCallback == NULL)
