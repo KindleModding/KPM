@@ -44,15 +44,21 @@ enum KPMResult KPM_UpdateIndex(struct KPM *kpm, void (*statusCallback)(enum Verb
         sqlite3_stmt* statement;
         sqlite3_prepare_v2(kpm->db, zSQL, strlen(zSQL), &statement, NULL);
         sqlite3_bind_text(statement, 1, repositories[i].id, strlen(repositories[i].id), SQLITE_STATIC);
-        if (sqlite3_step(statement) != SQLITE_DONE)
+        
+        int status = -1;
+        while (status != SQLITE_DONE && status != SQLITE_ERROR)
+        {
+            status = sqlite3_step(statement);
+        }
+        
+        sqlite3_finalize(statement);
+        if (status == SQLITE_ERROR)
         {
             statusCallback(KPM_VERBOSITY_ERROR, 0, "Could not clear packages for %s", repositories[i].id);
-            sqlite3_finalize(statement);
             SimpleGET_Cleanup(&request);
             sqlite3_exec(kpm->db, "ROLLBACK", NULL, NULL, NULL);
-            continue; // Move onto next repo
+            break; // Move onto next repo
         }
-        sqlite3_finalize(statement);
 
 
 
@@ -139,10 +145,11 @@ enum KPMResult KPM_UpdateIndex(struct KPM *kpm, void (*statusCallback)(enum Verb
         if (!success)
         {
             sqlite3_exec(kpm->db, "ROLLBACK", NULL, NULL, NULL);
-            return KPM_GENERIC_ERROR;
+            statusCallback(KPM_VERBOSITY_ERROR, 0, "Could not index repository [%s]", repositories[i].id);
         }
 
         sqlite3_exec(kpm->db, "COMMIT", NULL, NULL, NULL);
-        return KPM_OK;
     }
+
+    return KPM_OK;
 }
