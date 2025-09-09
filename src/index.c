@@ -57,7 +57,7 @@ bool indexDependency(struct KPM* kpm, char* artifactURL, cJSON* dependency, KPMS
     }
     
     if (typeObject == NULL) { // No dependency type
-        sqlite3_bind_null(statement, 4);
+        sqlite3_bind_int(statement, 4, KPM_DT_NONE);
         sqlite3_bind_null(statement, 5);
         sqlite3_bind_null(statement, 6);
         sqlite3_bind_null(statement, 7);

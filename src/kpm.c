@@ -50,7 +50,7 @@ enum KPMResult KPM_Initialise(struct KPM *kpm, const char* dbPath)
             artifact TEXT NOT NULL REFERENCES artifacts(url) ON DELETE CASCADE,
             repository TEXT,
             id TEXT NOT NULL,
-            type INTEGER,
+            type INTEGER NOT NULL,
             version_major INTEGER,
             version_minor INTEGER,
             version_patch INTEGER,

@@ -33,7 +33,7 @@ enum KPMResult
 */
 enum DependencyType
 {
-    KPM_DT_NONE, /**< No version-specific dependency */
+    KPM_DT_NONE=-1, /**< No version-specific dependency */
     KPM_DT_LESS_THAN, /**< Installed package must be less than dependent version */
     KPM_DT_LESS_THAN_OR_EQUAL_TO, /**< Installed package must be greater than or equal to dependent version */
     KPM_DT_EQUAL_TO, /**< Installed package must be equal to dependent version */
@@ -164,8 +164,10 @@ enum KPMResult KPM_ListPackageArtifacts(struct KPM* kpm, const char* repositoryI
 
 enum KPMResult KPM_UpdateIndex(struct KPM *kpm, KPMStatusCallback* statusCallback);
 
-enum KPMResult KPM_ResolveInstallString(char* installString, char* out);
-enum KPMResult KPM_DownloadPackages(struct KPM *kpm, size_t packageCount, const char** packageIds, KPMStatusCallback* statusCallback);
+void KPM_FreeInstallTarget(struct InstallTarget* target);
+enum KPMResult KPM_ResolveInstallString(char* installString, struct InstallTarget* target);
+
+enum KPMResult KPM_DownloadPackages(struct KPM *kpm, size_t packageCount, struct InstallTarget** installTargets, KPMStatusCallback* statusCallback);
 
 // Artifact management functions
 

@@ -177,7 +177,16 @@ enum KPMResult KPM_SearchPackages(struct KPM* kpm, const char* query, size_t* pa
     return KPM_OK;
 }
 
-
+/**
+ * @brief List the indexed artifacts of a package 
+ * 
+ * @param kpm The KPM object
+ * @param repositoryId The repository ID of the package
+ * @param packageId The package ID of the package
+ * @param artifactCount Pointer to store the artifact count
+ * @param artifacts Pointer to store the artifact array
+ * @return enum KPMResult 
+ */
 enum KPMResult KPM_ListPackageArtifacts(struct KPM* kpm, const char* repositoryId, const char* packageId, size_t* artifactCount, struct IndexedArtifact** artifacts)
 {
     *artifactCount = 0;
