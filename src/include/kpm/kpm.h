@@ -130,6 +130,8 @@ struct KPM
     sqlite3* db;
 };
 
+typedef void KPMStatusCallback(enum Verbosity verbosity, uint progress, char* details, ...);
+
 enum KPMResult KPM_Initialise(struct KPM *kpm, const char* dbPath);
 void KPM_Cleanup(struct KPM *kpm);
 
@@ -149,8 +151,9 @@ enum KPMResult KPM_GetPackage(struct KPM* kpm, const char* repositoryId, const c
 enum KPMResult KPM_SearchPackages(struct KPM* kpm, const char* query, size_t* packageCount, struct IndexedPackage** packages);
 enum KPMResult KPM_ListPackageArtifacts(struct KPM* kpm, const char* repositoryId, const char* packageId, size_t* artifactCount, struct IndexedArtifact** artifacts);
 
-enum KPMResult KPM_UpdateIndex(struct KPM *kpm, void (*statusCallback)(enum Verbosity verbosity, uint progress, char* details, ...));
+enum KPMResult KPM_UpdateIndex(struct KPM *kpm, KPMStatusCallback* statusCallback);
 
+//enum KPMResult KPM_DownloadPackages(struct KPM *kpm, KPMStatusCallback* statusCallback);
 // Artifact management functions
 
 /*    // Internet functions

@@ -8,7 +8,7 @@ void dummyCallback(enum Verbosity verbosity, uint progress, char* details, ...)
     return;
 }
 
-enum KPMResult KPM_UpdateIndex(struct KPM *kpm, void (*statusCallback)(enum Verbosity verbosity, uint progress, char* details, ...))
+enum KPMResult KPM_UpdateIndex(struct KPM *kpm, KPMStatusCallback* statusCallback)
 {
     if (statusCallback == NULL)
     {
