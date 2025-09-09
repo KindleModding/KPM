@@ -4,7 +4,9 @@ sources = files(
     'repository.c',
     'package.c',
     'index.c',
-    'utils.c'
+    'utils.c',
+    'install.c',
+    'callback.c'
 )
 include_dir = include_directories('./include')
 

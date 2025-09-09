@@ -24,7 +24,9 @@ enum KPMResult
     KPM_SQLITE_ERROR,
     KPM_CURL_ERROR,
     KPM_INVALID_RESPONSE_CODE, /**< Non-200 response code from server */
-    KPM_INVALID_RESPONSE_CONTENT /**< Invalid content when parsing it (likely malformed JSON or repository manifest) */
+    KPM_INVALID_RESPONSE_CONTENT, /**< Invalid content when parsing it (likely malformed JSON or repository manifest) */
+    KPM_FILE_SYSTEM_ERROR,
+    KPM_LIBARCHIVE_ERROR
 };
 
 /**
@@ -167,14 +169,13 @@ enum KPMResult KPM_UpdateIndex(struct KPM *kpm, KPMStatusCallback* statusCallbac
 void KPM_FreeInstallTarget(struct InstallTarget* target);
 enum KPMResult KPM_ResolveInstallString(char* installString, struct InstallTarget* target);
 
-enum KPMResult KPM_DownloadPackages(struct KPM *kpm, size_t packageCount, struct InstallTarget** installTargets, KPMStatusCallback* statusCallback);
+enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target, KPMStatusCallback* statusCallback);
+
+//enum KPMResult KPM_DownloadPackages(struct KPM *kpm, size_t packageCount, struct InstallTarget** installTargets, KPMStatusCallback* statusCallback);
 
 // Artifact management functions
 
-/*    // Internet functions
-    bool UpdateIndex();
-    bool InstallPackage(const char*& installString); // installString is generally a package ID but MAY contain a repo prefix
-
+/*
     // Local package functions
     std::vector<InstalledPackage> GetInstalledPackages();
     bool InstallPackage(const std::filesystem::path& package);

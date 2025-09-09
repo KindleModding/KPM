@@ -3,11 +3,7 @@
 #include "simpleGET.h"
 #include <string.h>
 #include <stdbool.h>
-
-void dummyCallback(enum Verbosity verbosity, uint progress, char* details, ...)
-{
-    return;
-}
+#include "callback.h"
 
 bool indexDependency(struct KPM* kpm, char* artifactURL, cJSON* dependency, KPMStatusCallback* statusCallback)
 {
@@ -162,7 +158,7 @@ enum KPMResult KPM_UpdateIndex(struct KPM *kpm, KPMStatusCallback* statusCallbac
 {
     if (statusCallback == NULL)
     {
-        statusCallback = &dummyCallback;
+        statusCallback = dummyCallback;
     }
 
     statusCallback(KPM_VERBOSITY_INFO, 0, "Getting repositories...");
