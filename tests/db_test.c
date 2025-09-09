@@ -27,14 +27,14 @@ int main()
         "artifacts",
         "artifact_dependencies",
         "installed_packages",
-        "dependencies"
+        "current_dependencies"
     };
     const size_t tableCount = 6;
 
     size_t found = 0;
     while (sqlite3_step(statement) != SQLITE_DONE)
     {
-        for (int i=0; i < tableCount; i++)
+        for (size_t i=0; i < tableCount; i++)
         {
             if (strcmp(tables[i], (const char*) sqlite3_column_text(statement, 0)) == 0)
             {

@@ -33,12 +33,12 @@ enum KPMResult
 */
 enum DependencyType
 {
-    NONE, /**< No version-specific dependency */
-    LESS_THAN, /**< Installed package must be less than dependent version */
-    LESS_THAN_OR_EQUAL_TO, /**< Installed package must be greater than or equal to dependent version */
-    EQUAL_TO, /**< Installed package must be equal to dependent version */
-    GREATER_THAN_OR_EQUAL_TO, /**< Installed package must be greater than or equal to dependent version */
-    GREATER_THAN /**< Installed package must be greater than dependent version */
+    KPM_DT_NONE, /**< No version-specific dependency */
+    KPM_DT_LESS_THAN, /**< Installed package must be less than dependent version */
+    KPM_DT_LESS_THAN_OR_EQUAL_TO, /**< Installed package must be greater than or equal to dependent version */
+    KPM_DT_EQUAL_TO, /**< Installed package must be equal to dependent version */
+    KPM_DT_GREATER_THAN_OR_EQUAL_TO, /**< Installed package must be greater than or equal to dependent version */
+    KPM_DT_GREATER_THAN /**< Installed package must be greater than dependent version */
 };
 
 /**
@@ -125,6 +125,14 @@ enum Verbosity
     KPM_VERBOSITY_ERROR
 };
 
+struct InstallTarget
+{
+    char* repository;
+    char* id;
+    enum DependencyType dependency_type;
+    struct SemVer version;
+};
+
 struct KPM
 {
     sqlite3* db;
@@ -156,7 +164,7 @@ enum KPMResult KPM_ListPackageArtifacts(struct KPM* kpm, const char* repositoryI
 
 enum KPMResult KPM_UpdateIndex(struct KPM *kpm, KPMStatusCallback* statusCallback);
 
-enum KPMResult KPM_ResolveInstallString();
+enum KPMResult KPM_ResolveInstallString(char* installString, char* out);
 enum KPMResult KPM_DownloadPackages(struct KPM *kpm, size_t packageCount, const char** packageIds, KPMStatusCallback* statusCallback);
 
 // Artifact management functions

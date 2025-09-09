@@ -41,7 +41,7 @@ int main()
     assert(packageCount > 0);
 
     fprintf(stderr, "Got %zu packages:\n", packageCount);
-    for (int i=0; i < packageCount; i++)
+    for (size_t i=0; i < packageCount; i++)
     {
         fprintf(stderr, "Repo: %s\n", packages[i].repository);
         fprintf(stderr, "Id: %s\n", packages[i].id);

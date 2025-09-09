@@ -50,7 +50,7 @@ enum KPMResult KPM_Initialise(struct KPM *kpm, const char* dbPath)
             artifact TEXT NOT NULL REFERENCES artifacts(url) ON DELETE CASCADE,
             repository TEXT,
             id TEXT NOT NULL,
-            type INTEGER NOT NULL,
+            type INTEGER,
             version_major INTEGER,
             version_minor INTEGER,
             version_patch INTEGER,
@@ -71,7 +71,7 @@ enum KPMResult KPM_Initialise(struct KPM *kpm, const char* dbPath)
     )", NULL, NULL, NULL);
 
     sqlite3_exec(kpm->db, R"(
-        CREATE TABLE IF NOT EXISTS dependencies (
+        CREATE TABLE IF NOT EXISTS current_dependencies (
             dependent TEXT NOT NULL REFERENCES installed_packages(id) ON DELETE CASCADE,
             dependency_repository TEXT NOT NULL,
             dependency_id TEXT NOT NULL,
@@ -83,7 +83,7 @@ enum KPMResult KPM_Initialise(struct KPM *kpm, const char* dbPath)
     )", NULL, NULL, NULL);
 
     return KPM_OK;
-};
+}
 
 /**
  * @brief Cleanup a KPM object
