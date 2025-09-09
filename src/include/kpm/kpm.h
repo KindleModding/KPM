@@ -149,11 +149,16 @@ void KPM_FreeIndexedPackage(struct IndexedPackage* package);
 void KPM_FreeIndexedPackageList(size_t packageCount, struct IndexedPackage* packages);
 enum KPMResult KPM_GetPackage(struct KPM* kpm, const char* repositoryId, const char* packageId, struct IndexedPackage* package);
 enum KPMResult KPM_SearchPackages(struct KPM* kpm, const char* query, size_t* packageCount, struct IndexedPackage** packages);
+
+void KPM_FreeIndexedArtifact(struct IndexedArtifact* artifact);
+void KPM_FreeIndexedArtifactList(size_t artifactCount, struct IndexedArtifact* artifacts);
 enum KPMResult KPM_ListPackageArtifacts(struct KPM* kpm, const char* repositoryId, const char* packageId, size_t* artifactCount, struct IndexedArtifact** artifacts);
 
 enum KPMResult KPM_UpdateIndex(struct KPM *kpm, KPMStatusCallback* statusCallback);
 
-//enum KPMResult KPM_DownloadPackages(struct KPM *kpm, KPMStatusCallback* statusCallback);
+enum KPMResult KPM_ResolveInstallString();
+enum KPMResult KPM_DownloadPackages(struct KPM *kpm, size_t packageCount, const char** packageIds, KPMStatusCallback* statusCallback);
+
 // Artifact management functions
 
 /*    // Internet functions

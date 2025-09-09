@@ -1,4 +1,5 @@
 #include <stddef.h>
+#include <stdio.h>
 
 #include "kpm/kpm.h"
 
@@ -92,4 +93,5 @@ enum KPMResult KPM_Initialise(struct KPM *kpm, const char* dbPath)
 void KPM_Cleanup(struct KPM *kpm)
 {
     sqlite3_close(kpm->db);
+    return;
 }

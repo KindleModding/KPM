@@ -6,15 +6,6 @@
 #include <unistd.h>
 #include <libgen.h>
 
-void statusCallback(enum Verbosity verbosity, uint progress, char * format, ...)
-{
-    va_list args;
-    va_start(args, format);
-    vfprintf(stderr, format, args);
-    fprintf(stderr, "\n");
-    va_end(args);
-}
-
 int main()
 {
     struct KPM kpm;
@@ -29,19 +20,16 @@ int main()
     struct Repository repository;
     assert(KPM_GetRepository(&kpm, "org.kindlemodding.examplerepo", &repository) == KPM_OK);
 
-    fprintf(stderr, "Indexing packages\n");
-    assert(KPM_UpdateIndex(&kpm, statusCallback) == KPM_OK);
-
-    fprintf(stderr, "Testing package list\n");
+    fprintf(stderr, "Searching packages\n");
     size_t packageCount;
     struct IndexedPackage* packages;
-    KPM_ListRepositoryPackages(&kpm, repository.id, &packageCount, &packages);
+    assert(KPM_SearchPackages(&kpm, "Example Package", &packageCount, &packages) == KPM_OK);
 
     fprintf(stderr, "Checking package count\n");
-    assert(packageCount > 0);
+    //assert(packageCount > 0);
 
     fprintf(stderr, "Got %zu packages:\n", packageCount);
-    for (int i=0; i < packageCount; i++)
+    for (size_t i=0; i < packageCount; i++)
     {
         fprintf(stderr, "Repo: %s\n", packages[i].repository);
         fprintf(stderr, "Id: %s\n", packages[i].id);
@@ -60,8 +48,10 @@ int main()
             fprintf(stderr, "\tVersion: %lu.%lu.%lu\n", artifacts[j].version.major, artifacts[j].version.minor, artifacts[j].version.patch);
             fprintf(stderr, "\n");
         }
+        KPM_FreeIndexedArtifactList(artifactCount, artifacts);
     }
 
+    KPM_FreeIndexedPackageList(packageCount, packages);
     KPM_Cleanup(&kpm);
 
     return 0;

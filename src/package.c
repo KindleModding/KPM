@@ -1,5 +1,6 @@
 #include "kpm/kpm.h"
 #include "kpm/semver.h"
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -38,6 +39,37 @@ void KPM_FreeIndexedPackageList(size_t packageCount, struct IndexedPackage* pack
     }
     free(packages);
 }
+
+/**
+ * @brief Free the properties of a package - WILL NOT FREE THE POINTER ITSELF
+ * 
+ * @param package The package to free the properties of
+ */
+ void KPM_FreeIndexedArtifact(struct IndexedArtifact* artifact)
+ {
+     free(artifact->repository);
+     free(artifact->id);
+     free(artifact->url);
+ 
+     artifact->repository = NULL;
+     artifact->id = NULL;
+     artifact->url = NULL;
+ }
+ 
+ /**
+  * @brief Free an allocated list of packages - such as returned by KPM_ListRepositoryPackages
+  * 
+  * @param packageCount The number of packages in the array
+  * @param packages The package array
+  */
+ void KPM_FreeIndexedArtifactList(size_t artifactCount, struct IndexedArtifact* artifacts)
+ {
+     for (size_t i=0; i < artifactCount; i++)
+     {
+         KPM_FreeIndexedArtifact(&artifacts[i]);
+     }
+     free(artifacts);
+ }
 
 /**
  * @brief Get a package given a repositoryId (optional) and a packageId
@@ -102,15 +134,21 @@ enum KPMResult KPM_SearchPackages(struct KPM* kpm, const char* query, size_t* pa
     }
 
     char* paddedQuery = malloc(strlen(query) + 2 + 1);
-    paddedQuery[0] = '%';
+    memset(paddedQuery, 0, strlen(query) + 2 + 1);
+    sprintf(paddedQuery, "%%%s%%", query);
+
+    /*paddedQuery[0] = '%';
     strcpy(&paddedQuery[1], query);
     paddedQuery[strlen(query) + 1] = '%';
     paddedQuery[strlen(query) + 2] = '\0';
+    printf("String: %s, char: %c\n", paddedQuery, paddedQuery[strlen(paddedQuery)-1]);*/
+
+    
 
     const char* zSQL = "SELECT COUNT(), repository, id, name, author, description FROM packages WHERE id LIKE ? OR name LIKE ?;";
     sqlite3_stmt* statement;
     sqlite3_prepare_v2(kpm->db, zSQL, strlen(zSQL), &statement, NULL);
-    sqlite3_bind_text(statement, 1, paddedQuery, strlen(paddedQuery), SQLITE_STATIC);
+    sqlite3_bind_text(statement, 1, paddedQuery, -1, SQLITE_STATIC);
     sqlite3_bind_text(statement, 2, paddedQuery, strlen(paddedQuery), SQLITE_STATIC);
 
     int status;
@@ -140,6 +178,7 @@ enum KPMResult KPM_SearchPackages(struct KPM* kpm, const char* query, size_t* pa
 
     if (status != SQLITE_DONE)
     {
+        sqlite3_finalize(statement);
         return KPM_SQLITE_ERROR;
     }
 
@@ -159,8 +198,8 @@ enum KPMResult KPM_ListPackageArtifacts(struct KPM* kpm, const char* repositoryI
     const char* zSQL = "SELECT COUNT(), url, repository, id, version_major, version_minor, version_patch FROM artifacts WHERE repository=? AND id=?;";
     sqlite3_stmt* statement;
     sqlite3_prepare_v2(kpm->db, zSQL, strlen(zSQL), &statement, NULL);
-    sqlite3_bind_text(statement, 1, repositoryId, strlen(repositoryId), SQLITE_STATIC);
-    sqlite3_bind_text(statement, 2, packageId, strlen(packageId), SQLITE_STATIC);
+    sqlite3_bind_text(statement, 1, repositoryId, -1, SQLITE_STATIC);
+    sqlite3_bind_text(statement, 2, packageId, -1, SQLITE_STATIC);
 
     int status;
     for (int i=0; (status = sqlite3_step(statement)) == SQLITE_ROW; i++)
@@ -174,7 +213,7 @@ enum KPMResult KPM_ListPackageArtifacts(struct KPM* kpm, const char* repositoryI
         {
             if (!*artifacts)
             {
-                *artifacts = malloc(*artifactCount * sizeof(struct IndexedPackage));
+                *artifacts = malloc(*artifactCount * sizeof(struct IndexedArtifact));
             }
 
             (*artifacts)[i].url = strdup((const char*) sqlite3_column_text(statement, 1));
@@ -184,14 +223,12 @@ enum KPMResult KPM_ListPackageArtifacts(struct KPM* kpm, const char* repositoryI
             (*artifacts)[i].version.major = sqlite3_column_int64(statement, 4);
             (*artifacts)[i].version.minor = sqlite3_column_int64(statement, 5);
             (*artifacts)[i].version.patch = sqlite3_column_int64(statement, 6);
-            
-            //(*artifacts)[i].supported_arch = strdup((const char*) sqlite3_column_text(statement, 4));
-            //(*artifacts)[i].supported_kindles = strdup((const char*) sqlite3_column_text(statement, 5));
         }
     }
 
     if (status != SQLITE_DONE)
     {
+        sqlite3_finalize(statement);
         return KPM_SQLITE_ERROR;
     }
 

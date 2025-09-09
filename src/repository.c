@@ -84,6 +84,7 @@ enum KPMResult KPM_ListRepositories(struct KPM* kpm, size_t* repositoryCount, st
 
     if (status != SQLITE_DONE)
     {
+        sqlite3_finalize(statement);
         return KPM_SQLITE_ERROR;
     }
 
@@ -269,6 +270,7 @@ enum KPMResult KPM_ListRepositoryPackages(struct KPM* kpm, const char* repositor
 
     if (status != SQLITE_DONE)
     {
+        sqlite3_finalize(statement);
         return KPM_SQLITE_ERROR;
     }
 
