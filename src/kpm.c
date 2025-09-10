@@ -50,10 +50,12 @@ enum KPMResult KPM_Initialise(struct KPM *kpm, const char* dbPath)
             artifact TEXT NOT NULL REFERENCES artifacts(url) ON DELETE CASCADE,
             repository TEXT,
             id TEXT NOT NULL,
-            type INTEGER NOT NULL,
-            version_major INTEGER,
-            version_minor INTEGER,
-            version_patch INTEGER,
+            min_version_major INTEGER,
+            min_version_minor INTEGER,
+            min_version_patch INTEGER,
+            max_version_major INTEGER,
+            max_version_minor INTEGER,
+            max_version_patch INTEGER,
             PRIMARY KEY (artifact, repository, id)
         )
     )", NULL, NULL, NULL);
@@ -76,9 +78,12 @@ enum KPMResult KPM_Initialise(struct KPM *kpm, const char* dbPath)
             dependency_repository TEXT NOT NULL,
             dependency_id TEXT NOT NULL,
             dependency_type TEXT NOT NULL,
-            version_major INTEGER NOT NULL,
-            version_minor INTEGER NOT NULL,
-            version_patch INTEGER NOT NULL
+            min_version_major INTEGER,
+            min_version_minor INTEGER,
+            min_version_patch INTEGER,
+            max_version_major INTEGER,
+            max_version_minor INTEGER,
+            max_version_patch INTEGER
         )
     )", NULL, NULL, NULL);
 

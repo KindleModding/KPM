@@ -10,8 +10,8 @@ struct FlattenedDependency
 {
     char* repository;
     char* id;
-    struct SemVer minimum; // Inclusive
-    struct SemVer maximum; // Inclusive
+    struct SemVer min_version; // Inclusive
+    struct SemVer max_version; // Inclusive
 };
 
 static int copy_data(struct archive *ar, struct archive *aw);

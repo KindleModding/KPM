@@ -219,45 +219,16 @@ enum KPMResult Internal_GetManifest(char* path, char** outBuffer, KPMStatusCallb
  */
 bool Internal_NarrowDependency(struct FlattenedDependency* currentDependency, struct InstallTarget* targetDependency)
 {
-    switch (targetDependency->dependency_type)
+    if (SemVerCmp(currentDependency->min_version, targetDependency->min_version) > 0 || SemVerCmp(currentDependency->max_version, targetDependency->max_version) < 0 )
     {
-        case KPM_DT_GREATER_THAN_OR_EQUAL_TO:
-            if (SemVerCmp(currentDependency->minimum, targetDependency->version) < 0)
-            {
-                currentDependency->minimum = targetDependency->version;
-            }
-
-            if (SemVerCmp(currentDependency->maximum, targetDependency->version) < 0)
-            {
-                // Our max is less than this
-                return false;
-            }
-            return true;
-        case KPM_DT_EQUAL_TO:
-            if (SemVerCmp(currentDependency->minimum, targetDependency->version) <= 0 && SemVerCmp(currentDependency->maximum, targetDependency->version) >= 0 )
-            {
-                currentDependency->minimum = targetDependency->version;
-                currentDependency->maximum = targetDependency->version;
-                return true;
-            }
-            else
-            {
-                return false;
-            }
-        case KPM_DT_LESS_THAN_OR_EQUAL_TO:
-            if (SemVerCmp(currentDependency->maximum, targetDependency->version) > 0)
-            {
-                currentDependency->maximum = targetDependency->version;
-            }
-
-            if (SemVerCmp(currentDependency->minimum, targetDependency->version) > 0)
-            {
-                // Our min is more than this
-                return false;
-            }
-        case KPM_DT_NONE:
-            return true; // Based dependency
-        }
+        return false;
+    }
+    else
+    {
+        currentDependency->min_version = targetDependency->min_version;
+        currentDependency->max_version = targetDependency->max_version;
+        return true;
+    }
 }
 
 /**
@@ -271,6 +242,8 @@ bool Internal_NarrowDependency(struct FlattenedDependency* currentDependency, st
  */
 enum KPMResult Internal_AddDependencies(struct InstallTarget* target, size_t* dependencyCount, struct FlattenedDependency** flattenedDependencies, KPMStatusCallback *statusCallback)
 {
+    struct FlattenedDependency* dependencies; // We will store parse target dependencies in here
+
     if (strncmp(target->id, "file://", strlen("file://")) == 0)
     {
         char* manifestData;
@@ -297,14 +270,6 @@ enum KPMResult Internal_AddDependencies(struct InstallTarget* target, size_t* de
             }
         }
 
-        // Parse the deps
-        if (*flattenedDependencies == NULL)
-        {
-            *flattenedDependencies = malloc(cJSON_GetArraySize(cJSON_GetObjectItem(json, "dependencies")) * sizeof(struct FlattenedDependency));
-        }
-        else {
-            *flattenedDependencies = realloc(*flattenedDependencies, *dependencyCount + cJSON_GetArraySize(cJSON_GetObjectItem(json, "dependencies")) * sizeof(struct InstallTarget));
-        }
         cJSON* dependencyJSON;
         cJSON_ArrayForEach(dependencyJSON, cJSON_GetObjectItem(json, "dependencies"))
         {
@@ -326,82 +291,18 @@ enum KPMResult Internal_AddDependencies(struct InstallTarget* target, size_t* de
                 dependency.repository = strdup(cJSON_GetStringValue(cJSON_GetObjectItem(dependencyJSON, "repository")));
             }
 
-            dependency.version.major = 0;
-            dependency.version.minor = 0;
-            dependency.version.patch = 0;
-            if (cJSON_GetArraySize(cJSON_GetObjectItem(dependencyJSON, "version")) == 3)
-            {
-                dependency.version.major = cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependencyJSON, "version"), 0));
-                dependency.version.minor = cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependencyJSON, "version"), 1));
-                dependency.version.patch = cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependencyJSON, "version"), 2));
-            }
+        }
 
-            dependency.dependency_type = KPM_DT_NONE;
-            if (cJSON_GetStringValue(cJSON_GetObjectItem(dependencyJSON, "type")) != NULL)
-            {
-                char* typeStr = cJSON_GetStringValue(cJSON_GetObjectItem(dependencyJSON, "type")); //@TODO: Do we need to free() this? Unclear docs!
-                if (strcmp(typeStr, "==") == 0) { // Sinful same-line bracket frfr
-                    dependency.dependency_type=KPM_DT_EQUAL_TO;
-                } else if (strcmp(typeStr, ">") == 0) {
-                    dependency.dependency_type=KPM_DT_GREATER_THAN_OR_EQUAL_TO;
-                    dependency.version.patch++;
-                } else if (strcmp(typeStr, "<") == 0) {
-                    dependency.dependency_type=KPM_DT_LESS_THAN_OR_EQUAL_TO;
-                    if (dependency.version.patch == 0)
-                    {
-                        dependency.version.patch = LONG_MAX;
-                        if (dependency.version.minor == 0)
-                        {
-                            dependency.version.minor = LONG_MAX;
-                            dependency.version.major--;
-                        }
-                        else
-                        {
-                            dependency.version.minor--;
-                        }
-                    }
-                    else
-                    {
-                        dependency.version.patch--;
-                    }
-                } else if (strcmp(typeStr, ">=") == 0) {
-                    dependency.dependency_type=KPM_DT_GREATER_THAN_OR_EQUAL_TO;
-                } else if (strcmp(typeStr, "<=") == 0) {
-                    dependency.dependency_type=KPM_DT_LESS_THAN_OR_EQUAL_TO;
-                } else {
-                    statusCallback(KPM_VERBOSITY_ERROR, 0, "Invalid dependency found [%s].", typeStr);
-                    free(*flattenedDependencies);
-                    *flattenedDependencies = NULL;
-                    free(manifestData);
-                    cJSON_Delete(json);
-                    return KPM_PARSE_ERROR;
-                }
-            }
 
-            
-            bool preExisting = false;
-            for (size_t i=0; i < *dependencyCount; i++)
-            {
-                if (strcmp(flattenedDependencies[i]->id, dependency.id) == 0)
-                {
-                    preExisting = true;
-                    if (!Internal_NarrowDependency((*flattenedDependencies) + i, &dependency))
-                    {
-                        free(manifestData);
-                        cJSON_Delete(json);
-                        return KPM_GENERIC_ERROR;
-                    }
-                    break;
-                }
-            }
 
-            (*dependencyCount)++;
 
-            // Get the dependencies for this dependency
-            if (!preExisting)
-            {
-                Internal_GetRecursiveDependencies(flattenedDependencies[(*dependencyCount)-1], dependencyCount, flattenedDependencies, statusCallback);
-            }
+        // Parse the deps
+        if (*flattenedDependencies == NULL)
+        {
+            *flattenedDependencies = malloc(cJSON_GetArraySize(cJSON_GetObjectItem(json, "dependencies")) * sizeof(struct FlattenedDependency));
+        }
+        else {
+            *flattenedDependencies = realloc(*flattenedDependencies, *dependencyCount + cJSON_GetArraySize(cJSON_GetObjectItem(json, "dependencies")) * sizeof(struct InstallTarget));
         }
 
         free(manifestData);

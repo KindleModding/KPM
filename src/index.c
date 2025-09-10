@@ -1,6 +1,5 @@
 #include "cjson/cJSON.h"
 #include "kpm/kpm.h"
-#include "kpm/semver.h"
 #include "simpleGET.h"
 #include <limits.h>
 #include <string.h>
@@ -9,7 +8,7 @@
 
 bool indexDependency(struct KPM* kpm, char* artifactURL, cJSON* dependency, KPMStatusCallback* statusCallback)
 {
-    const char* zSQL = "INSERT INTO artifact_dependencies (artifact, repository, id, type, version_major, version_minor, version_patch) VALUES (?, ?, ?, ?, ?, ?, ?);";
+    const char* zSQL = "INSERT INTO artifact_dependencies (artifact, repository, id, min_version_major, min_version_minor, min_version_patch, max_version_major, max_version_minor, max_version_patch) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);";
     sqlite3_stmt* statement;
     sqlite3_prepare_v2(kpm->db, zSQL, strlen(zSQL), &statement, NULL);
     sqlite3_bind_text(statement, 1, artifactURL, -1, SQLITE_STATIC);
@@ -23,71 +22,14 @@ bool indexDependency(struct KPM* kpm, char* artifactURL, cJSON* dependency, KPMS
     else {
         sqlite3_bind_null(statement, 2);
     }
-
-    cJSON* typeObject = cJSON_GetObjectItem(dependency, "type");
-    if (typeObject != NULL && !cJSON_IsNull(typeObject))
-    {
-        struct SemVer version = {
-            .major = cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "version"), 0)),
-            .minor = cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "version"), 1)),
-            .patch = cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "version"), 2))
-        };
-
-        char* typeStr = cJSON_GetStringValue(typeObject);
-        enum DependencyType type = KPM_DT_EQUAL_TO;
-        if (strcmp(typeStr, "==") == 0) { // Sinful same-line bracket frfr
-            type=KPM_DT_EQUAL_TO;
-        } else if (strcmp(typeStr, ">") == 0) {
-            type=KPM_DT_GREATER_THAN_OR_EQUAL_TO;
-            version.patch++;
-        } else if (strcmp(typeStr, "<") == 0) {
-            type=KPM_DT_LESS_THAN_OR_EQUAL_TO;
-            if (version.patch == 0)
-            {
-                version.patch = LONG_MAX;
-                if (version.minor == 0)
-                {
-                    version.minor = LONG_MAX;
-                    if (version.major == 0)
-                    {
-                        // INVALID??? @@TODO
-                    }
-                    else {
-                        version.major--;
-                    }
-                }
-                else {
-                    version.minor--;
-                }
-            } else
-            {
-                version.patch--;
-            }
-        } else if (strcmp(typeStr, ">=") == 0) {
-            type=KPM_DT_GREATER_THAN_OR_EQUAL_TO;
-        } else if (strcmp(typeStr, "<=") == 0) {
-            type=KPM_DT_LESS_THAN_OR_EQUAL_TO;
-        } else {
-            statusCallback(KPM_VERBOSITY_ERROR, 0, "Invalid dependency found.");
-            sqlite3_finalize(statement);
-            return false;
-        }
-
-        sqlite3_bind_int(statement, 4, type);
-        sqlite3_bind_int(statement, 5, version.major);
-        sqlite3_bind_int(statement, 6, version.minor);
-        sqlite3_bind_int(statement, 7, version.patch);
-    }
-    else {
-        typeObject = NULL; // In case it's "JSON NULL" but not proper NULL (trigger dependency type "failure" case)
-    }
     
-    if (typeObject == NULL) { // No dependency type
-        sqlite3_bind_int(statement, 4, KPM_DT_NONE);
-        sqlite3_bind_null(statement, 5);
-        sqlite3_bind_null(statement, 6);
-        sqlite3_bind_null(statement, 7);
-    }
+    sqlite3_bind_int(statement, 4, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "min"), 0)));
+    sqlite3_bind_int(statement, 5, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "min"), 1)));
+    sqlite3_bind_int(statement, 6, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "min"), 2)));
+
+    sqlite3_bind_int(statement, 7, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "max"), 0)));
+    sqlite3_bind_int(statement, 8, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "max"), 1)));
+    sqlite3_bind_int(statement, 9, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "max"), 2)));
 
     if (sqlite3_step(statement) != SQLITE_DONE)
     {

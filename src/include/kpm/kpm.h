@@ -31,18 +31,6 @@ enum KPMResult
 };
 
 /**
-* @brief Type of dependency version
-* 
-*/
-enum DependencyType
-{
-    KPM_DT_NONE=-1, /**< No version-specific dependency */
-    KPM_DT_LESS_THAN_OR_EQUAL_TO, /**< Installed package must be greater than or equal to dependent version */
-    KPM_DT_EQUAL_TO, /**< Installed package must be equal to dependent version */
-    KPM_DT_GREATER_THAN_OR_EQUAL_TO /**< Installed package must be greater than or equal to dependent version */
-};
-
-/**
 * @brief A repository that KPM is using
 * 
 */
@@ -80,7 +68,7 @@ struct IndexedArtifact
 };
 
 /**
-* @brief A dependency of an artifact KPM has indexed
+* @brief A dependency object
 * 
 */
 struct ArtifactDependency
@@ -88,8 +76,8 @@ struct ArtifactDependency
     char* artifact; /**< URL of the artifact */
     char* repository; /**< The repository ID */
     char* id; /**< The package ID */
-    enum DependencyType type; /**< The type of dependency */
-    struct SemVer version; /**< The version of the dependency */
+    struct SemVer min_version; /**< The min version of the dependency (inclusive) */
+    struct SemVer max_version; /**< The max version of the dependency (exclusive) */
 };
 
 /**
@@ -114,8 +102,8 @@ struct InstalledDependency
     char* dependent; /**< ID of installed package */
     char* dependency_repository; /**< ID of the repository of the dependency */
     char* dependency_id; /**< ID of the dependency */
-    enum DependencyType dependency_type; /**< The type of dependency */
-    struct SemVer version; /**< The dependency's version */
+    struct SemVer min_version; /**< The min version of the dependency (inclusive) */
+    struct SemVer max_version; /**< The max version of the dependency (exclusive) */
 };
 
 enum Verbosity
@@ -130,7 +118,6 @@ struct InstallTarget
 {
     char* repository;
     char* id;
-    enum DependencyType dependency_type;
     struct SemVer version;
 };
 
@@ -162,6 +149,10 @@ enum KPMResult KPM_SearchPackages(struct KPM* kpm, const char* query, size_t* pa
 void KPM_FreeIndexedArtifact(struct IndexedArtifact* artifact);
 void KPM_FreeIndexedArtifactList(size_t artifactCount, struct IndexedArtifact* artifacts);
 enum KPMResult KPM_ListPackageArtifacts(struct KPM* kpm, const char* repositoryId, const char* packageId, size_t* artifactCount, struct IndexedArtifact** artifacts);
+
+void KPM_FreeArtifactDependency(struct ArtifactDependency* dependency);
+void KPM_FreeArtifactDependencyList(size_t artifactCount, struct ArtifactDependency* dependency);
+enum KPMResult KPM_ListArtifactDependencies(struct KPM* kpm, const char* artifact, size_t* dependencyCount, struct ArtifactDependency** dependencies);
 
 enum KPMResult KPM_UpdateIndex(struct KPM *kpm, KPMStatusCallback* statusCallback);
 

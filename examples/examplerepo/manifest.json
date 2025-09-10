@@ -11,14 +11,13 @@
       "artifacts": [
         {
           "url": "packages/com.kindlemodding.examplepackage/artifacts/com.kindlemodding.examplepackage_1.2.3_armhf-armel.kpkg",
-          "version": [
-            1,
-            2,
-            3
-          ],
+          "version": [ 1, 2, 3 ],
           "dependencies": [
             {
-              "id": "fbink"
+              "repository": "io.github.niluje",
+              "id": "fbink",
+              "min": [ 0, 6, 10 ],
+              "max": [ 0, 7, 0 ]
             }
           ],
           "supported_arch": [
