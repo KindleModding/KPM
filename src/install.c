@@ -217,9 +217,10 @@ enum KPMResult Internal_GetManifest(char* path, char** outBuffer, KPMStatusCallb
  * @param targetDependency 
  * @return enum KPMResult 
  */
-bool Internal_NarrowDependency(struct Internal_Dependency* currentDependency, struct Internal_Dependency* targetDependency)
+bool Internal_NarrowDependency(struct ArtifactDependency* currentDependency, struct ArtifactDependency* targetDependency)
 {
-    if (SemVerCmp(currentDependency->min_version, targetDependency->min_version) > 0 || SemVerCmp(currentDependency->max_version, targetDependency->max_version) < 0 )
+    if ((currentDependency->min_version != NULL && SemVerCmp(*currentDependency->min_version, *targetDependency->min_version) > 0) ||
+        (currentDependency->max_version != NULL && SemVerCmp(*currentDependency->max_version, *targetDependency->max_version) <= 0))
     {
         return false;
     }
@@ -232,7 +233,7 @@ bool Internal_NarrowDependency(struct Internal_Dependency* currentDependency, st
 }
 
 /**
- * @brief Add a package and its dependency to a series of flattened dependencies
+ * @brief Add a package and its dependency to a series of flattened artifacts
  * 
  * @param target 
  * @param dependencyCount 
@@ -240,10 +241,10 @@ bool Internal_NarrowDependency(struct Internal_Dependency* currentDependency, st
  * @param statusCallback 
  * @return enum KPMResult 
  */
-enum KPMResult Internal_AddDependencies(struct InstallTarget* target, size_t* dependencyCount, struct Internal_Dependency** flattenedDependencies, KPMStatusCallback *statusCallback)
+enum KPMResult Internal_AddInstallTarget(struct KPM *kpm, struct InstallTarget* target, size_t* flattenedDependencyCount, struct ArtifactDependency** flattenedDependencies, KPMStatusCallback *statusCallback)
 {
     size_t targetDependencyCount = 0;
-    struct Internal_Dependency* targetDependencies;
+    struct ArtifactDependency* targetDependencies;
 
     if (strncmp(target->id, "file://", strlen("file://")) == 0)
     {
@@ -272,7 +273,7 @@ enum KPMResult Internal_AddDependencies(struct InstallTarget* target, size_t* de
         }
 
         targetDependencyCount = cJSON_GetArraySize(cJSON_GetObjectItem(json, "dependencies"));
-        targetDependencies = malloc(targetDependencyCount * sizeof(struct Internal_Dependency));
+        targetDependencies = malloc(targetDependencyCount * sizeof(struct ArtifactDependency));
         for (size_t i=0; i < targetDependencyCount; i++)
         {
             cJSON* dependencyJSON = cJSON_GetArrayItem(cJSON_GetObjectItem(json, "dependencies"), i);
@@ -281,9 +282,11 @@ enum KPMResult Internal_AddDependencies(struct InstallTarget* target, size_t* de
                 free(*flattenedDependencies);
                 free(manifestData);
                 cJSON_Delete(json);
+                KPM_FreeArtifactDependencyList(targetDependencyCount, targetDependencies);
                 return KPM_PARSE_ERROR;
             }
 
+            targetDependencies[i].artifact = target->id;
             targetDependencies[i].id = strdup(cJSON_GetStringValue(cJSON_GetObjectItem(dependencyJSON, "id"))); // 90% sure I don't need to free this
             targetDependencies[i].repository = NULL;
 
@@ -296,16 +299,24 @@ enum KPMResult Internal_AddDependencies(struct InstallTarget* target, size_t* de
             cJSON* max = cJSON_GetObjectItem(dependencyJSON, "max");
             if (min != NULL && cJSON_GetArraySize(min) == 3)
             {
-                targetDependencies[i].min_version.major = cJSON_GetNumberValue(cJSON_GetArrayItem(min, 0));
-                targetDependencies[i].min_version.minor = cJSON_GetNumberValue(cJSON_GetArrayItem(min, 1));
-                targetDependencies[i].min_version.patch = cJSON_GetNumberValue(cJSON_GetArrayItem(min, 2));
+                targetDependencies[i].min_version->major = cJSON_GetNumberValue(cJSON_GetArrayItem(min, 0));
+                targetDependencies[i].min_version->minor = cJSON_GetNumberValue(cJSON_GetArrayItem(min, 1));
+                targetDependencies[i].min_version->patch = cJSON_GetNumberValue(cJSON_GetArrayItem(min, 2));
+            }
+            else
+            {
+                targetDependencies[i].min_version = NULL;
             }
 
             if (max != NULL && cJSON_GetArraySize(max) == 3)
             {
-                targetDependencies[i].max_version.major = cJSON_GetNumberValue(cJSON_GetArrayItem(max, 0));
-                targetDependencies[i].max_version.minor = cJSON_GetNumberValue(cJSON_GetArrayItem(max, 1));
-                targetDependencies[i].max_version.patch = cJSON_GetNumberValue(cJSON_GetArrayItem(max, 2));
+                targetDependencies[i].max_version->major = cJSON_GetNumberValue(cJSON_GetArrayItem(max, 0));
+                targetDependencies[i].max_version->minor = cJSON_GetNumberValue(cJSON_GetArrayItem(max, 1));
+                targetDependencies[i].max_version->patch = cJSON_GetNumberValue(cJSON_GetArrayItem(max, 2));
+            }
+            else
+            {
+                targetDependencies[i].max_version = NULL;
             }
         }
 
@@ -314,21 +325,58 @@ enum KPMResult Internal_AddDependencies(struct InstallTarget* target, size_t* de
     }
     else
     {
-        // Get dependencies from InstallTarget
-        
+        struct IndexedArtifact artifact;
+        KPM_GetArtifact(kpm, target->repository, target->id, target->version, &artifact);
+        KPM_ListArtifactDependencies(kpm, artifact.url, &targetDependencyCount, &targetDependencies);
     }
-
 
     // Parse the deps
     if (*flattenedDependencies == NULL)
     {
-        *flattenedDependencies = malloc(cJSON_GetArraySize(cJSON_GetObjectItem(json, "dependencies")) * sizeof(struct Internal_Dependency));
+        *flattenedDependencies = malloc(targetDependencyCount * sizeof(struct ArtifactDependency));
     }
     else {
-        *flattenedDependencies = realloc(*flattenedDependencies, *dependencyCount + cJSON_GetArraySize(cJSON_GetObjectItem(json, "dependencies")) * sizeof(struct InstallTarget));
+        *flattenedDependencies = realloc(*flattenedDependencies, *flattenedDependencyCount + targetDependencyCount * sizeof(struct ArtifactDependency));
     }
 
-    return KPM_GENERIC_ERROR;
+    for (size_t i=0; i < targetDependencyCount; i++)
+    {
+        bool found = false;
+        for (size_t j=0; j < *flattenedDependencyCount; j++)
+        {
+            if (strcmp(targetDependencies[i].id, (*flattenedDependencies)[j].id) == 0)
+            {
+                if (targetDependencies[i].repository != NULL && flattenedDependencies[j]->repository != NULL && strcmp(targetDependencies[i].repository, flattenedDependencies[j]->repository) != 0)
+                {
+                    statusCallback(KPM_VERBOSITY_ERROR, 0, "Dependency [%s] is required from repository %s but is also being requested from repository %s", targetDependencies[i].id, targetDependencies[i].repository, flattenedDependencies[i]->repository);
+                    KPM_FreeArtifactDependencyList(targetDependencyCount, targetDependencies);
+                    return KPM_GENERIC_ERROR;
+                }
+
+                if (!Internal_NarrowDependency(&(*flattenedDependencies)[j], &targetDependencies[i]))
+                {
+                    // @TODO: Track which packages needed a dependency so we can say which package is causing this
+                    statusCallback(KPM_VERBOSITY_ERROR, 0, "Dependency [%s] referenced by package [%s] interferes with a dependency required by another package", targetDependencies[i].id, target->id);
+                    KPM_FreeArtifactDependencyList(targetDependencyCount, targetDependencies);
+                    return KPM_GENERIC_ERROR;
+                }
+                found = true;
+                break;
+            }
+        }
+
+        if (!found)
+        {
+            flattenedDependencies[*flattenedDependencyCount + i]->artifact = strdup(targetDependencies[i].artifact);
+            flattenedDependencies[*flattenedDependencyCount + i]->repository = strdup(targetDependencies[i].repository);
+            flattenedDependencies[*flattenedDependencyCount + i]->id = strdup(targetDependencies[i].id);
+            memcpy(flattenedDependencies[*flattenedDependencyCount + i]->min_version, targetDependencies[i].min_version, sizeof(struct SemVer));
+            memcpy(flattenedDependencies[*flattenedDependencyCount + i]->max_version, targetDependencies[i].max_version, sizeof(struct SemVer));
+        }
+    }
+
+    KPM_FreeArtifactDependencyList(targetDependencyCount, targetDependencies);
+    return KPM_OK;
 }
 
 /**
