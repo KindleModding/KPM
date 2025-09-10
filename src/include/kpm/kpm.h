@@ -26,7 +26,8 @@ enum KPMResult
     KPM_INVALID_RESPONSE_CODE, /**< Non-200 response code from server */
     KPM_INVALID_RESPONSE_CONTENT, /**< Invalid content when parsing it (likely malformed JSON or repository manifest) */
     KPM_FILE_SYSTEM_ERROR,
-    KPM_LIBARCHIVE_ERROR
+    KPM_LIBARCHIVE_ERROR,
+    KPM_PARSE_ERROR
 };
 
 /**
@@ -36,11 +37,9 @@ enum KPMResult
 enum DependencyType
 {
     KPM_DT_NONE=-1, /**< No version-specific dependency */
-    KPM_DT_LESS_THAN, /**< Installed package must be less than dependent version */
     KPM_DT_LESS_THAN_OR_EQUAL_TO, /**< Installed package must be greater than or equal to dependent version */
     KPM_DT_EQUAL_TO, /**< Installed package must be equal to dependent version */
-    KPM_DT_GREATER_THAN_OR_EQUAL_TO, /**< Installed package must be greater than or equal to dependent version */
-    KPM_DT_GREATER_THAN /**< Installed package must be greater than dependent version */
+    KPM_DT_GREATER_THAN_OR_EQUAL_TO /**< Installed package must be greater than or equal to dependent version */
 };
 
 /**
@@ -84,7 +83,7 @@ struct IndexedArtifact
 * @brief A dependency of an artifact KPM has indexed
 * 
 */
-struct IndexedArtifactDependency
+struct ArtifactDependency
 {
     char* artifact; /**< URL of the artifact */
     char* repository; /**< The repository ID */
@@ -110,7 +109,7 @@ struct InstalledPackage
 * @brief A dependency of a package KPM has installed
 * 
 */
-struct Dependency
+struct InstalledDependency
 {
     char* dependent; /**< ID of installed package */
     char* dependency_repository; /**< ID of the repository of the dependency */

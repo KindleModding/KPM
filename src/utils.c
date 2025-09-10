@@ -1,4 +1,5 @@
 #include "kpm/kpm.h"
+#include <limits.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,6 +13,16 @@ void KPM_FreeInstallTarget(struct InstallTarget* target)
     target->repository = NULL;
 }
 
+enum Internal_UserVersionComparison
+{
+    Internal_DTCMP_NONE,
+    Internal_DTCMP_GT,
+    Internal_DTCMP_GTEQ,
+    Internal_DTCMP_EQ,
+    Internal_DTCMP_LT,
+    Internal_DTCMP_LTEQ
+};
+
 /**
  * @brief Resolve an install string such as "com.kindlemodding.repo/kpm>=5.1.2" into an InstallTarget object
  * 
@@ -24,6 +35,7 @@ enum KPMResult KPM_ResolveInstallString(char* installString, struct InstallTarge
     target->id = NULL;
     target->repository = NULL;
     target->dependency_type = KPM_DT_NONE;
+    enum Internal_UserVersionComparison comparisonType = Internal_DTCMP_NONE;
 
     char* buffer = malloc(strlen(installString) + 1);
     int bufferIndex = 0;
@@ -46,7 +58,7 @@ enum KPMResult KPM_ResolveInstallString(char* installString, struct InstallTarge
 
         if (installString[i] == '=' || installString[i] == '>' || installString[i] == '<')
         {
-            if (target->id != NULL || target->dependency_type != KPM_DT_NONE)
+            if (target->id != NULL || comparisonType != Internal_DTCMP_NONE)
             {
                 goto error;
             }
@@ -58,7 +70,7 @@ enum KPMResult KPM_ResolveInstallString(char* installString, struct InstallTarge
                 i++;
                 if (installString[i] == '=')
                 {
-                    target->dependency_type = KPM_DT_EQUAL_TO;
+                    comparisonType = Internal_DTCMP_EQ;
                 }
                 else {
                     goto error;
@@ -66,19 +78,19 @@ enum KPMResult KPM_ResolveInstallString(char* installString, struct InstallTarge
             }
             else if (installString[i] == '>')
             {
-                target->dependency_type = KPM_DT_GREATER_THAN;
+                comparisonType = Internal_DTCMP_GT;
                 if (installString[i+1] == '=')
                 {
-                    target->dependency_type = KPM_DT_GREATER_THAN_OR_EQUAL_TO;
+                    comparisonType = Internal_DTCMP_GTEQ;
                     i++;
                 }
             }
             else if (installString[i] == '<')
             {
-                target->dependency_type = KPM_DT_LESS_THAN;
+                comparisonType = Internal_DTCMP_LT;
                 if (installString[i+1] == '=')
                 {
-                    target->dependency_type = KPM_DT_LESS_THAN_OR_EQUAL_TO;
+                    comparisonType = Internal_DTCMP_LTEQ;
                     i++;
                 }
             }
@@ -92,7 +104,7 @@ enum KPMResult KPM_ResolveInstallString(char* installString, struct InstallTarge
         buffer[bufferIndex] = '\0';
     }
     
-    if (target->dependency_type == KPM_DT_NONE)
+    if (comparisonType == Internal_DTCMP_NONE)
     {
         target->id = strdup(buffer);
     }
@@ -132,6 +144,45 @@ enum KPMResult KPM_ResolveInstallString(char* installString, struct InstallTarge
     }
 
     free(buffer);
+
+    switch (comparisonType)
+    {
+        case Internal_DTCMP_NONE:
+            target->dependency_type = KPM_DT_NONE;
+            break;
+        case Internal_DTCMP_GT:
+            target->dependency_type = KPM_DT_GREATER_THAN_OR_EQUAL_TO;
+            target->version.patch++;
+            break;
+        case Internal_DTCMP_GTEQ:
+            target->dependency_type = KPM_DT_GREATER_THAN_OR_EQUAL_TO;
+            break;
+        case Internal_DTCMP_EQ:
+            target->dependency_type = KPM_DT_EQUAL_TO;
+            break;
+        case Internal_DTCMP_LT:
+            target->dependency_type = KPM_DT_LESS_THAN_OR_EQUAL_TO;
+            if (target->version.patch == 0)
+            {
+                target->version.patch = LONG_MAX;
+                if (target->version.minor == 0)
+                {
+                    target->version.minor = LONG_MAX;
+                    target->version.major--;
+                }
+                else {
+                    target->version.minor--;
+                }
+            }
+            else {
+                target->version.patch--;
+            }
+            break;
+        case Internal_DTCMP_LTEQ:
+            target->dependency_type = KPM_DT_LESS_THAN_OR_EQUAL_TO;
+            break;
+    };
+
     return KPM_OK;
 
 error:

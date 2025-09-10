@@ -1,6 +1,8 @@
 #include "cjson/cJSON.h"
 #include "kpm/kpm.h"
+#include "kpm/semver.h"
 #include "simpleGET.h"
+#include <limits.h>
 #include <string.h>
 #include <stdbool.h>
 #include "callback.h"
@@ -25,14 +27,42 @@ bool indexDependency(struct KPM* kpm, char* artifactURL, cJSON* dependency, KPMS
     cJSON* typeObject = cJSON_GetObjectItem(dependency, "type");
     if (typeObject != NULL && !cJSON_IsNull(typeObject))
     {
+        struct SemVer version = {
+            .major = cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "version"), 0)),
+            .minor = cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "version"), 1)),
+            .patch = cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "version"), 2))
+        };
+
         char* typeStr = cJSON_GetStringValue(typeObject);
         enum DependencyType type = KPM_DT_EQUAL_TO;
         if (strcmp(typeStr, "==") == 0) { // Sinful same-line bracket frfr
             type=KPM_DT_EQUAL_TO;
         } else if (strcmp(typeStr, ">") == 0) {
-            type=KPM_DT_GREATER_THAN;
+            type=KPM_DT_GREATER_THAN_OR_EQUAL_TO;
+            version.patch++;
         } else if (strcmp(typeStr, "<") == 0) {
-            type=KPM_DT_LESS_THAN;
+            type=KPM_DT_LESS_THAN_OR_EQUAL_TO;
+            if (version.patch == 0)
+            {
+                version.patch = LONG_MAX;
+                if (version.minor == 0)
+                {
+                    version.minor = LONG_MAX;
+                    if (version.major == 0)
+                    {
+                        // INVALID??? @@TODO
+                    }
+                    else {
+                        version.major--;
+                    }
+                }
+                else {
+                    version.minor--;
+                }
+            } else
+            {
+                version.patch--;
+            }
         } else if (strcmp(typeStr, ">=") == 0) {
             type=KPM_DT_GREATER_THAN_OR_EQUAL_TO;
         } else if (strcmp(typeStr, "<=") == 0) {
@@ -44,9 +74,9 @@ bool indexDependency(struct KPM* kpm, char* artifactURL, cJSON* dependency, KPMS
         }
 
         sqlite3_bind_int(statement, 4, type);
-        sqlite3_bind_int(statement, 5, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "version"), 0)));
-        sqlite3_bind_int(statement, 6, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "version"), 1)));
-        sqlite3_bind_int(statement, 7, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "version"), 2)));
+        sqlite3_bind_int(statement, 5, version.major);
+        sqlite3_bind_int(statement, 6, version.minor);
+        sqlite3_bind_int(statement, 7, version.patch);
     }
     else {
         typeObject = NULL; // In case it's "JSON NULL" but not proper NULL (trigger dependency type "failure" case)
