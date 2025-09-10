@@ -1,7 +1,39 @@
 #include "kpm/kpm.h"
+#include "kpm/semver.h"
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
+
+/**
+ * @brief Free the properties of a package - WILL NOT FREE THE POINTER ITSELF
+ * 
+ * @param package The package to free the properties of
+ */
+void KPM_FreeIndexedArtifact(struct IndexedArtifact* artifact)
+{
+     free(artifact->repository);
+     free(artifact->id);
+     free(artifact->url);
+ 
+     artifact->repository = NULL;
+     artifact->id = NULL;
+     artifact->url = NULL;
+}
+ 
+ /**
+  * @brief Free an allocated list of packages - such as returned by KPM_ListRepositoryPackages
+  * 
+  * @param packageCount The number of packages in the array
+  * @param packages The package array
+  */
+void KPM_FreeIndexedArtifactList(size_t artifactCount, struct IndexedArtifact* artifacts)
+{
+     for (size_t i=0; i < artifactCount; i++)
+     {
+         KPM_FreeIndexedArtifact(&artifacts[i]);
+     }
+     free(artifacts);
+}
 
 void KPM_FreeArtifactDependency(struct ArtifactDependency* dependency)
 {
@@ -22,6 +54,47 @@ void KPM_FreeArtifactDependencyList(size_t dependencyCount, struct ArtifactDepen
     }
 }
 
+enum KPMResult KPM_GetArtifact(struct KPM* kpm, const char* repositoryId, const char* packageId, struct SemVer version, struct IndexedArtifact* artifact)
+{   
+    const char* zSQL;
+    if (version.major == 0 && version.minor == 0 && version.patch == 0)
+    {
+        zSQL = "SELECT url, repository, id, version_major, version_minor, version_patch FROM artifacts WHERE repository=? AND id=? AND version_major=? AND version_minor=? AND version_patch=?;";
+    }
+    else
+    {
+        zSQL = "SELECT url, repository, id, version_major, version_minor, version_patch FROM artifacts WHERE repository=? AND id=? ORDER BY version_major DESC, version_minor DESC, version_patch DESC LIMIT 1;";
+    }
+
+
+     
+    sqlite3_stmt* statement;
+    sqlite3_prepare_v2(kpm->db, zSQL, strlen(zSQL), &statement, NULL);
+    sqlite3_bind_text(statement, 1, repositoryId, -1, SQLITE_STATIC);
+    sqlite3_bind_text(statement, 2, packageId, -1, SQLITE_STATIC);
+
+    if (version.major == 0 && version.minor == 0 && version.patch == 0)
+    {
+        sqlite3_bind_int(statement, 3, version.major);
+        sqlite3_bind_int(statement, 4, version.minor);
+        sqlite3_bind_int(statement, 5, version.patch);
+    }
+
+    if (sqlite3_step(statement) == SQLITE_ROW)
+    {
+        artifact->url = strdup((const char*) sqlite3_column_text(statement, 0));
+        artifact->repository = strdup((const char*) sqlite3_column_text(statement, 1));
+        artifact->id = strdup((const char*) sqlite3_column_text(statement, 2));
+        artifact->version.major = sqlite3_column_int(statement, 3);
+        artifact->version.minor = sqlite3_column_int(statement, 4);
+        artifact->version.patch = sqlite3_column_int(statement, 5);
+    } else {
+        return KPM_SQLITE_ERROR;
+    }
+
+    sqlite3_finalize(statement);
+    return KPM_OK;
+}
 
 enum KPMResult KPM_ListArtifactDependencies(struct KPM* kpm, const char* artifact, size_t* dependencyCount, struct ArtifactDependency** dependencies)
 {

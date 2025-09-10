@@ -217,7 +217,7 @@ enum KPMResult Internal_GetManifest(char* path, char** outBuffer, KPMStatusCallb
  * @param targetDependency 
  * @return enum KPMResult 
  */
-bool Internal_NarrowDependency(struct FlattenedDependency* currentDependency, struct InstallTarget* targetDependency)
+bool Internal_NarrowDependency(struct Internal_Dependency* currentDependency, struct Internal_Dependency* targetDependency)
 {
     if (SemVerCmp(currentDependency->min_version, targetDependency->min_version) > 0 || SemVerCmp(currentDependency->max_version, targetDependency->max_version) < 0 )
     {
@@ -240,9 +240,10 @@ bool Internal_NarrowDependency(struct FlattenedDependency* currentDependency, st
  * @param statusCallback 
  * @return enum KPMResult 
  */
-enum KPMResult Internal_AddDependencies(struct InstallTarget* target, size_t* dependencyCount, struct FlattenedDependency** flattenedDependencies, KPMStatusCallback *statusCallback)
+enum KPMResult Internal_AddDependencies(struct InstallTarget* target, size_t* dependencyCount, struct Internal_Dependency** flattenedDependencies, KPMStatusCallback *statusCallback)
 {
-    struct FlattenedDependency* dependencies; // We will store parse target dependencies in here
+    size_t targetDependencyCount = 0;
+    struct Internal_Dependency* targetDependencies;
 
     if (strncmp(target->id, "file://", strlen("file://")) == 0)
     {
@@ -270,9 +271,11 @@ enum KPMResult Internal_AddDependencies(struct InstallTarget* target, size_t* de
             }
         }
 
-        cJSON* dependencyJSON;
-        cJSON_ArrayForEach(dependencyJSON, cJSON_GetObjectItem(json, "dependencies"))
+        targetDependencyCount = cJSON_GetArraySize(cJSON_GetObjectItem(json, "dependencies"));
+        targetDependencies = malloc(targetDependencyCount * sizeof(struct Internal_Dependency));
+        for (size_t i=0; i < targetDependencyCount; i++)
         {
+            cJSON* dependencyJSON = cJSON_GetArrayItem(cJSON_GetObjectItem(json, "dependencies"), i);
             if (!cJSON_IsString(cJSON_GetObjectItem(dependencyJSON, "id")))
             {
                 free(*flattenedDependencies);
@@ -281,33 +284,48 @@ enum KPMResult Internal_AddDependencies(struct InstallTarget* target, size_t* de
                 return KPM_PARSE_ERROR;
             }
 
-            struct InstallTarget dependency = {
-                .id = strdup(cJSON_GetStringValue(cJSON_GetObjectItem(dependencyJSON, "id"))), // 90% sure I don't need to free this
-                .repository = NULL
-            };
+            targetDependencies[i].id = strdup(cJSON_GetStringValue(cJSON_GetObjectItem(dependencyJSON, "id"))); // 90% sure I don't need to free this
+            targetDependencies[i].repository = NULL;
 
             if (cJSON_GetStringValue(cJSON_GetObjectItem(dependencyJSON, "repository")) != NULL)
             {
-                dependency.repository = strdup(cJSON_GetStringValue(cJSON_GetObjectItem(dependencyJSON, "repository")));
+                targetDependencies[i].repository = strdup(cJSON_GetStringValue(cJSON_GetObjectItem(dependencyJSON, "repository")));
             }
 
-        }
+            cJSON* min = cJSON_GetObjectItem(dependencyJSON, "min");
+            cJSON* max = cJSON_GetObjectItem(dependencyJSON, "max");
+            if (min != NULL && cJSON_GetArraySize(min) == 3)
+            {
+                targetDependencies[i].min_version.major = cJSON_GetNumberValue(cJSON_GetArrayItem(min, 0));
+                targetDependencies[i].min_version.minor = cJSON_GetNumberValue(cJSON_GetArrayItem(min, 1));
+                targetDependencies[i].min_version.patch = cJSON_GetNumberValue(cJSON_GetArrayItem(min, 2));
+            }
 
-
-
-
-        // Parse the deps
-        if (*flattenedDependencies == NULL)
-        {
-            *flattenedDependencies = malloc(cJSON_GetArraySize(cJSON_GetObjectItem(json, "dependencies")) * sizeof(struct FlattenedDependency));
-        }
-        else {
-            *flattenedDependencies = realloc(*flattenedDependencies, *dependencyCount + cJSON_GetArraySize(cJSON_GetObjectItem(json, "dependencies")) * sizeof(struct InstallTarget));
+            if (max != NULL && cJSON_GetArraySize(max) == 3)
+            {
+                targetDependencies[i].max_version.major = cJSON_GetNumberValue(cJSON_GetArrayItem(max, 0));
+                targetDependencies[i].max_version.minor = cJSON_GetNumberValue(cJSON_GetArrayItem(max, 1));
+                targetDependencies[i].max_version.patch = cJSON_GetNumberValue(cJSON_GetArrayItem(max, 2));
+            }
         }
 
         free(manifestData);
         cJSON_Delete(json);
-        return KPM_OK;
+    }
+    else
+    {
+        // Get dependencies from InstallTarget
+        
+    }
+
+
+    // Parse the deps
+    if (*flattenedDependencies == NULL)
+    {
+        *flattenedDependencies = malloc(cJSON_GetArraySize(cJSON_GetObjectItem(json, "dependencies")) * sizeof(struct Internal_Dependency));
+    }
+    else {
+        *flattenedDependencies = realloc(*flattenedDependencies, *dependencyCount + cJSON_GetArraySize(cJSON_GetObjectItem(json, "dependencies")) * sizeof(struct InstallTarget));
     }
 
     return KPM_GENERIC_ERROR;

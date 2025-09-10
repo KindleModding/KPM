@@ -6,7 +6,8 @@ sources = files(
     'index.c',
     'utils.c',
     'install.c',
-    'callback.c'
+    'callback.c',
+    'artifacts.c'
 )
 include_dir = include_directories('./include')
 

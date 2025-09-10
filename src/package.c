@@ -41,37 +41,6 @@ void KPM_FreeIndexedPackageList(size_t packageCount, struct IndexedPackage* pack
 }
 
 /**
- * @brief Free the properties of a package - WILL NOT FREE THE POINTER ITSELF
- * 
- * @param package The package to free the properties of
- */
- void KPM_FreeIndexedArtifact(struct IndexedArtifact* artifact)
- {
-     free(artifact->repository);
-     free(artifact->id);
-     free(artifact->url);
- 
-     artifact->repository = NULL;
-     artifact->id = NULL;
-     artifact->url = NULL;
- }
- 
- /**
-  * @brief Free an allocated list of packages - such as returned by KPM_ListRepositoryPackages
-  * 
-  * @param packageCount The number of packages in the array
-  * @param packages The package array
-  */
- void KPM_FreeIndexedArtifactList(size_t artifactCount, struct IndexedArtifact* artifacts)
- {
-     for (size_t i=0; i < artifactCount; i++)
-     {
-         KPM_FreeIndexedArtifact(&artifacts[i]);
-     }
-     free(artifacts);
- }
-
-/**
  * @brief Get a package given a repositoryId (optional) and a packageId
  * 
  * @param kpm The KPM object
@@ -110,6 +79,51 @@ enum KPMResult KPM_GetPackage(struct KPM* kpm, const char* repositoryId, const c
         package->author = strdup((const char*) sqlite3_column_text(statement, 4));
         package->description = strdup((const char*) sqlite3_column_text(statement, 3));
     } else {
+        return KPM_SQLITE_ERROR;
+    }
+
+    sqlite3_finalize(statement);
+    return KPM_OK;
+}
+
+enum KPMResult KPM_GetPackages(struct KPM* kpm, const char* id, size_t* packageCount, struct IndexedPackage** packages)
+{
+    if (packages != NULL)
+    {
+        *packages = NULL;
+    }
+
+    const char* zSQL = "SELECT COUNT(), repository, id, name, author, description FROM packages WHERE id=?;";
+    sqlite3_stmt* statement;
+    sqlite3_prepare_v2(kpm->db, zSQL, strlen(zSQL), &statement, NULL);
+    sqlite3_bind_text(statement, 1, id, -1, SQLITE_STATIC);
+
+    int status;
+    for (int i=0; (status = sqlite3_step(statement)) == SQLITE_ROW; i++)
+    {
+        if (i == 0)
+        {
+            *packageCount = sqlite3_column_int64(statement, 0);
+        }
+
+        if (packages != NULL && *packageCount > 0)
+        {
+            if (!*packages)
+            {
+                *packages = malloc(*packageCount * sizeof(struct IndexedPackage));
+            }
+
+            (*packages)[i].repository = strdup((const char*) sqlite3_column_text(statement, 1));
+            (*packages)[i].id = strdup((const char*) sqlite3_column_text(statement, 2));
+            (*packages)[i].name = strdup((const char*) sqlite3_column_text(statement, 3));
+            (*packages)[i].author = strdup((const char*) sqlite3_column_text(statement, 4));
+            (*packages)[i].description = strdup((const char*) sqlite3_column_text(statement, 5));
+        }
+    }
+
+    if (status != SQLITE_DONE)
+    {
+        sqlite3_finalize(statement);
         return KPM_SQLITE_ERROR;
     }
 

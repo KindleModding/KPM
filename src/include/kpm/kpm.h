@@ -144,12 +144,16 @@ enum KPMResult KPM_ListRepositoryPackages(struct KPM* kpm, const char* repositor
 void KPM_FreeIndexedPackage(struct IndexedPackage* package);
 void KPM_FreeIndexedPackageList(size_t packageCount, struct IndexedPackage* packages);
 enum KPMResult KPM_GetPackage(struct KPM* kpm, const char* repositoryId, const char* packageId, struct IndexedPackage* package);
+enum KPMResult KPM_GetPackages(struct KPM* kpm, const char* id, size_t* packageCount, struct IndexedPackage** packages);
 enum KPMResult KPM_SearchPackages(struct KPM* kpm, const char* query, size_t* packageCount, struct IndexedPackage** packages);
 
+// Artifact management functions
 void KPM_FreeIndexedArtifact(struct IndexedArtifact* artifact);
 void KPM_FreeIndexedArtifactList(size_t artifactCount, struct IndexedArtifact* artifacts);
+enum KPMResult KPM_GetArtifact(struct KPM* kpm, const char* repositoryId, const char* packageId, struct SemVer version, struct IndexedArtifact* artifact);
 enum KPMResult KPM_ListPackageArtifacts(struct KPM* kpm, const char* repositoryId, const char* packageId, size_t* artifactCount, struct IndexedArtifact** artifacts);
 
+// Dependency management functions
 void KPM_FreeArtifactDependency(struct ArtifactDependency* dependency);
 void KPM_FreeArtifactDependencyList(size_t artifactCount, struct ArtifactDependency* dependency);
 enum KPMResult KPM_ListArtifactDependencies(struct KPM* kpm, const char* artifact, size_t* dependencyCount, struct ArtifactDependency** dependencies);
