@@ -241,7 +241,7 @@ bool Internal_NarrowDependency(struct ArtifactDependency* currentDependency, str
  * @param statusCallback 
  * @return enum KPMResult 
  */
-enum KPMResult Internal_AddInstallTarget(struct KPM *kpm, struct InstallTarget* target, size_t* flattenedDependencyCount, struct ArtifactDependency** flattenedDependencies, KPMStatusCallback *statusCallback)
+enum KPMResult Internal_AddInstallTarget(struct KPM *kpm, struct ArtifactDependency* target, size_t* flattenedDependencyCount, struct ArtifactDependency** flattenedDependencies, KPMStatusCallback *statusCallback)
 {
     size_t targetDependencyCount = 0;
     struct ArtifactDependency* targetDependencies;
@@ -326,7 +326,7 @@ enum KPMResult Internal_AddInstallTarget(struct KPM *kpm, struct InstallTarget* 
     else
     {
         struct IndexedArtifact artifact;
-        KPM_GetArtifact(kpm, target->repository, target->id, target->version, &artifact);
+        KPM_GetArtifact(kpm, target->repository, target->id, target->max_version, &artifact);
         KPM_ListArtifactDependencies(kpm, artifact.url, &targetDependencyCount, &targetDependencies);
     }
 
@@ -372,26 +372,14 @@ enum KPMResult Internal_AddInstallTarget(struct KPM *kpm, struct InstallTarget* 
             flattenedDependencies[*flattenedDependencyCount + i]->id = strdup(targetDependencies[i].id);
             memcpy(flattenedDependencies[*flattenedDependencyCount + i]->min_version, targetDependencies[i].min_version, sizeof(struct SemVer));
             memcpy(flattenedDependencies[*flattenedDependencyCount + i]->max_version, targetDependencies[i].max_version, sizeof(struct SemVer));
-        }
+
+            Internal_AddInstallTarget(kpm, &targetDependencies[i], flattenedDependencyCount, flattenedDependencies, statusCallback);
+        }        
     }
 
     KPM_FreeArtifactDependencyList(targetDependencyCount, targetDependencies);
     return KPM_OK;
 }
-
-/**
- * @brief Algorithm plan
- *
-
- Do we need separate code-paths for local installation :think:
-
- 1. Resolve manifest dependencies - We need to get a package object either by extracting or querying
- 2. List dependencies recursively
- 3. Once flat list of dependency objects is built (wait a second-) resolve the dependency boundaries
- 4. Check if dependencies are already installed
- 5. Create a list of install targets
- 6. Run internal installer
- */
 
 enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target, KPMStatusCallback* statusCallback)
 {
