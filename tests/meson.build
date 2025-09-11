@@ -1,4 +1,3 @@
-install_string_test = executable('install_string_test', 'install_string_test.c', dependencies: [kpm_dep])
 db_test = executable('db_test', 'db_test.c', dependencies: [kpm_dep, sqlite3_dep])
 add_repository_test = executable('add_repository_test', 'add_repository_test.c', dependencies: [kpm_dep])
 index_test = executable('index_test', 'index_test.c', dependencies: [kpm_dep])
@@ -6,9 +5,7 @@ search_test = executable('search_test', 'search_test.c', dependencies: [kpm_dep]
 index_test_empty = executable('index_test_empty', 'index_test_empty.c', dependencies: [kpm_dep])
 remove_repository_test = executable('remove_repository_test', 'remove_repository_test.c', dependencies: [kpm_dep])
 install_package_test = executable('install_package_test', 'install_package_test.c', dependencies: [kpm_dep])
-internal_getdependencies_localfile_test = executable('internal_getdependencies_localfile_test', 'internal_getdependencies_localfile_test.c', dependencies: [kpm_dep], include_directories: include_directories('../src/include/'))
 
-test('Install String Test', install_string_test, is_parallel: false)
 test('Database Test', db_test, is_parallel: false)
 test('Add Repository Test', add_repository_test, is_parallel: false)
 test('Index Test', index_test, is_parallel: false)

@@ -54,17 +54,10 @@ void KPM_FreeArtifactDependencyList(size_t dependencyCount, struct ArtifactDepen
     }
 }
 
-enum KPMResult KPM_GetArtifact(struct KPM* kpm, const char* repositoryId, const char* packageId, struct SemVer* version, struct IndexedArtifact* artifact)
+enum KPMResult KPM_GetArtifact(struct KPM* kpm, const char* repositoryId, const char* packageId, struct SemVer version, struct IndexedArtifact* artifact)
 {   
     const char* zSQL;
-    if (version == NULL)
-    {
-        zSQL = "SELECT url, repository, id, version_major, version_minor, version_patch FROM artifacts WHERE repository=? AND id=? AND version_major=? AND version_minor=? AND version_patch=?;";
-    }
-    else
-    {
-        zSQL = "SELECT url, repository, id, version_major, version_minor, version_patch FROM artifacts WHERE repository=? AND id=? ORDER BY version_major DESC, version_minor DESC, version_patch DESC LIMIT 1;";
-    }
+    zSQL = "SELECT url, repository, id, version_major, version_minor, version_patch FROM artifacts WHERE repository=? AND id=? AND version_major=? AND version_minor=? AND version_patch=?;";
 
 
      
@@ -72,13 +65,9 @@ enum KPMResult KPM_GetArtifact(struct KPM* kpm, const char* repositoryId, const 
     sqlite3_prepare_v2(kpm->db, zSQL, strlen(zSQL), &statement, NULL);
     sqlite3_bind_text(statement, 1, repositoryId, -1, SQLITE_STATIC);
     sqlite3_bind_text(statement, 2, packageId, -1, SQLITE_STATIC);
-
-    if (version->major == 0 && version->minor == 0 && version->patch == 0)
-    {
-        sqlite3_bind_int(statement, 3, version->major);
-        sqlite3_bind_int(statement, 4, version->minor);
-        sqlite3_bind_int(statement, 5, version->patch);
-    }
+    sqlite3_bind_int(statement, 3, version.major);
+    sqlite3_bind_int(statement, 4, version.minor);
+    sqlite3_bind_int(statement, 5, version.patch);
 
     if (sqlite3_step(statement) == SQLITE_ROW)
     {
@@ -129,24 +118,28 @@ enum KPMResult KPM_ListArtifactDependencies(struct KPM* kpm, char* artifact, siz
             (*dependencies)[i].id = strdup((const char*) sqlite3_column_text(statement, 3));
             if (sqlite3_column_type(statement, 4) ==  SQLITE_NULL)
             {
-                (*dependencies)[i].min_version->major = sqlite3_column_int(statement, 4);
-                (*dependencies)[i].min_version->minor = sqlite3_column_int(statement, 5);
-                (*dependencies)[i].min_version->patch = sqlite3_column_int(statement,6);
+                (*dependencies)[i].min_version.major = sqlite3_column_int(statement, 4);
+                (*dependencies)[i].min_version.minor = sqlite3_column_int(statement, 5);
+                (*dependencies)[i].min_version.patch = sqlite3_column_int(statement,6);
             }
             else
             {
-                (*dependencies)[i].min_version = NULL;
+                (*dependencies)[i].min_version.major = 0;
+                (*dependencies)[i].min_version.minor = 1;
+                (*dependencies)[i].min_version.patch = 2;
             }
 
             if (sqlite3_column_type(statement, 7) ==  SQLITE_NULL)
             {
-                (*dependencies)[i].max_version->major = sqlite3_column_int(statement, 7);
-                (*dependencies)[i].max_version->minor = sqlite3_column_int(statement, 8);
-                (*dependencies)[i].max_version->patch = sqlite3_column_int(statement,9);
+                (*dependencies)[i].max_version.major = sqlite3_column_int(statement, 7);
+                (*dependencies)[i].max_version.minor = sqlite3_column_int(statement, 8);
+                (*dependencies)[i].max_version.patch = sqlite3_column_int(statement,9);
             }
             else
             {
-                (*dependencies)[i].max_version = NULL;
+                (*dependencies)[i].max_version.major = 0;
+                (*dependencies)[i].max_version.minor = 1;
+                (*dependencies)[i].max_version.patch = 2;
             }
         }
     }

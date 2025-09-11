@@ -4,6 +4,7 @@
 #include "install.h"
 #include "kpm/kpm.h"
 #include "kpm/semver.h"
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -18,14 +19,10 @@ void FreeNode(struct DependencyNode* node)
     free(node->repository);
     free(node->id);
     free(node->connected);
-    free(node->min_version);
-    free(node->max_version);
     node->repository = NULL;
     node->id = NULL;
     node->connected = NULL;
     node->connectedCount = 0;
-    node->min_version = NULL;
-    node->max_version = NULL;
 }
 
 void FreeDependencyGraph(struct DependencyGraph* graph)
@@ -72,7 +69,7 @@ void AddEdge(struct DependencyGraph* graph, size_t firstNodeIndex, size_t nextNo
     graph->nodes[firstNodeIndex].connected[graph->nodes[firstNodeIndex].connectedCount-1] = nextNodeIndex;
 }
 
-bool FindArtifactNode(struct DependencyGraph* graph, char* repository, char* id, struct SemVer* version, size_t* index)
+bool FindArtifactNode(struct DependencyGraph* graph, char* repository, char* id, struct SemVer version, size_t* index)
 {
     for (size_t i=0; i < graph->nodeCount; i++)
     {
@@ -96,7 +93,7 @@ bool FindArtifactNode(struct DependencyGraph* graph, char* repository, char* id,
             continue;
         }
 
-        if (SemVerCmp(*version, *graph->nodes[i].max_version) != 0)
+        if (SemVerCmp(version, graph->nodes[i].min_version) != 0) // NODE_ARTIFACT is a fixed version
         {
             continue;
         }
@@ -161,24 +158,28 @@ enum KPMResult Internal_GetArtifactDependencies(struct KPM* kpm, struct IndexedA
             cJSON* max = cJSON_GetObjectItem(dependencyJSON, "max");
             if (min != NULL && cJSON_GetArraySize(min) == 3)
             {
-                (*targetDependencies[i]).min_version->major = cJSON_GetNumberValue(cJSON_GetArrayItem(min, 0));
-                (*targetDependencies[i]).min_version->minor = cJSON_GetNumberValue(cJSON_GetArrayItem(min, 1));
-                (*targetDependencies[i]).min_version->patch = cJSON_GetNumberValue(cJSON_GetArrayItem(min, 2));
+                (*targetDependencies[i]).min_version.major = cJSON_GetNumberValue(cJSON_GetArrayItem(min, 0));
+                (*targetDependencies[i]).min_version.minor = cJSON_GetNumberValue(cJSON_GetArrayItem(min, 1));
+                (*targetDependencies[i]).min_version.patch = cJSON_GetNumberValue(cJSON_GetArrayItem(min, 2));
             }
             else
             {
-                (*targetDependencies[i]).min_version = NULL;
+                (*targetDependencies[i]).min_version.major = 0;
+                (*targetDependencies[i]).min_version.minor = 0;
+                (*targetDependencies[i]).min_version.patch = 0;
             }
 
             if (max != NULL && cJSON_GetArraySize(max) == 3)
             {
-                (*targetDependencies[i]).max_version->major = cJSON_GetNumberValue(cJSON_GetArrayItem(max, 0));
-                (*targetDependencies[i]).max_version->minor = cJSON_GetNumberValue(cJSON_GetArrayItem(max, 1));
-                (*targetDependencies[i]).max_version->patch = cJSON_GetNumberValue(cJSON_GetArrayItem(max, 2));
+                (*targetDependencies[i]).max_version.major = cJSON_GetNumberValue(cJSON_GetArrayItem(max, 0));
+                (*targetDependencies[i]).max_version.minor = cJSON_GetNumberValue(cJSON_GetArrayItem(max, 1));
+                (*targetDependencies[i]).max_version.patch = cJSON_GetNumberValue(cJSON_GetArrayItem(max, 2));
             }
             else
             {
-                (*targetDependencies[i]).max_version = NULL;
+                (*targetDependencies[i]).max_version.major = LONG_MAX;
+                (*targetDependencies[i]).max_version.minor = LONG_MAX;
+                (*targetDependencies[i]).max_version.patch = LONG_MAX;
             }
         }
 
@@ -202,8 +203,8 @@ enum KPMResult Internal_GetArtifactDependencies(struct KPM* kpm, struct IndexedA
  */
 bool Internal_NarrowDependency(struct ArtifactDependency* currentDependency, struct ArtifactDependency* targetDependency)
 {
-    if ((currentDependency->min_version != NULL && SemVerCmp(*currentDependency->min_version, *targetDependency->min_version) > 0) ||
-        (currentDependency->max_version != NULL && SemVerCmp(*currentDependency->max_version, *targetDependency->max_version) <= 0))
+    if (SemVerCmp(currentDependency->min_version, targetDependency->min_version) > 0 ||
+        SemVerCmp(currentDependency->max_version, targetDependency->max_version) <= 0)
     {
         return false;
     }
@@ -223,8 +224,8 @@ int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph*
         .connectedCount = 0,
         .repository = artifact->repository,
         .id = artifact->repository,
-        .min_version = &artifact->version,
-        .max_version = &artifact->version
+        .min_version = artifact->version,
+        .max_version = artifact->version
     };
     size_t dependencyCount;
     struct ArtifactDependency* dependencies;
@@ -241,21 +242,9 @@ int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph*
             .connectedCount = 0,
             .repository = dependencies[i].repository,
             .id = dependencies[i].id,
-            .min_version = NULL,
-            .max_version = NULL
+            .min_version = dependencies[i].min_version,
+            .max_version = dependencies[i].max_version
         };
-
-        if (dependencies[i].min_version != NULL)
-        {
-            dependencyNode.min_version = malloc(sizeof(struct SemVer));
-            memcpy(dependencyNode.min_version, dependencies[i].min_version, sizeof(struct SemVer));
-        }
-
-        if (dependencies[i].max_version != NULL)
-        {
-            dependencyNode.max_version = malloc(sizeof(struct SemVer));
-            memcpy(dependencyNode.max_version, dependencies[i].max_version, sizeof(struct SemVer));
-        }
 
         size_t dependencyNodeId = AddNode(graph, dependencyNode);
 
@@ -266,7 +255,7 @@ int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph*
         bool validArtifactFound = false;
         for (size_t j=0; j < artifactCount; j++)
         {
-            if (SemVerCmp(artifacts[j].version, *dependencies[i].min_version) <= 0 || SemVerCmp(artifacts[j].version, *dependencies[i].max_version) >= 0)
+            if (SemVerCmp(artifacts[j].version, dependencies[i].min_version) <= 0 || SemVerCmp(artifacts[j].version, dependencies[i].max_version) >= 0)
             {
                 continue;
             }
@@ -274,7 +263,7 @@ int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph*
             validArtifactFound = true;
 
             size_t artifactNodeId;
-            if (!FindArtifactNode(graph, artifacts[j].repository, artifacts[j].id, &artifacts[j].version, &artifactNodeId))
+            if (!FindArtifactNode(graph, artifacts[j].repository, artifacts[j].id, artifacts[j].version, &artifactNodeId))
             {
                 struct DependencyNode artifactNode = {
                     .type = NODE_ARTIFACT,
@@ -282,11 +271,10 @@ int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph*
                     .connectedCount = 0,
                     .repository = artifacts[j].repository,
                     .id = artifacts[j].id,
-                    .min_version = malloc(sizeof(struct SemVer)),
-                    .max_version = malloc(sizeof(struct SemVer))
+                    .min_version = artifacts[j].version,
+                    .max_version = artifacts[j].version
                 };
-                memcpy(artifactNode.min_version, &artifacts[j].version, sizeof(struct SemVer));
-                memcpy(artifactNode.max_version, &artifacts[j].version, sizeof(struct SemVer));
+                artifactNode.max_version.patch+=1; // max_version is technically exclusive // @TODO: remove this for NODE_ARTIFACT?
                 artifactNodeId = AddNode(graph, artifactNode);
             }
 

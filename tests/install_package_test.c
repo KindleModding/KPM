@@ -21,10 +21,9 @@ int main()
     uri[strlen("file://") + strlen(dir) + strlen("/examples/examplerepo/packages/com.kindlemodding.examplepackage/artifacts/com.kindlemodding.examplepackage_1.2.3_armhf-armel.kpkg")] = '\0';
 
     struct InstallTarget target = {
-        .dependency_type = KPM_DT_NONE,
         .id = uri,
         .repository = NULL,
-        .version = {0, 0, 0}
+        .version = NULL
     };
     
     KPM_InstallPackage(&kpm, &target, NULL);

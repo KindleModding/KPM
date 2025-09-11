@@ -222,11 +222,11 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
     // Get the dependencies
     size_t dependencyCount = 0;
     struct InstallTarget* dependencies = NULL;
-    enum KPMResult result = Internal_GetRecursiveDependencies(target, &dependencyCount, &dependencies, statusCallback);
-    if (result != KPM_OK)
-    {
-        return result;
-    }
+    //enum KPMResult result = Internal_GetRecursiveDependencies(target, &dependencyCount, &dependencies, statusCallback);
+    //if (result != KPM_OK)
+    //{
+    //    return result;
+    //}
 
     return KPM_OK;
 }

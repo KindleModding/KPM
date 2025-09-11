@@ -21,8 +21,8 @@ struct DependencyNode
     size_t connectedCount; /**< Number of dependencies of this node */
     char* repository; /**< Package repo */
     char* id; /**< Package id */
-    struct SemVer* min_version;
-    struct SemVer* max_version;
+    struct SemVer min_version;
+    struct SemVer max_version;
 };
 
 void CreateDependencyGraph(struct DependencyGraph* graph, int count);
@@ -31,4 +31,4 @@ void FreeNode(struct DependencyNode* node);
 void FreeDependencyGraph(struct DependencyGraph* graph);
 size_t AddNode(struct DependencyGraph* graph, struct DependencyNode node);
 void AddEdge(struct DependencyGraph* graph, size_t firstNodeIndex, size_t nextNodeIndex);
-bool FindArtifactNode(struct DependencyGraph* graph, char* repository, char* id, struct SemVer* version, size_t* index);
+bool FindArtifactNode(struct DependencyGraph* graph, char* repository, char* id, struct SemVer version, size_t* index);

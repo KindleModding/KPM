@@ -76,8 +76,8 @@ struct ArtifactDependency
     char* artifact; /**< URL of the artifact */
     char* repository; /**< The repository ID */
     char* id; /**< The package ID */
-    struct SemVer* min_version; /**< The min version of the dependency (inclusive) */
-    struct SemVer* max_version; /**< The max version of the dependency (exclusive) */
+    struct SemVer min_version; /**< The min version of the dependency (inclusive) */
+    struct SemVer max_version; /**< The max version of the dependency (exclusive) */
 };
 
 /**
@@ -102,8 +102,8 @@ struct InstalledDependency
     char* dependent; /**< ID of installed package */
     char* dependency_repository; /**< ID of the repository of the dependency */
     char* dependency_id; /**< ID of the dependency */
-    struct SemVer* min_version; /**< The min version of the dependency (inclusive) */
-    struct SemVer* max_version; /**< The max version of the dependency (exclusive) */
+    struct SemVer min_version; /**< The min version of the dependency (inclusive) */
+    struct SemVer max_version; /**< The max version of the dependency (exclusive) */
 };
 
 enum Verbosity
@@ -150,7 +150,7 @@ enum KPMResult KPM_SearchPackages(struct KPM* kpm, const char* query, size_t* pa
 // Artifact management functions
 void KPM_FreeIndexedArtifact(struct IndexedArtifact* artifact);
 void KPM_FreeIndexedArtifactList(size_t artifactCount, struct IndexedArtifact* artifacts);
-enum KPMResult KPM_GetArtifact(struct KPM* kpm, const char* repositoryId, const char* packageId, struct SemVer* version, struct IndexedArtifact* artifact);
+enum KPMResult KPM_GetArtifact(struct KPM* kpm, const char* repositoryId, const char* packageId, struct SemVer version, struct IndexedArtifact* artifact);
 enum KPMResult KPM_ListPackageArtifacts(struct KPM* kpm, const char* repositoryId, const char* packageId, size_t* artifactCount, struct IndexedArtifact** artifacts);
 
 // Dependency management functions
@@ -161,7 +161,6 @@ enum KPMResult KPM_ListArtifactDependencies(struct KPM* kpm, char* artifact, siz
 enum KPMResult KPM_UpdateIndex(struct KPM *kpm, KPMStatusCallback* statusCallback);
 
 void KPM_FreeInstallTarget(struct InstallTarget* target);
-enum KPMResult KPM_ResolveInstallString(char* installString, struct InstallTarget* target);
 
 enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target, KPMStatusCallback* statusCallback);
 
