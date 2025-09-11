@@ -72,6 +72,42 @@ void AddEdge(struct DependencyGraph* graph, size_t firstNodeIndex, size_t nextNo
     graph->nodes[firstNodeIndex].connected[graph->nodes[firstNodeIndex].connectedCount-1] = nextNodeIndex;
 }
 
+bool FindArtifactNode(struct DependencyGraph* graph, char* repository, char* id, struct SemVer* version, size_t* index)
+{
+    for (size_t i=0; i < graph->nodeCount; i++)
+    {
+        if (graph->nodes[i].type == NODE_DEPENDENCY)
+        {
+            continue;
+        }
+
+        if (strcmp(graph->nodes[i].id, id) != 0)
+        {
+            continue;
+        }
+
+        if (repository != graph->nodes[i].repository && (repository == NULL || graph->nodes[i].repository == NULL))
+        {
+            continue;
+        }
+
+        if (repository != NULL && strcmp(graph->nodes[i].repository, repository) != 0)
+        {
+            continue;
+        }
+
+        if (SemVerCmp(*version, *graph->nodes[i].max_version) != 0)
+        {
+            continue;
+        }
+
+        *index = i;
+        return true;
+    }
+
+    return false;
+}
+
 enum KPMResult Internal_GetArtifactDependencies(struct KPM* kpm, struct IndexedArtifact* target, size_t* targetDependencyCount, struct ArtifactDependency** targetDependencies)
 {
     if (strncmp(target->url, "file://", strlen("file://")) == 0)
@@ -227,7 +263,7 @@ int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph*
         struct IndexedArtifact* artifacts;
         KPM_ListPackageArtifacts(kpm, dependencies[i].repository, dependencies[i].id, &artifactCount, &artifacts);
         
-        bool foundArtifact = false;
+        bool validArtifactFound = false;
         for (size_t j=0; j < artifactCount; j++)
         {
             if (SemVerCmp(artifacts[j].version, *dependencies[i].min_version) <= 0 || SemVerCmp(artifacts[j].version, *dependencies[i].max_version) >= 0)
@@ -235,26 +271,30 @@ int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph*
                 continue;
             }
 
-            foundArtifact = true;
+            validArtifactFound = true;
 
-            struct DependencyNode artifactNode = {
-                .type = NODE_ARTIFACT,
-                .connected = NULL,
-                .connectedCount = 0,
-                .repository = artifacts[j].repository,
-                .id = artifacts[j].id,
-                .min_version = malloc(sizeof(struct SemVer)),
-                .max_version = malloc(sizeof(struct SemVer))
-            };
-            memcpy(artifactNode.min_version, &artifacts[j].version, sizeof(struct SemVer));
-            memcpy(artifactNode.max_version, &artifacts[j].version, sizeof(struct SemVer));
+            size_t artifactNodeId;
+            if (!FindArtifactNode(graph, artifacts[j].repository, artifacts[j].id, &artifacts[j].version, &artifactNodeId))
+            {
+                struct DependencyNode artifactNode = {
+                    .type = NODE_ARTIFACT,
+                    .connected = NULL,
+                    .connectedCount = 0,
+                    .repository = artifacts[j].repository,
+                    .id = artifacts[j].id,
+                    .min_version = malloc(sizeof(struct SemVer)),
+                    .max_version = malloc(sizeof(struct SemVer))
+                };
+                memcpy(artifactNode.min_version, &artifacts[j].version, sizeof(struct SemVer));
+                memcpy(artifactNode.max_version, &artifacts[j].version, sizeof(struct SemVer));
+                artifactNodeId = AddNode(graph, artifactNode);
+            }
 
-            size_t artifactNodeId = AddNode(graph, artifactNode);
             AddEdge(graph, dependencyNodeId, artifactNodeId);
             AddEdge(graph, artifactNodeId, Internal_ConstructGraphFromArtifact(kpm, graph, &artifacts[j]));
         }
 
-        if (!foundArtifact)
+        if (!validArtifactFound)
         {
             return -1; // @TODO: Free stuff, etc
         }

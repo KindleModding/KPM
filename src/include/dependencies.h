@@ -31,3 +31,4 @@ void FreeNode(struct DependencyNode* node);
 void FreeDependencyGraph(struct DependencyGraph* graph);
 size_t AddNode(struct DependencyGraph* graph, struct DependencyNode node);
 void AddEdge(struct DependencyGraph* graph, size_t firstNodeIndex, size_t nextNodeIndex);
+bool FindArtifactNode(struct DependencyGraph* graph, char* repository, char* id, struct SemVer* version, size_t* index);
