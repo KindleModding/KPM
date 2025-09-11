@@ -5,11 +5,13 @@
 #include "kpm/kpm.h"
 #include "kpm/semver.h"
 #include <limits.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 void CreateDependencyGraph(struct DependencyGraph* graph, int count)
 {
+    graph->nodeCount = 0;
     graph->nodes = malloc(sizeof(struct DependencyNode) * count);
     graph->allocated = count;
 }
@@ -52,7 +54,7 @@ size_t AddNode(struct DependencyGraph *graph, struct DependencyNode node)
     }
 
     graph->nodes[graph->nodeCount++] = node;
-    return graph->nodeCount;
+    return graph->nodeCount-1;
 }
 
 void AddEdge(struct DependencyGraph* graph, size_t firstNodeIndex, size_t nextNodeIndex)
@@ -89,6 +91,42 @@ bool FindArtifactNode(struct DependencyGraph* graph, char* repository, char* id,
         }
 
         if (SemVerCmp(version, graph->nodes[i].min_version) != 0) // NODE_ARTIFACT is a fixed version
+        {
+            continue;
+        }
+
+        *index = i;
+        return true;
+    }
+
+    return false;
+}
+
+bool FindDependencyNode(struct DependencyGraph* graph, char* repository, char* id, struct SemVer min_version, struct SemVer max_version, size_t* index)
+{
+    for (size_t i=0; i < graph->nodeCount; i++)
+    {
+        if (graph->nodes[i].type == NODE_DEPENDENCY)
+        {
+            continue;
+        }
+
+        if (strcmp(graph->nodes[i].id, id) != 0)
+        {
+            continue;
+        }
+
+        if (strcmp(graph->nodes[i].repository, repository) != 0)
+        {
+            continue;
+        }
+
+        if (SemVerCmp(min_version, graph->nodes[i].min_version) != 0)
+        {
+            continue;
+        }
+
+        if (SemVerCmp(max_version, graph->nodes[i].max_version) != 0)
         {
             continue;
         }
@@ -192,6 +230,79 @@ enum KPMResult Internal_GetArtifactDependencies(struct KPM* kpm, struct IndexedA
     return KPM_OK;
 }
 
+void stringConcatenate(char* dest, char* src, size_t* length, bool dry)
+{
+    *length += strlen(src);
+    if (!dry)
+    {
+        strcat(dest, src);
+    }
+}
+
+void getNameFromNode(struct DependencyGraph* graph, size_t index, char** output, bool declaration)
+{
+    if (declaration)
+    {
+        if (graph->nodes[index].type == NODE_ARTIFACT)
+        {
+            *output = malloc(1 + snprintf(NULL, 0, "%zu[\"%s\n%s\n%zu.%zu.%zu\"]", index, graph->nodes[index].repository, graph->nodes[index].id, graph->nodes[index].min_version.major, graph->nodes[index].min_version.minor, graph->nodes[index].min_version.patch));
+            sprintf(*output, "%zu[\"%s\n%s\n%zu.%zu.%zu\"]", index, graph->nodes[index].repository, graph->nodes[index].id, graph->nodes[index].min_version.major, graph->nodes[index].min_version.minor, graph->nodes[index].min_version.patch);
+            return;
+        }
+
+        if (graph->nodes[index].type == NODE_DEPENDENCY)
+        {
+            *output = malloc(1 + snprintf(NULL, 0, "%zu([\"%s\n%s\n%zu.%zu.%zu to %zu.%zu.%zu\"])", index, graph->nodes[index].repository, graph->nodes[index].id, graph->nodes[index].min_version.major, graph->nodes[index].min_version.minor, graph->nodes[index].min_version.patch, graph->nodes[index].max_version.major, graph->nodes[index].max_version.minor, graph->nodes[index].max_version.patch));
+            sprintf(*output, "%zu([\"%s\n%s\n%zu.%zu.%zu to %zu.%zu.%zu\"])", index, graph->nodes[index].repository, graph->nodes[index].id, graph->nodes[index].min_version.major, graph->nodes[index].min_version.minor, graph->nodes[index].min_version.patch, graph->nodes[index].max_version.major, graph->nodes[index].max_version.minor, graph->nodes[index].max_version.patch);
+            return;
+        }
+    }
+    else 
+    {
+        *output = malloc(1 + snprintf(NULL, 0, "%zu", index));
+            sprintf(*output, "%zu", index);
+            return;
+    }
+}
+
+int Internal_RenderGraph(struct DependencyGraph* graph, char* output, bool dry)
+{
+    size_t outputLength=0;
+    stringConcatenate(output, "flowchart\n", &outputLength, dry);
+
+    for (size_t i=0; i < graph->nodeCount; i++)
+    {
+        char* nodeName = NULL;
+        getNameFromNode(graph, i, &nodeName, true);
+        stringConcatenate(output, "    ", &outputLength, dry);
+        stringConcatenate(output, nodeName, &outputLength, dry);
+        stringConcatenate(output, "\n", &outputLength, dry);
+
+        free(nodeName);
+        for (size_t j=0; j < graph->nodes[i].connectedCount; j++)
+        {
+            char* connectedName = NULL;
+            getNameFromNode(graph, i, &nodeName, false);
+            getNameFromNode(graph, graph->nodes[i].connected[j], &connectedName, false);
+            stringConcatenate(output, "    ", &outputLength, dry);
+            stringConcatenate(output, nodeName, &outputLength, dry);
+            stringConcatenate(output, " --> ", &outputLength, dry);
+            stringConcatenate(output, connectedName, &outputLength, dry);
+            stringConcatenate(output, "\n", &outputLength, dry);
+            free(connectedName);
+            free(nodeName);
+        }
+    }
+
+    return outputLength;
+}
+
+void RenderGraph(struct DependencyGraph* graph, char** output)
+{
+    *output = malloc(1 + Internal_RenderGraph(graph, NULL, true));
+    Internal_RenderGraph(graph, *output, false);
+}
+
 /**
  * @brief Alters the current dependency to be restricted so that the targetDependency is ALSO met (if possible)
  * 
@@ -225,15 +336,23 @@ int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph*
         .min_version = artifact->version,
         .max_version = artifact->version
     };
+    // Add this artifact to the graph
+    int root = AddNode(graph, node);
+
     size_t dependencyCount;
     struct ArtifactDependency* dependencies;
     Internal_GetArtifactDependencies(kpm, artifact, &dependencyCount, &dependencies);
 
-
-    int root = AddNode(graph, node);
-
     for (size_t i=0; i < dependencyCount; i++)
     {
+        // Check if this dependency is already present
+        size_t dependencyNodeId;
+        if (FindDependencyNode(graph, dependencies[i].repository, dependencies[i].id, dependencies[i].min_version, dependencies[i].max_version, &dependencyNodeId))
+        {
+            AddEdge(graph, root, dependencyNodeId);
+            continue; // We can skip this dependency if it already exists in the graph
+        }
+
         struct DependencyNode dependencyNode = {
             .type = NODE_DEPENDENCY,
             .connected = NULL,
@@ -244,7 +363,8 @@ int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph*
             .max_version = dependencies[i].max_version
         };
 
-        size_t dependencyNodeId = AddNode(graph, dependencyNode);
+        dependencyNodeId = AddNode(graph, dependencyNode);
+        AddEdge(graph, root, dependencyNodeId);
 
         size_t artifactCount;
         struct IndexedArtifact* artifacts;
@@ -267,8 +387,8 @@ int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph*
                     .type = NODE_ARTIFACT,
                     .connected = NULL,
                     .connectedCount = 0,
-                    .repository = artifacts[j].repository,
-                    .id = artifacts[j].id,
+                    .repository = strdup(artifacts[j].repository),
+                    .id = strdup(artifacts[j].id),
                     .min_version = artifacts[j].version,
                     .max_version = artifacts[j].version
                 };
@@ -280,11 +400,16 @@ int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph*
             AddEdge(graph, artifactNodeId, Internal_ConstructGraphFromArtifact(kpm, graph, &artifacts[j]));
         }
 
+        KPM_FreeIndexedArtifactList(artifactCount, artifacts);
+        
         if (!validArtifactFound)
         {
-            return -1; // @TODO: Free stuff, etc
+            KPM_FreeArtifactDependencyList(dependencyCount, dependencies);
+            return -1;
         }
     }
+
+    KPM_FreeArtifactDependencyList(dependencyCount, dependencies);
 
 
     return root;

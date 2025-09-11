@@ -1,3 +1,4 @@
+graph_test = executable('graph_test', 'graph_test.c', dependencies: [kpm_dep], include_directories: '../src/include/')
 db_test = executable('db_test', 'db_test.c', dependencies: [kpm_dep, sqlite3_dep])
 add_repository_test = executable('add_repository_test', 'add_repository_test.c', dependencies: [kpm_dep])
 index_test = executable('index_test', 'index_test.c', dependencies: [kpm_dep])
@@ -6,6 +7,7 @@ index_test_empty = executable('index_test_empty', 'index_test_empty.c', dependen
 remove_repository_test = executable('remove_repository_test', 'remove_repository_test.c', dependencies: [kpm_dep])
 install_package_test = executable('install_package_test', 'install_package_test.c', dependencies: [kpm_dep])
 
+test('Graph Test', graph_test, is_parallel: false)
 test('Database Test', db_test, is_parallel: false)
 test('Add Repository Test', add_repository_test, is_parallel: false)
 test('Index Test', index_test, is_parallel: false)
