@@ -20,7 +20,7 @@ bool indexDependency(struct KPM* kpm, char* artifactURL, cJSON* dependency, KPMS
         sqlite3_bind_text(statement, 2, cJSON_GetStringValue(repositoryObject), -1, SQLITE_STATIC);
     }
     else {
-        sqlite3_bind_null(statement, 2);
+        sqlite3_bind_text(statement, 2, "", -1, SQLITE_STATIC);
     }
     
     sqlite3_bind_int(statement, 4, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "min"), 0)));

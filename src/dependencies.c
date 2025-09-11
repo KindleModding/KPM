@@ -83,12 +83,7 @@ bool FindArtifactNode(struct DependencyGraph* graph, char* repository, char* id,
             continue;
         }
 
-        if (repository != graph->nodes[i].repository && (repository == NULL || graph->nodes[i].repository == NULL))
-        {
-            continue;
-        }
-
-        if (repository != NULL && strcmp(graph->nodes[i].repository, repository) != 0)
+        if (strcmp(graph->nodes[i].repository, repository) != 0)
         {
             continue;
         }
@@ -147,11 +142,14 @@ enum KPMResult Internal_GetArtifactDependencies(struct KPM* kpm, struct IndexedA
 
             (*targetDependencies)[i].artifact = target->id;
             (*targetDependencies)[i].id = strdup(cJSON_GetStringValue(cJSON_GetObjectItem(dependencyJSON, "id"))); // 90% sure I don't need to free this
-            (*targetDependencies)[i].repository = NULL;
 
             if (cJSON_GetStringValue(cJSON_GetObjectItem(dependencyJSON, "repository")) != NULL)
             {
                 (*targetDependencies[i]).repository = strdup(cJSON_GetStringValue(cJSON_GetObjectItem(dependencyJSON, "repository")));
+            }
+            else
+            {
+                (*targetDependencies)[i].repository = "";
             }
 
             cJSON* min = cJSON_GetObjectItem(dependencyJSON, "min");
