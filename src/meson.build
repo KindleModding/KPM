@@ -1,13 +1,15 @@
 sources = files(
-    'simpleGET.c',
-    'kpm.c',
-    'repository.c',
-    'package.c',
-    'index.c',
-    'utils.c',
-    'install.c',
+    'artifacts.c',
     'callback.c',
-    'artifacts.c'
+    'dependencies.c',
+    'device.c',
+    'index.c',
+    'install.c',
+    'kpm.c',
+    'package.c',
+    'repository.c',
+    'simpleGET.c',
+    'utils.c'
 )
 include_dir = include_directories('./include')
 

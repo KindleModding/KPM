@@ -15,7 +15,7 @@ struct SemVer
  * @param b 
  * @return int 
  */
-inline int SemVerCmp(struct SemVer a, struct SemVer b)
+static inline int SemVerCmp(struct SemVer a, struct SemVer b)
 {
     if (a.major != b.major)
     {
