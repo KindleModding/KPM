@@ -209,7 +209,7 @@ enum KPMResult KPM_ListPackageArtifacts(struct KPM* kpm, const char* repositoryI
         *artifacts = NULL;
     }
     
-    const char* zSQL = "SELECT COUNT(), url, repository, id, version_major, version_minor, version_patch FROM artifacts WHERE repository=? AND id=?;";
+    const char* zSQL = "SELECT COUNT(), url, repository, id, version_major, version_minor, version_patch FROM artifacts WHERE repository=? AND id=? ORDER BY version_major DESC, version_minor DESC;";
     sqlite3_stmt* statement;
     sqlite3_prepare_v2(kpm->db, zSQL, strlen(zSQL), &statement, NULL);
     sqlite3_bind_text(statement, 1, repositoryId, -1, SQLITE_STATIC);
