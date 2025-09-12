@@ -117,31 +117,12 @@ enum KPMResult KPM_ListArtifactDependencies(struct KPM* kpm, char* artifact, siz
             (*dependencies)[i].artifact = strdup((const char*) sqlite3_column_text(statement, 1));
             (*dependencies)[i].repository = strdup((const char*) sqlite3_column_text(statement, 2));
             (*dependencies)[i].id = strdup((const char*) sqlite3_column_text(statement, 3));
-            if (sqlite3_column_type(statement, 4) ==  SQLITE_NULL)
-            {
-                (*dependencies)[i].min_version.major = sqlite3_column_int(statement, 4);
-                (*dependencies)[i].min_version.minor = sqlite3_column_int(statement, 5);
-                (*dependencies)[i].min_version.patch = sqlite3_column_int(statement,6);
-            }
-            else
-            {
-                (*dependencies)[i].min_version.major = 0;
-                (*dependencies)[i].min_version.minor = 0;
-                (*dependencies)[i].min_version.patch = 0;
-            }
-
-            if (sqlite3_column_type(statement, 7) ==  SQLITE_NULL)
-            {
-                (*dependencies)[i].max_version.major = sqlite3_column_int(statement, 7);
-                (*dependencies)[i].max_version.minor = sqlite3_column_int(statement, 8);
-                (*dependencies)[i].max_version.patch = sqlite3_column_int(statement,9);
-            }
-            else
-            {
-                (*dependencies)[i].max_version.major = VERSION_MAX;
-                (*dependencies)[i].max_version.minor = VERSION_MAX;
-                (*dependencies)[i].max_version.patch = VERSION_MAX;
-            }
+            (*dependencies)[i].min_version.major = sqlite3_column_int(statement, 4);
+            (*dependencies)[i].min_version.minor = sqlite3_column_int(statement, 5);
+            (*dependencies)[i].min_version.patch = sqlite3_column_int(statement,6);
+            (*dependencies)[i].max_version.major = sqlite3_column_int(statement, 7);
+            (*dependencies)[i].max_version.minor = sqlite3_column_int(statement, 8);
+            (*dependencies)[i].max_version.patch = sqlite3_column_int(statement,9);
         }
     }
 
