@@ -93,10 +93,11 @@ enum KPMResult KPM_GetPackages(struct KPM* kpm, const char* id, size_t* packageC
         *packages = NULL;
     }
 
-    const char* zSQL = "SELECT COUNT(), repository, id, name, author, description FROM packages WHERE id=?;";
+    const char* zSQL = "SELECT (SELECT COUNT() FROM packages WHERE id=?), repository, id, name, author, description FROM packages WHERE id=?;";
     sqlite3_stmt* statement;
     sqlite3_prepare_v2(kpm->db, zSQL, strlen(zSQL), &statement, NULL);
     sqlite3_bind_text(statement, 1, id, -1, SQLITE_STATIC);
+    sqlite3_bind_text(statement, 2, id, -1, SQLITE_STATIC);
 
     int status;
     for (int i=0; (status = sqlite3_step(statement)) == SQLITE_ROW; i++)
@@ -150,11 +151,13 @@ enum KPMResult KPM_SearchPackages(struct KPM* kpm, const char* query, size_t* pa
     char* paddedQuery = malloc(strlen(query) + 2 + 1);
     sprintf(paddedQuery, "%%%s%%", query);    
 
-    const char* zSQL = "SELECT COUNT(), repository, id, name, author, description FROM packages WHERE id LIKE ? OR name LIKE ?;";
+    const char* zSQL = "SELECT (SELECT COUNT() FROM packages WHERE id LIKE ? OR name LIKE ?), repository, id, name, author, description FROM packages WHERE id LIKE ? OR name LIKE ?;";
     sqlite3_stmt* statement;
     sqlite3_prepare_v2(kpm->db, zSQL, strlen(zSQL), &statement, NULL);
     sqlite3_bind_text(statement, 1, paddedQuery, -1, SQLITE_STATIC);
     sqlite3_bind_text(statement, 2, paddedQuery, strlen(paddedQuery), SQLITE_STATIC);
+    sqlite3_bind_text(statement, 3, paddedQuery, -1, SQLITE_STATIC);
+    sqlite3_bind_text(statement, 4, paddedQuery, strlen(paddedQuery), SQLITE_STATIC);
 
     int status;
     for (int i=0; (status = sqlite3_step(statement)) == SQLITE_ROW; i++)
@@ -212,11 +215,11 @@ enum KPMResult KPM_ListPackageArtifacts(struct KPM* kpm, const char* repositoryI
     const char* zSQL;
     if (strlen(repositoryId) == 0)
     {
-        zSQL = "SELECT COUNT(), url, repository, id, version_major, version_minor, version_patch FROM artifacts WHERE id=? ORDER BY version_major DESC, version_minor DESC;";
+        zSQL = "SELECT (SELECT COUNT() FROM artifacts WHERE id=?), url, repository, id, version_major, version_minor, version_patch FROM artifacts WHERE id=? ORDER BY version_major DESC, version_minor DESC;";
     }
     else
     {
-        zSQL = "SELECT COUNT(), url, repository, id, version_major, version_minor, version_patch FROM artifacts WHERE repository=? AND id=? ORDER BY version_major DESC, version_minor DESC;";
+        zSQL = "SELECT (SELECT COUNT() FROM artifacts WHERE repository=? AND id=?), url, repository, id, version_major, version_minor, version_patch FROM artifacts WHERE repository=? AND id=? ORDER BY version_major DESC, version_minor DESC;";
     }
     
     sqlite3_stmt* statement;
@@ -225,11 +228,14 @@ enum KPMResult KPM_ListPackageArtifacts(struct KPM* kpm, const char* repositoryI
     if (strlen(repositoryId) == 0)
     {
         sqlite3_bind_text(statement, 1, packageId, -1, SQLITE_STATIC);
+        sqlite3_bind_text(statement, 2, packageId, -1, SQLITE_STATIC);
     }
     else
     {
         sqlite3_bind_text(statement, 1, repositoryId, -1, SQLITE_STATIC);
         sqlite3_bind_text(statement, 2, packageId, -1, SQLITE_STATIC);
+        sqlite3_bind_text(statement, 3, repositoryId, -1, SQLITE_STATIC);
+        sqlite3_bind_text(statement, 4, packageId, -1, SQLITE_STATIC);
     }
 
     int status;

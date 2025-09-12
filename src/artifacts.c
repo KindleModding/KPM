@@ -93,10 +93,11 @@ enum KPMResult KPM_ListArtifactDependencies(struct KPM* kpm, char* artifact, siz
         *dependencies = NULL;
     }
     
-    const char* zSQL = "SELECT COUNT(), artifact, repository, id, min_version_major, min_version_minor, min_version_patch, max_version_major, max_version_minor, max_version_patch FROM dependencies WHERE artifact=?;";
+    const char* zSQL = "SELECT (SELECT COUNT() FROM dependencies WHERE artifact=?), artifact, repository, id, min_version_major, min_version_minor, min_version_patch, max_version_major, max_version_minor, max_version_patch FROM dependencies WHERE artifact=?;";
     sqlite3_stmt* statement;
     sqlite3_prepare_v2(kpm->db, zSQL, strlen(zSQL), &statement, NULL);
     sqlite3_bind_text(statement, 1, artifact, -1, SQLITE_STATIC);
+    sqlite3_bind_text(statement, 2, artifact, -1, SQLITE_STATIC);
 
     int status;
     for (int i=0; (status = sqlite3_step(statement)) == SQLITE_ROW; i++)

@@ -44,7 +44,7 @@
       "description": "This is fbink",
       "artifacts": [
         {
-          "url": "packages/com.kindlemodding.examplepackage/artifacts/com.kindlemodding.examplepackage_1.2.3_armhf-armel.kpkg",
+          "url": "packages/fbink/artifacts/fbink_0.6.9_armhf-armel.kpkg",
           "version": [ 0, 6, 9 ],
           "dependencies": [
             {
@@ -62,7 +62,7 @@
           ]
         },
         {
-          "url": "packages/com.kindlemodding.examplepackage/artifacts/com.kindlemodding.examplepackage_1.2.3_armhf-armel.kpkg",
+          "url": "packages/fbink/artifacts/fbink_0.6.10_armhf-armel.kpkg",
           "version": [ 0, 6, 10 ],
           "dependencies": [
             {
@@ -80,7 +80,7 @@
           ]
         },
         {
-          "url": "packages/com.kindlemodding.examplepackage/artifacts/com.kindlemodding.examplepackage_1.2.3_armhf-armel.kpkg",
+          "url": "packages/fbink/artifacts/fbink_0.6.11_armhf-armel.kpkg",
           "version": [ 0, 6, 11 ],
           "dependencies": [
             {
@@ -98,7 +98,7 @@
           ]
         },
         {
-          "url": "packages/com.kindlemodding.examplepackage/artifacts/com.kindlemodding.examplepackage_1.2.3_armhf-armel.kpkg",
+          "url": "packages/fbink/artifacts/fbink_0.6.99_armhf-armel.kpkg",
           "version": [ 0, 6, 99 ],
           "dependencies": [
             {
@@ -116,7 +116,7 @@
           ]
         },
         {
-          "url": "packages/com.kindlemodding.examplepackage/artifacts/com.kindlemodding.examplepackage_1.2.3_armhf-armel.kpkg",
+          "url": "packages/fbink/artifacts/fbink_0.7.0_armhf-armel.kpkg",
           "version": [ 0, 7, 0 ],
           "dependencies": [
             {
@@ -141,7 +141,7 @@
       "description": "This is Lua",
       "artifacts": [
         {
-          "url": "packages/com.kindlemodding.examplepackage/artifacts/com.kindlemodding.examplepackage_1.2.3_armhf-armel.kpkg",
+          "url": "packages/lua/artifacts/lua_1.2.3_armhf-armel.kpkg",
           "version": [ 1, 2, 3 ],
           "supported_arch": [
             "armhf",
@@ -149,7 +149,7 @@
           ]
         },
         {
-          "url": "packages/com.kindlemodding.examplepackage/artifacts/com.kindlemodding.examplepackage_1.2.3_armhf-armel.kpkg",
+          "url": "packages/lua/artifacts/lua_1.2.5_armhf-armel.kpkg",
           "version": [ 1, 2, 5 ],
           "supported_arch": [
             "armhf",
@@ -157,7 +157,7 @@
           ]
         },
         {
-          "url": "packages/com.kindlemodding.examplepackage/artifacts/com.kindlemodding.examplepackage_1.2.3_armhf-armel.kpkg",
+          "url": "packages/lua/artifacts/lua_4.5.6_armhf-armel.kpkg",
           "version": [ 4, 5, 6 ],
           "supported_arch": [
             "armhf",
@@ -172,7 +172,7 @@
       "description": "This is NOT Lua",
       "artifacts": [
         {
-          "url": "packages/com.kindlemodding.examplepackage/artifacts/com.kindlemodding.examplepackage_1.2.3_armhf-armel.kpkg",
+          "url": "packages/testmin/artifacts/testmin_0.1.2_armhf-armel.kpkg",
           "version": [ 0, 1, 2 ],
           "supported_arch": [
             "armhf",
@@ -180,7 +180,7 @@
           ]
         },
         {
-          "url": "packages/com.kindlemodding.examplepackage/artifacts/com.kindlemodding.examplepackage_1.2.3_armhf-armel.kpkg",
+          "url": "packages/testmin/artifacts/testmin_0.2.3_armhf-armel.kpkg",
           "version": [ 0, 2, 3 ],
           "supported_arch": [
             "armhf",
@@ -188,7 +188,7 @@
           ]
         },
         {
-          "url": "packages/com.kindlemodding.examplepackage/artifacts/com.kindlemodding.examplepackage_1.2.3_armhf-armel.kpkg",
+          "url": "packages/testmin/artifacts/testmin_0.99.99_armhf-armel.kpkg",
           "version": [ 0, 99, 99 ],
           "supported_arch": [
             "armhf",
@@ -196,7 +196,7 @@
           ]
         },
         {
-          "url": "packages/com.kindlemodding.examplepackage/artifacts/com.kindlemodding.examplepackage_1.2.3_armhf-armel.kpkg",
+          "url": "packages/testmin/artifacts/testmin_1.0.0_armhf-armel.kpkg",
           "version": [ 1, 0, 0 ],
           "supported_arch": [
             "armhf",
@@ -204,7 +204,7 @@
           ]
         },
         {
-          "url": "packages/com.kindlemodding.examplepackage/artifacts/com.kindlemodding.examplepackage_1.2.3_armhf-armel.kpkg",
+          "url": "packages/testmin/artifacts/testmin_1.1.1_armhf-armel.kpkg",
           "version": [ 1, 1, 1 ],
           "supported_arch": [
             "armhf",
@@ -212,7 +212,62 @@
           ]
         },
         {
-          "url": "packages/com.kindlemodding.examplepackage/artifacts/com.kindlemodding.examplepackage_1.2.3_armhf-armel.kpkg",
+          "url": "packages/testmin/artifacts/testmin_1.999.999_armhf-armel.kpkg",
+          "version": [ 1, 999, 999 ],
+          "supported_arch": [
+            "armhf",
+            "armel"
+          ]
+        }
+      ]
+    },
+    "testmax": {
+      "name": "Testmax",
+      "author": "Hackerdude",
+      "description": "This is NOT Lua",
+      "artifacts": [
+        {
+          "url": "packages/testmax/artifacts/testmax_0.1.2_armhf-armel.kpkg",
+          "version": [ 0, 1, 2 ],
+          "supported_arch": [
+            "armhf",
+            "armel"
+          ]
+        },
+        {
+          "url": "packages/testmax/artifacts/testmax_0.2.3_armhf-armel.kpkg",
+          "version": [ 0, 2, 3 ],
+          "supported_arch": [
+            "armhf",
+            "armel"
+          ]
+        },
+        {
+          "url": "packages/testmax/artifacts/testmax_0.99.99_armhf-armel.kpkg",
+          "version": [ 0, 99, 99 ],
+          "supported_arch": [
+            "armhf",
+            "armel"
+          ]
+        },
+        {
+          "url": "packages/testmax/artifacts/testmax_1.0.0_armhf-armel.kpkg",
+          "version": [ 1, 0, 0 ],
+          "supported_arch": [
+            "armhf",
+            "armel"
+          ]
+        },
+        {
+          "url": "packages/testmax/artifacts/testmax_1.1.1_armhf-armel.kpkg",
+          "version": [ 1, 1, 1 ],
+          "supported_arch": [
+            "armhf",
+            "armel"
+          ]
+        },
+        {
+          "url": "packages/testmax/artifacts/testmax_1.999.999_armhf-armel.kpkg",
           "version": [ 1, 999, 999 ],
           "supported_arch": [
             "armhf",

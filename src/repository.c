@@ -54,7 +54,7 @@ enum KPMResult KPM_ListRepositories(struct KPM* kpm, size_t* repositoryCount, st
         *repositories = NULL;
     }
     
-    const char* zSQL = "SELECT COUNT(), id, url, name, description FROM repositories;";
+    const char* zSQL = "SELECT (SELECT COUNT() FROM repositories), id, url, name, description FROM repositories;";
     sqlite3_stmt* statement;
     sqlite3_prepare_v2(kpm->db, zSQL, strlen(zSQL), &statement, NULL);
   
@@ -240,10 +240,11 @@ enum KPMResult KPM_ListRepositoryPackages(struct KPM* kpm, const char* repositor
         *packages = NULL;
     }
     
-    const char* zSQL = "SELECT COUNT(), repository, id, name, author, description FROM packages WHERE repository=?;";
+    const char* zSQL = "SELECT (SELECT COUNT() FROM packages WHERE repository=?), repository, id, name, author, description FROM packages WHERE repository=?;";
     sqlite3_stmt* statement;
     sqlite3_prepare_v2(kpm->db, zSQL, strlen(zSQL), &statement, NULL);
     sqlite3_bind_text(statement, 1, repositoryId, strlen(repositoryId), SQLITE_STATIC);
+    sqlite3_bind_text(statement, 2, repositoryId, strlen(repositoryId), SQLITE_STATIC);
 
     int status;
     for (int i=0; (status = sqlite3_step(statement)) == SQLITE_ROW; i++)

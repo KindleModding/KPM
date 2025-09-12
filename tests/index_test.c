@@ -60,8 +60,10 @@ int main()
             fprintf(stderr, "\tVersion: %lu.%lu.%lu\n", artifacts[j].version.major, artifacts[j].version.minor, artifacts[j].version.patch);
             fprintf(stderr, "\n");
         }
+        KPM_FreeIndexedArtifactList(artifactCount, artifacts);
     }
 
+    KPM_FreeIndexedPackageList(packageCount, packages);
     KPM_Cleanup(&kpm);
 
     return 0;
