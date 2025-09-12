@@ -88,7 +88,7 @@ int main()
     assert(result);
     assert(index == koreader_100);
 
-    char* rendered = "";
+    char* rendered;
     fprintf(stderr, "Rendering graph\n");
     RenderGraph(&graph, &rendered);
 

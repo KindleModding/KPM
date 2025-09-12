@@ -12,8 +12,14 @@
 void CreateDependencyGraph(struct DependencyGraph* graph, int count)
 {
     graph->nodeCount = 0;
-    graph->nodes = malloc(sizeof(struct DependencyNode) * count);
-    graph->allocated = count;
+    graph->nodes = NULL;
+    graph->allocated = 0;
+
+    if (count != 0)
+    {
+        graph->nodes = malloc(sizeof(struct DependencyNode) * count);
+        graph->allocated = count;
+    }
 }
 
 void FreeNode(struct DependencyNode* node)
@@ -43,14 +49,14 @@ void FreeDependencyGraph(struct DependencyGraph* graph)
 void ExtendDependencyGraph(struct DependencyGraph* graph, int allocate)
 {
     graph->allocated += allocate;
-    graph->nodes = realloc(graph->nodes, graph->allocated);
+    graph->nodes = realloc(graph->nodes, sizeof(struct DependencyNode) * graph->allocated);
 }
 
 size_t AddNode(struct DependencyGraph *graph, struct DependencyNode node)
 {
     if (graph->nodeCount == graph->allocated)
     {
-        ExtendDependencyGraph(graph, graph->allocated/2);
+        ExtendDependencyGraph(graph, graph->allocated/2 + 1);
     }
 
     graph->nodes[graph->nodeCount++] = node;
@@ -60,14 +66,7 @@ size_t AddNode(struct DependencyGraph *graph, struct DependencyNode node)
 void AddEdge(struct DependencyGraph* graph, size_t firstNodeIndex, size_t nextNodeIndex)
 {
     graph->nodes[firstNodeIndex].connectedCount++;
-    if (graph->nodes[firstNodeIndex].connected == NULL)
-    {
-        graph->nodes[firstNodeIndex].connected = malloc(graph->nodes[firstNodeIndex].connectedCount);
-    }
-    else
-    {
-        graph->nodes[firstNodeIndex].connected = realloc(graph->nodes[firstNodeIndex].connected, graph->nodes[firstNodeIndex].connectedCount);
-    }
+    graph->nodes[firstNodeIndex].connected = realloc(graph->nodes[firstNodeIndex].connected, graph->nodes[firstNodeIndex].connectedCount);
     graph->nodes[firstNodeIndex].connected[graph->nodes[firstNodeIndex].connectedCount-1] = nextNodeIndex;
 }
 
@@ -178,7 +177,7 @@ enum KPMResult Internal_GetArtifactDependencies(struct KPM* kpm, struct IndexedA
                 return KPM_PARSE_ERROR;
             }
 
-            (*targetDependencies)[i].artifact = target->id;
+            (*targetDependencies)[i].artifact = strdup(target->id);
             (*targetDependencies)[i].id = strdup(cJSON_GetStringValue(cJSON_GetObjectItem(dependencyJSON, "id"))); // 90% sure I don't need to free this
 
             if (cJSON_GetStringValue(cJSON_GetObjectItem(dependencyJSON, "repository")) != NULL)
@@ -187,7 +186,7 @@ enum KPMResult Internal_GetArtifactDependencies(struct KPM* kpm, struct IndexedA
             }
             else
             {
-                (*targetDependencies)[i].repository = "";
+                (*targetDependencies)[i].repository = strdup("");
             }
 
             cJSON* min = cJSON_GetObjectItem(dependencyJSON, "min");
@@ -213,9 +212,9 @@ enum KPMResult Internal_GetArtifactDependencies(struct KPM* kpm, struct IndexedA
             }
             else
             {
-                (*targetDependencies[i]).max_version.major = LONG_MAX;
-                (*targetDependencies[i]).max_version.minor = LONG_MAX;
-                (*targetDependencies[i]).max_version.patch = LONG_MAX;
+                (*targetDependencies[i]).max_version.major = VERSION_MAX;
+                (*targetDependencies[i]).max_version.minor = VERSION_MAX;
+                (*targetDependencies[i]).max_version.patch = VERSION_MAX;
             }
         }
 
@@ -224,7 +223,7 @@ enum KPMResult Internal_GetArtifactDependencies(struct KPM* kpm, struct IndexedA
     }
     else
     {
-        KPM_ListArtifactDependencies(kpm, target->url, targetDependencyCount, targetDependencies);
+        return KPM_ListArtifactDependencies(kpm, target->url, targetDependencyCount, targetDependencies);
     }
 
     return KPM_OK;
@@ -334,8 +333,8 @@ int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph*
         .type = NODE_ARTIFACT,
         .connected = NULL,
         .connectedCount = 0,
-        .repository = artifact->repository,
-        .id = artifact->repository,
+        .repository = strdup(artifact->repository),
+        .id = strdup(artifact->id),
         .min_version = artifact->version,
         .max_version = artifact->version
     };
@@ -360,8 +359,8 @@ int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph*
             .type = NODE_DEPENDENCY,
             .connected = NULL,
             .connectedCount = 0,
-            .repository = dependencies[i].repository,
-            .id = dependencies[i].id,
+            .repository = strdup(dependencies[i].repository),
+            .id = strdup(dependencies[i].id),
             .min_version = dependencies[i].min_version,
             .max_version = dependencies[i].max_version
         };
@@ -376,7 +375,7 @@ int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph*
         bool validArtifactFound = false;
         for (size_t j=0; j < artifactCount && !validArtifactFound; j++)
         {
-            if (SemVerCmp(artifacts[j].version, dependencies[i].min_version) <= 0 || SemVerCmp(artifacts[j].version, dependencies[i].max_version) >= 0)
+            if (SemVerCmp(artifacts[j].version, dependencies[i].min_version) < 0 || SemVerCmp(artifacts[j].version, dependencies[i].max_version) >= 0)
             {
                 continue;
             }
@@ -386,21 +385,11 @@ int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph*
             size_t artifactNodeId;
             if (!FindArtifactNode(graph, artifacts[j].repository, artifacts[j].id, artifacts[j].version, &artifactNodeId))
             {
-                struct DependencyNode artifactNode = {
-                    .type = NODE_ARTIFACT,
-                    .connected = NULL,
-                    .connectedCount = 0,
-                    .repository = strdup(artifacts[j].repository),
-                    .id = strdup(artifacts[j].id),
-                    .min_version = artifacts[j].version,
-                    .max_version = artifacts[j].version
-                };
-                artifactNode.max_version.patch+=1; // max_version is technically exclusive // @TODO: remove this for NODE_ARTIFACT?
-                artifactNodeId = AddNode(graph, artifactNode);
+                artifactNodeId = Internal_ConstructGraphFromArtifact(kpm, graph, &artifacts[j]);
             }
 
             AddEdge(graph, dependencyNodeId, artifactNodeId);
-            AddEdge(graph, artifactNodeId, Internal_ConstructGraphFromArtifact(kpm, graph, &artifacts[j]));
+            //AddEdge(graph, artifactNodeId, Internal_ConstructGraphFromArtifact(kpm, graph, &artifacts[j]));
         }
 
         KPM_FreeIndexedArtifactList(artifactCount, artifacts);

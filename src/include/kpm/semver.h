@@ -1,11 +1,14 @@
 #pragma once
 
 #include <stdbool.h>
+#include <limits.h>
+
+#define VERSION_MAX UINT_MAX
 struct SemVer
 {
-    unsigned long int major;
-    unsigned long int minor;
-    unsigned long int patch;
+    unsigned int major;
+    unsigned int minor;
+    unsigned int patch;
 };
 
 /**
@@ -15,19 +18,19 @@ struct SemVer
  * @param b 
  * @return int 
  */
-static inline int SemVerCmp(struct SemVer a, struct SemVer b)
+static inline long SemVerCmp(struct SemVer a, struct SemVer b)
 {
     if (a.major != b.major)
     {
-        return a.major - b.major;
+        return (long) a.major - (long) b.major;
     }
     if (a.major == b.major && a.minor != b.minor)
     {
-        return a.minor - b.minor;
+        return (long) a.minor - (long) b.minor;
     }
     if (a.major == b.major && a.minor == b.minor && a.patch != b.patch)
     {
-        return a.patch - b.patch;
+        return (long) a.patch - (long) b.patch;
     }
     return 0;
 }

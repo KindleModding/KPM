@@ -39,9 +39,9 @@ enum KPMResult KPM_Initialise(struct KPM *kpm, const char* dbPath)
             url TEXT PRIMARY KEY NOT NULL,
             repository TEXT NOT NULL REFERENCES packages(repository) ON DELETE CASCADE,
             id TEXT NOT NULL REFERENCES packages(id) ON DELETE CASCADE,
-            version_major INTEGER NOT NULL,
-            version_minor INTEGER NOT NULL,
-            version_patch INTEGER NOT NULL
+            version_major UNSIGNED INTEGER NOT NULL,
+            version_minor UNSIGNED INTEGER NOT NULL,
+            version_patch UNSIGNED INTEGER NOT NULL
         )
     )", NULL, NULL, NULL);
 
@@ -50,12 +50,12 @@ enum KPMResult KPM_Initialise(struct KPM *kpm, const char* dbPath)
             artifact TEXT NOT NULL REFERENCES artifacts(url) ON DELETE CASCADE,
             repository TEXT NOT NULL,
             id TEXT NOT NULL,
-            min_version_major INTEGER,
-            min_version_minor INTEGER,
-            min_version_patch INTEGER,
-            max_version_major INTEGER,
-            max_version_minor INTEGER,
-            max_version_patch INTEGER,
+            min_version_major UNSIGNED INTEGER NOT NULL,
+            min_version_minor UNSIGNED INTEGER NOT NULL,
+            min_version_patch UNSIGNED INTEGER NOT NULL,
+            max_version_major UNSIGNED INTEGER NOT NULL,
+            max_version_minor UNSIGNED INTEGER NOT NULL,
+            max_version_patch UNSIGNED INTEGER NOT NULL,
             PRIMARY KEY (artifact, repository, id)
         )
     )", NULL, NULL, NULL);
@@ -66,9 +66,9 @@ enum KPMResult KPM_Initialise(struct KPM *kpm, const char* dbPath)
             name TEXT NOT NULL,
             author TEXT NOT NULL,
             description TEXT NOT NULL,
-            version_major INTEGER,
-            version_minor INTEGER,
-            version_patch INTEGER
+            version_major UNSIGNED INTEGER NOT NULL,
+            version_minor UNSIGNED INTEGER NOT NULL,
+            version_patch UNSIGNED INTEGER NOT NULL
         )
     )", NULL, NULL, NULL);
 
@@ -78,12 +78,12 @@ enum KPMResult KPM_Initialise(struct KPM *kpm, const char* dbPath)
             dependency_repository TEXT NOT NULL,
             dependency_id TEXT NOT NULL,
             dependency_type TEXT NOT NULL,
-            min_version_major INTEGER,
-            min_version_minor INTEGER,
-            min_version_patch INTEGER,
-            max_version_major INTEGER,
-            max_version_minor INTEGER,
-            max_version_patch INTEGER
+            min_version_major UNSIGNED INTEGER NOT NULL,
+            min_version_minor UNSIGNED INTEGER NOT NULL,
+            min_version_patch UNSIGNED INTEGER NOT NULL,
+            max_version_major UNSIGNED INTEGER NOT NULL,
+            max_version_minor UNSIGNED INTEGER NOT NULL,
+            max_version_patch UNSIGNED INTEGER NOT NULL
         )
     )", NULL, NULL, NULL);
 

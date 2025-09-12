@@ -1,5 +1,6 @@
 #include "cjson/cJSON.h"
 #include "kpm/kpm.h"
+#include "kpm/semver.h"
 #include "simpleGET.h"
 #include <limits.h>
 #include <string.h>
@@ -10,7 +11,7 @@ bool indexDependency(struct KPM* kpm, char* artifactURL, cJSON* dependency, KPMS
 {
     const char* zSQL = "INSERT INTO artifact_dependencies (artifact, repository, id, min_version_major, min_version_minor, min_version_patch, max_version_major, max_version_minor, max_version_patch) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);";
     sqlite3_stmt* statement;
-    sqlite3_prepare_v2(kpm->db, zSQL, strlen(zSQL), &statement, NULL);
+    sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
     sqlite3_bind_text(statement, 1, artifactURL, -1, SQLITE_STATIC);
     sqlite3_bind_text(statement, 3, cJSON_GetStringValue(cJSON_GetObjectItem(dependency, "id")), -1, SQLITE_STATIC);
 
@@ -23,13 +24,31 @@ bool indexDependency(struct KPM* kpm, char* artifactURL, cJSON* dependency, KPMS
         sqlite3_bind_text(statement, 2, "", -1, SQLITE_STATIC);
     }
     
-    sqlite3_bind_int(statement, 4, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "min"), 0)));
-    sqlite3_bind_int(statement, 5, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "min"), 1)));
-    sqlite3_bind_int(statement, 6, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "min"), 2)));
+    if (cJSON_GetObjectItem(dependency, "min") != NULL)
+    {
+        sqlite3_bind_int(statement, 4, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "min"), 0)));
+        sqlite3_bind_int(statement, 5, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "min"), 1)));
+        sqlite3_bind_int(statement, 6, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "min"), 2)));
+    }
+    else
+    {
+        sqlite3_bind_int(statement, 4, 0);
+        sqlite3_bind_int(statement, 5, 0);
+        sqlite3_bind_int(statement, 6, 0);
+    }
 
-    sqlite3_bind_int(statement, 7, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "max"), 0)));
-    sqlite3_bind_int(statement, 8, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "max"), 1)));
-    sqlite3_bind_int(statement, 9, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "max"), 2)));
+    if (cJSON_GetObjectItem(dependency, "max") != NULL)
+    {
+        sqlite3_bind_int(statement, 7, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "max"), 0)));
+        sqlite3_bind_int(statement, 8, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "max"), 1)));
+        sqlite3_bind_int(statement, 9, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "max"), 2)));
+    }
+    else
+    {
+        sqlite3_bind_int(statement, 7, VERSION_MAX);
+        sqlite3_bind_int(statement, 8, VERSION_MAX);
+        sqlite3_bind_int(statement, 9, VERSION_MAX);
+    }
 
     if (sqlite3_step(statement) != SQLITE_DONE)
     {
@@ -45,7 +64,7 @@ bool indexArtifact(struct KPM* kpm, char* repositoryId, char* packageId, cJSON* 
 {
     const char* zSQL = "INSERT INTO artifacts (url, repository, id, version_major, version_minor, version_patch) VALUES (?, ?, ?, ?, ?, ?);";
     sqlite3_stmt* statement;
-    sqlite3_prepare_v2(kpm->db, zSQL, strlen(zSQL), &statement, NULL);
+    sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
     sqlite3_bind_text(statement, 1, cJSON_GetStringValue(cJSON_GetObjectItem(artifact, "url")), -1, SQLITE_STATIC);
     sqlite3_bind_text(statement, 2, repositoryId, -1, SQLITE_STATIC);
     sqlite3_bind_text(statement, 3, packageId, -1, SQLITE_STATIC);
@@ -89,7 +108,7 @@ bool indexPackage(struct KPM* kpm, char* repositoryId, cJSON* package, KPMStatus
     // INSERT that package INTO the DATABASE (deltarune reference???)
     const char* zSQL = "INSERT INTO packages (repository, id, name, author, description) VALUES (?, ?, ?, ?, ?);";
     sqlite3_stmt* statement;
-    sqlite3_prepare_v2(kpm->db, zSQL, strlen(zSQL), &statement, NULL);
+    sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
     sqlite3_bind_text(statement, 1, repositoryId, -1, SQLITE_STATIC);
     sqlite3_bind_text(statement, 2, package->string, -1, SQLITE_STATIC);
     sqlite3_bind_text(statement, 3, cJSON_GetStringValue(cJSON_GetObjectItem(package, "name")), -1, SQLITE_STATIC);
@@ -160,7 +179,7 @@ enum KPMResult KPM_UpdateIndex(struct KPM *kpm, KPMStatusCallback* statusCallbac
         statusCallback(KPM_VERBOSITY_DEBUG, 0, "Clearing index");
         const char* zSQL = "DELETE FROM packages WHERE repository=?;";
         sqlite3_stmt* statement;
-        sqlite3_prepare_v2(kpm->db, zSQL, strlen(zSQL), &statement, NULL);
+        sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
         sqlite3_bind_text(statement, 1, repositories[i].id, strlen(repositories[i].id), SQLITE_STATIC);
         
         int status = -1;

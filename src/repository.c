@@ -56,7 +56,7 @@ enum KPMResult KPM_ListRepositories(struct KPM* kpm, size_t* repositoryCount, st
     
     const char* zSQL = "SELECT (SELECT COUNT() FROM repositories), id, url, name, description FROM repositories;";
     sqlite3_stmt* statement;
-    sqlite3_prepare_v2(kpm->db, zSQL, strlen(zSQL), &statement, NULL);
+    sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
   
     int status;
     for (int i=0; (status = sqlite3_step(statement)) == SQLITE_ROW; i++)
@@ -108,7 +108,7 @@ enum KPMResult KPM_GetRepository(struct KPM *kpm, const char *repositoryId, stru
 
     const char* zSQL = "SELECT id, url, name, description FROM repositories WHERE id=? LIMIT 1;";
     sqlite3_stmt* statement;
-    sqlite3_prepare_v2(kpm->db, zSQL, strlen(zSQL), &statement, NULL);
+    sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
     sqlite3_bind_text(statement, 1, repositoryId, strlen(repositoryId), SQLITE_STATIC);
 
     if (sqlite3_step(statement) == SQLITE_ROW)
@@ -166,7 +166,7 @@ enum KPMResult KPM_AddRepository(struct KPM *kpm, const char *url, struct Reposi
     sqlite3_exec(kpm->db, "BEGIN", NULL, NULL, NULL);
     const char* zSQL = "INSERT INTO repositories (id, url, name, description) VALUES (?, ?, ?, ?);";
     sqlite3_stmt* statement;
-    sqlite3_prepare_v2(kpm->db, zSQL, strlen(zSQL), &statement, NULL);
+    sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
     sqlite3_bind_text(statement, 1, cJSON_GetStringValue(cJSON_GetObjectItem(json, "id")), strlen(cJSON_GetStringValue(cJSON_GetObjectItem(json, "id"))), SQLITE_STATIC);
     sqlite3_bind_text(statement, 2, url, strlen(url), SQLITE_STATIC);
     sqlite3_bind_text(statement, 3, cJSON_GetStringValue(cJSON_GetObjectItem(json, "name")), strlen(cJSON_GetStringValue(cJSON_GetObjectItem(json, "name"))), SQLITE_STATIC);
@@ -208,7 +208,7 @@ enum KPMResult KPM_RemoveRepository(struct KPM *kpm, const char* repositoryId)
     sqlite3_exec(kpm->db, "BEGIN", NULL, NULL, NULL);
     const char* zSQL = "DELETE FROM repositories WHERE id=?;";
     sqlite3_stmt* statement;
-    sqlite3_prepare_v2(kpm->db, zSQL, strlen(zSQL), &statement, NULL);
+    sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
     sqlite3_bind_text(statement, 1, repositoryId, strlen(repositoryId), SQLITE_STATIC);
 
     if (sqlite3_step(statement) != SQLITE_DONE)
@@ -242,7 +242,7 @@ enum KPMResult KPM_ListRepositoryPackages(struct KPM* kpm, const char* repositor
     
     const char* zSQL = "SELECT (SELECT COUNT() FROM packages WHERE repository=?), repository, id, name, author, description FROM packages WHERE repository=?;";
     sqlite3_stmt* statement;
-    sqlite3_prepare_v2(kpm->db, zSQL, strlen(zSQL), &statement, NULL);
+    sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
     sqlite3_bind_text(statement, 1, repositoryId, strlen(repositoryId), SQLITE_STATIC);
     sqlite3_bind_text(statement, 2, repositoryId, strlen(repositoryId), SQLITE_STATIC);
 

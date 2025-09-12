@@ -45,7 +45,7 @@ int main()
         {
             fprintf(stderr, "\tId: %s\n", artifacts[j].id);
             fprintf(stderr, "\tUrl: %s\n", artifacts[j].url);
-            fprintf(stderr, "\tVersion: %lu.%lu.%lu\n", artifacts[j].version.major, artifacts[j].version.minor, artifacts[j].version.patch);
+            fprintf(stderr, "\tVersion: %u.%u.%u\n", artifacts[j].version.major, artifacts[j].version.minor, artifacts[j].version.patch);
             fprintf(stderr, "\n");
         }
         KPM_FreeIndexedArtifactList(artifactCount, artifacts);

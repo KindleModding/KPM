@@ -62,7 +62,7 @@ enum KPMResult KPM_GetArtifact(struct KPM* kpm, const char* repositoryId, const 
 
      
     sqlite3_stmt* statement;
-    sqlite3_prepare_v2(kpm->db, zSQL, strlen(zSQL), &statement, NULL);
+    sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
     sqlite3_bind_text(statement, 1, repositoryId, -1, SQLITE_STATIC);
     sqlite3_bind_text(statement, 2, packageId, -1, SQLITE_STATIC);
     sqlite3_bind_int(statement, 3, version.major);
@@ -93,9 +93,9 @@ enum KPMResult KPM_ListArtifactDependencies(struct KPM* kpm, char* artifact, siz
         *dependencies = NULL;
     }
     
-    const char* zSQL = "SELECT (SELECT COUNT() FROM dependencies WHERE artifact=?), artifact, repository, id, min_version_major, min_version_minor, min_version_patch, max_version_major, max_version_minor, max_version_patch FROM dependencies WHERE artifact=?;";
+    const char* zSQL = "SELECT (SELECT COUNT() FROM artifact_dependencies WHERE artifact=?), artifact, repository, id, min_version_major, min_version_minor, min_version_patch, max_version_major, max_version_minor, max_version_patch FROM artifact_dependencies WHERE artifact=?;";
     sqlite3_stmt* statement;
-    sqlite3_prepare_v2(kpm->db, zSQL, strlen(zSQL), &statement, NULL);
+    sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
     sqlite3_bind_text(statement, 1, artifact, -1, SQLITE_STATIC);
     sqlite3_bind_text(statement, 2, artifact, -1, SQLITE_STATIC);
 
@@ -111,7 +111,7 @@ enum KPMResult KPM_ListArtifactDependencies(struct KPM* kpm, char* artifact, siz
         {
             if (!*dependencies)
             {
-                *dependencies = malloc(*dependencyCount * sizeof(struct IndexedArtifact));
+                *dependencies = malloc(*dependencyCount * sizeof(struct ArtifactDependency));
             }
 
             (*dependencies)[i].artifact = strdup((const char*) sqlite3_column_text(statement, 1));
@@ -126,8 +126,8 @@ enum KPMResult KPM_ListArtifactDependencies(struct KPM* kpm, char* artifact, siz
             else
             {
                 (*dependencies)[i].min_version.major = 0;
-                (*dependencies)[i].min_version.minor = 1;
-                (*dependencies)[i].min_version.patch = 2;
+                (*dependencies)[i].min_version.minor = 0;
+                (*dependencies)[i].min_version.patch = 0;
             }
 
             if (sqlite3_column_type(statement, 7) ==  SQLITE_NULL)
@@ -138,9 +138,9 @@ enum KPMResult KPM_ListArtifactDependencies(struct KPM* kpm, char* artifact, siz
             }
             else
             {
-                (*dependencies)[i].max_version.major = 0;
-                (*dependencies)[i].max_version.minor = 1;
-                (*dependencies)[i].max_version.patch = 2;
+                (*dependencies)[i].max_version.major = VERSION_MAX;
+                (*dependencies)[i].max_version.minor = VERSION_MAX;
+                (*dependencies)[i].max_version.patch = VERSION_MAX;
             }
         }
     }

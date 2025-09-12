@@ -61,12 +61,12 @@ enum KPMResult KPM_GetPackage(struct KPM* kpm, const char* repositoryId, const c
     if (repositoryId == NULL)
     {
         const char* zSQL = "SELECT repository, id, name, author, description FROM packages WHERE AND id=? LIMIT 1;";
-        sqlite3_prepare_v2(kpm->db, zSQL, strlen(zSQL), &statement, NULL);
+        sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
         sqlite3_bind_text(statement, 1, packageId, strlen(packageId), SQLITE_STATIC);
     }
     else {
         const char* zSQL = "SELECT repository, id, name, author, description FROM packages WHERE repository=? AND id=? LIMIT 1;";
-        sqlite3_prepare_v2(kpm->db, zSQL, strlen(zSQL), &statement, NULL);
+        sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
         sqlite3_bind_text(statement, 1, repositoryId, strlen(repositoryId), SQLITE_STATIC);
         sqlite3_bind_text(statement, 2, packageId, strlen(packageId), SQLITE_STATIC);
     }
@@ -95,7 +95,7 @@ enum KPMResult KPM_GetPackages(struct KPM* kpm, const char* id, size_t* packageC
 
     const char* zSQL = "SELECT (SELECT COUNT() FROM packages WHERE id=?), repository, id, name, author, description FROM packages WHERE id=?;";
     sqlite3_stmt* statement;
-    sqlite3_prepare_v2(kpm->db, zSQL, strlen(zSQL), &statement, NULL);
+    sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
     sqlite3_bind_text(statement, 1, id, -1, SQLITE_STATIC);
     sqlite3_bind_text(statement, 2, id, -1, SQLITE_STATIC);
 
@@ -153,7 +153,7 @@ enum KPMResult KPM_SearchPackages(struct KPM* kpm, const char* query, size_t* pa
 
     const char* zSQL = "SELECT (SELECT COUNT() FROM packages WHERE id LIKE ? OR name LIKE ?), repository, id, name, author, description FROM packages WHERE id LIKE ? OR name LIKE ?;";
     sqlite3_stmt* statement;
-    sqlite3_prepare_v2(kpm->db, zSQL, strlen(zSQL), &statement, NULL);
+    sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
     sqlite3_bind_text(statement, 1, paddedQuery, -1, SQLITE_STATIC);
     sqlite3_bind_text(statement, 2, paddedQuery, strlen(paddedQuery), SQLITE_STATIC);
     sqlite3_bind_text(statement, 3, paddedQuery, -1, SQLITE_STATIC);
@@ -223,7 +223,7 @@ enum KPMResult KPM_ListPackageArtifacts(struct KPM* kpm, const char* repositoryI
     }
     
     sqlite3_stmt* statement;
-    sqlite3_prepare_v2(kpm->db, zSQL, strlen(zSQL), &statement, NULL);
+    sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
 
     if (strlen(repositoryId) == 0)
     {

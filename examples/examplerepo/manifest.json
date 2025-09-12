@@ -14,7 +14,7 @@
           "version": [ 1, 2, 3 ],
           "dependencies": [
             {
-              "repository": "com.kindlemodding.examplerepo",
+              "repository": "org.kindlemodding.examplerepo",
               "id": "io.github.niluje.fbink",
               "min": [ 0, 6, 10 ],
               "max": [ 0, 7, 0 ]
