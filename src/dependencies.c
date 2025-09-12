@@ -105,7 +105,7 @@ bool FindDependencyNode(struct DependencyGraph* graph, char* repository, char* i
 {
     for (size_t i=0; i < graph->nodeCount; i++)
     {
-        if (graph->nodes[i].type == NODE_DEPENDENCY)
+        if (graph->nodes[i].type == NODE_ARTIFACT)
         {
             continue;
         }
