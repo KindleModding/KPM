@@ -65,6 +65,7 @@ size_t AddNode(struct DependencyGraph *graph, struct DependencyNode node)
 
 void AddEdge(struct DependencyGraph* graph, size_t firstNodeIndex, size_t nextNodeIndex)
 {
+    // @TODO: Sort by min version on addition (newest first)
     graph->nodes[firstNodeIndex].connectedCount++;
     graph->nodes[firstNodeIndex].connected = realloc(graph->nodes[firstNodeIndex].connected, graph->nodes[firstNodeIndex].connectedCount);
     graph->nodes[firstNodeIndex].connected[graph->nodes[firstNodeIndex].connectedCount-1] = nextNodeIndex;
