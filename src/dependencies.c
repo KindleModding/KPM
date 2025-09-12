@@ -424,6 +424,10 @@ bool CheckIdInDependencyList(char* id, size_t* needleIndex, size_t haystackSize,
 
 bool ResolveDependencyGraph(struct DependencyGraph* graph, size_t root, size_t* flattenedDependencyCount, struct DependencyNode** flattenedDependencies)
 {
+    // Add this artifact to the flattened list (it should've already been checked)
+    *flattenedDependencies = realloc(*flattenedDependencies, sizeof(struct DependencyNode) * (*flattenedDependencyCount)++);
+    memcpy(&flattenedDependencies[*flattenedDependencyCount-1], &graph->nodes[root], sizeof(struct DependencyNode));
+
     // Iterate dependencies of this graph
     for (size_t dependencyId=0; dependencyId < graph->nodes[root].connectedCount; dependencyId++)
     {
@@ -459,14 +463,9 @@ bool ResolveDependencyGraph(struct DependencyGraph* graph, size_t root, size_t* 
             // This is a new artifact to install
             // Find an artifact that doesn't cause inteference
             for (size_t artifactId=0; artifactId < dependency.connectedCount; artifactId++)
-            {
-                struct DependencyNode artifact = graph->nodes[artifactId];
-                
+            {                
                 // Ensure that its own dependencies don't interfere
                 size_t oldSize = *flattenedDependencyCount;
-                *flattenedDependencies = realloc(*flattenedDependencies, sizeof(struct DependencyNode) * (oldSize+1));
-                memcpy(&flattenedDependencies[oldSize], &artifact, sizeof(struct DependencyNode));
-
                 if (ResolveDependencyGraph(graph, artifactId, flattenedDependencyCount, flattenedDependencies))
                 {
                     // It's all good, man!
@@ -482,13 +481,14 @@ bool ResolveDependencyGraph(struct DependencyGraph* graph, size_t root, size_t* 
                     memcpy(newFlattenedDependencies, flattenedDependencies, oldSize * sizeof(struct DependencyNode));
                     free(*flattenedDependencies);
                     *flattenedDependencies = newFlattenedDependencies;
+                    *flattenedDependencyCount = oldSize;
                 }
             }
         }
 
         if (!validArtifactFound)
         {
-            // We could not find an artifact that satisfies previous dependencies
+            // We could not find an artifact for this dependency that satisfies previous dependencies
             return false;
         }
     }
