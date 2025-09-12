@@ -260,8 +260,8 @@ void getNameFromNode(struct DependencyGraph* graph, size_t index, char** output,
     else 
     {
         *output = malloc(1 + snprintf(NULL, 0, "%zu", index));
-            sprintf(*output, "%zu", index);
-            return;
+        sprintf(*output, "%zu", index);
+        return;
     }
 }
 
@@ -277,8 +277,8 @@ int Internal_RenderGraph(struct DependencyGraph* graph, char* output, bool dry)
         stringConcatenate(output, "    ", &outputLength, dry);
         stringConcatenate(output, nodeName, &outputLength, dry);
         stringConcatenate(output, "\n", &outputLength, dry);
-
         free(nodeName);
+
         for (size_t j=0; j < graph->nodes[i].connectedCount; j++)
         {
             char* connectedName = NULL;
@@ -299,7 +299,10 @@ int Internal_RenderGraph(struct DependencyGraph* graph, char* output, bool dry)
 
 void RenderGraph(struct DependencyGraph* graph, char** output)
 {
-    *output = malloc(1 + Internal_RenderGraph(graph, NULL, true));
+    size_t targetSize = 1 + Internal_RenderGraph(graph, NULL, true);
+    *output = malloc(targetSize);
+    //memset(*output, 0, targetSize);
+    *output[0] = '\0';
     Internal_RenderGraph(graph, *output, false);
 }
 
