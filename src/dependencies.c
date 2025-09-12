@@ -373,7 +373,7 @@ int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph*
         KPM_ListPackageArtifacts(kpm, dependencies[i].repository, dependencies[i].id, &artifactCount, &artifacts);
         
         bool validArtifactFound = false;
-        for (size_t j=0; j < artifactCount && !validArtifactFound; j++)
+        for (size_t j=0; j < artifactCount; j++)
         {
             if (SemVerCmp(artifacts[j].version, dependencies[i].min_version) < 0 || SemVerCmp(artifacts[j].version, dependencies[i].max_version) >= 0)
             {
