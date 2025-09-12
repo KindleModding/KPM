@@ -14,12 +14,206 @@
           "version": [ 1, 2, 3 ],
           "dependencies": [
             {
-              "repository": "io.github.niluje",
-              "id": "fbink",
+              "repository": "com.kindlemodding.examplerepo",
+              "id": "io.github.niluje.fbink",
               "min": [ 0, 6, 10 ],
               "max": [ 0, 7, 0 ]
+            },
+            {
+              "id": "org.lua"
+            },
+            {
+              "id": "testmin",
+              "min": [ 1, 0, 0 ]
+            },
+            {
+              "id": "testmax",
+              "max": [ 1, 0, 0 ]
             }
           ],
+          "supported_arch": [
+            "armhf",
+            "armel"
+          ]
+        }
+      ]
+    },
+    "io.github.niluje.fbink": {
+      "name": "FBInk",
+      "author": "NiLuJe",
+      "description": "This is fbink",
+      "artifacts": [
+        {
+          "url": "packages/com.kindlemodding.examplepackage/artifacts/com.kindlemodding.examplepackage_1.2.3_armhf-armel.kpkg",
+          "version": [ 0, 6, 9 ],
+          "dependencies": [
+            {
+              "id": "testmin",
+              "min": [ 1, 0, 0 ]
+            },
+            {
+              "id": "testmax",
+              "max": [ 1, 0, 0 ]
+            }
+          ],
+          "supported_arch": [
+            "armhf",
+            "armel"
+          ]
+        },
+        {
+          "url": "packages/com.kindlemodding.examplepackage/artifacts/com.kindlemodding.examplepackage_1.2.3_armhf-armel.kpkg",
+          "version": [ 0, 6, 10 ],
+          "dependencies": [
+            {
+              "id": "testmin",
+              "min": [ 1, 0, 0 ]
+            },
+            {
+              "id": "testmax",
+              "max": [ 1, 0, 0 ]
+            }
+          ],
+          "supported_arch": [
+            "armhf",
+            "armel"
+          ]
+        },
+        {
+          "url": "packages/com.kindlemodding.examplepackage/artifacts/com.kindlemodding.examplepackage_1.2.3_armhf-armel.kpkg",
+          "version": [ 0, 6, 11 ],
+          "dependencies": [
+            {
+              "id": "testmin",
+              "min": [ 1, 0, 0 ]
+            },
+            {
+              "id": "testmax",
+              "max": [ 1, 0, 0 ]
+            }
+          ],
+          "supported_arch": [
+            "armhf",
+            "armel"
+          ]
+        },
+        {
+          "url": "packages/com.kindlemodding.examplepackage/artifacts/com.kindlemodding.examplepackage_1.2.3_armhf-armel.kpkg",
+          "version": [ 0, 6, 99 ],
+          "dependencies": [
+            {
+              "id": "testmin",
+              "min": [ 1, 0, 0 ]
+            },
+            {
+              "id": "testmax",
+              "max": [ 1, 0, 0 ]
+            }
+          ],
+          "supported_arch": [
+            "armhf",
+            "armel"
+          ]
+        },
+        {
+          "url": "packages/com.kindlemodding.examplepackage/artifacts/com.kindlemodding.examplepackage_1.2.3_armhf-armel.kpkg",
+          "version": [ 0, 7, 0 ],
+          "dependencies": [
+            {
+              "id": "testmin",
+              "min": [ 1, 0, 0 ]
+            },
+            {
+              "id": "testmax",
+              "max": [ 1, 0, 0 ]
+            }
+          ],
+          "supported_arch": [
+            "armhf",
+            "armel"
+          ]
+        }
+      ]
+    },
+    "org.lua": {
+      "name": "Lua",
+      "author": "Hackerdude",
+      "description": "This is Lua",
+      "artifacts": [
+        {
+          "url": "packages/com.kindlemodding.examplepackage/artifacts/com.kindlemodding.examplepackage_1.2.3_armhf-armel.kpkg",
+          "version": [ 1, 2, 3 ],
+          "supported_arch": [
+            "armhf",
+            "armel"
+          ]
+        },
+        {
+          "url": "packages/com.kindlemodding.examplepackage/artifacts/com.kindlemodding.examplepackage_1.2.3_armhf-armel.kpkg",
+          "version": [ 1, 2, 5 ],
+          "supported_arch": [
+            "armhf",
+            "armel"
+          ]
+        },
+        {
+          "url": "packages/com.kindlemodding.examplepackage/artifacts/com.kindlemodding.examplepackage_1.2.3_armhf-armel.kpkg",
+          "version": [ 4, 5, 6 ],
+          "supported_arch": [
+            "armhf",
+            "armel"
+          ]
+        }
+      ]
+    },
+    "testmin": {
+      "name": "Testmin",
+      "author": "Hackerdude",
+      "description": "This is NOT Lua",
+      "artifacts": [
+        {
+          "url": "packages/com.kindlemodding.examplepackage/artifacts/com.kindlemodding.examplepackage_1.2.3_armhf-armel.kpkg",
+          "version": [ 0, 1, 2 ],
+          "supported_arch": [
+            "armhf",
+            "armel"
+          ]
+        },
+        {
+          "url": "packages/com.kindlemodding.examplepackage/artifacts/com.kindlemodding.examplepackage_1.2.3_armhf-armel.kpkg",
+          "version": [ 0, 2, 3 ],
+          "supported_arch": [
+            "armhf",
+            "armel"
+          ]
+        },
+        {
+          "url": "packages/com.kindlemodding.examplepackage/artifacts/com.kindlemodding.examplepackage_1.2.3_armhf-armel.kpkg",
+          "version": [ 0, 99, 99 ],
+          "supported_arch": [
+            "armhf",
+            "armel"
+          ]
+        },
+        {
+          "url": "packages/com.kindlemodding.examplepackage/artifacts/com.kindlemodding.examplepackage_1.2.3_armhf-armel.kpkg",
+          "version": [ 1, 0, 0 ],
+          "supported_arch": [
+            "armhf",
+            "armel"
+          ]
+        },
+        {
+          "url": "packages/com.kindlemodding.examplepackage/artifacts/com.kindlemodding.examplepackage_1.2.3_armhf-armel.kpkg",
+          "version": [ 1, 1, 1 ],
+          "supported_arch": [
+            "armhf",
+            "armel"
+          ]
+        },
+        {
+          "url": "packages/com.kindlemodding.examplepackage/artifacts/com.kindlemodding.examplepackage_1.2.3_armhf-armel.kpkg",
+          "version": [ 1, 999, 999 ],
           "supported_arch": [
             "armhf",
             "armel"
