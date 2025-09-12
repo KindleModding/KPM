@@ -244,15 +244,15 @@ void getNameFromNode(struct DependencyGraph* graph, size_t index, char** output,
     {
         if (graph->nodes[index].type == NODE_ARTIFACT)
         {
-            *output = malloc(1 + snprintf(NULL, 0, "%zu[\"%s\n%s\n%zu.%zu.%zu\"]", index, graph->nodes[index].repository, graph->nodes[index].id, graph->nodes[index].min_version.major, graph->nodes[index].min_version.minor, graph->nodes[index].min_version.patch));
-            sprintf(*output, "%zu[\"%s\n%s\n%zu.%zu.%zu\"]", index, graph->nodes[index].repository, graph->nodes[index].id, graph->nodes[index].min_version.major, graph->nodes[index].min_version.minor, graph->nodes[index].min_version.patch);
+            *output = malloc(1 + snprintf(NULL, 0, "%zu[\"%s\n%s\n%u.%u.%u\"]", index, graph->nodes[index].repository, graph->nodes[index].id, graph->nodes[index].min_version.major, graph->nodes[index].min_version.minor, graph->nodes[index].min_version.patch));
+            sprintf(*output, "%zu[\"%s\n%s\n%u.%u.%u\"]", index, graph->nodes[index].repository, graph->nodes[index].id, graph->nodes[index].min_version.major, graph->nodes[index].min_version.minor, graph->nodes[index].min_version.patch);
             return;
         }
 
         if (graph->nodes[index].type == NODE_DEPENDENCY)
         {
-            *output = malloc(1 + snprintf(NULL, 0, "%zu([\"%s\n%s\n%zu.%zu.%zu to %zu.%zu.%zu\"])", index, graph->nodes[index].repository, graph->nodes[index].id, graph->nodes[index].min_version.major, graph->nodes[index].min_version.minor, graph->nodes[index].min_version.patch, graph->nodes[index].max_version.major, graph->nodes[index].max_version.minor, graph->nodes[index].max_version.patch));
-            sprintf(*output, "%zu([\"%s\n%s\n%zu.%zu.%zu to %zu.%zu.%zu\"])", index, graph->nodes[index].repository, graph->nodes[index].id, graph->nodes[index].min_version.major, graph->nodes[index].min_version.minor, graph->nodes[index].min_version.patch, graph->nodes[index].max_version.major, graph->nodes[index].max_version.minor, graph->nodes[index].max_version.patch);
+            *output = malloc(1 + snprintf(NULL, 0, "%zu([\"%s\n%s\n%u.%u.%u to %u.%u.%u\"])", index, graph->nodes[index].repository, graph->nodes[index].id, graph->nodes[index].min_version.major, graph->nodes[index].min_version.minor, graph->nodes[index].min_version.patch, graph->nodes[index].max_version.major, graph->nodes[index].max_version.minor, graph->nodes[index].max_version.patch));
+            sprintf(*output, "%zu([\"%s\n%s\n%u.%u.%u to %zu.%zu.%zu\"])", index, graph->nodes[index].repository, graph->nodes[index].id, graph->nodes[index].min_version.major, graph->nodes[index].min_version.minor, graph->nodes[index].min_version.patch, graph->nodes[index].max_version.major, graph->nodes[index].max_version.minor, graph->nodes[index].max_version.patch);
             return;
         }
     }
@@ -422,7 +422,7 @@ bool CheckIdInDependencyList(char* id, size_t* needleIndex, size_t haystackSize,
     return false;
 }
 
-bool ResolveDependencyGraph(struct DependencyGraph* graph, size_t root, size_t* lockedDependencyCount, struct DependencyNode** lockedDependencies)
+bool ResolveDependencyGraph(struct DependencyGraph* graph, size_t root, size_t* flattenedDependencyCount, struct DependencyNode** flattenedDependencies)
 {
     // Iterate dependencies of this graph
     for (size_t dependencyId=0; dependencyId < graph->nodes[root].connectedCount; dependencyId++)
@@ -430,33 +430,58 @@ bool ResolveDependencyGraph(struct DependencyGraph* graph, size_t root, size_t* 
         // Iterate through artifacts in a dependency
         struct DependencyNode dependency = graph->nodes[dependencyId];
         bool validArtifactFound=false;
-        for (size_t artifactId=0; artifactId < dependency.connectedCount; artifactId++)
+
+        // If this dependency ID is already in the list...
+        size_t foundIndex=0;
+        if (CheckIdInDependencyList(dependency.id, &foundIndex, *flattenedDependencyCount, *flattenedDependencies))
         {
-            struct DependencyNode artifact = graph->nodes[artifactId];
-            // Check if this artifact id has already been indexed by a different dependency
-            size_t foundIndex=0;
-            if (CheckIdInDependencyList(artifact.id, &foundIndex, *lockedDependencyCount, *lockedDependencies))
+            struct DependencyNode lockedArtifact = (*flattenedDependencies)[foundIndex];
+            for (size_t artifactId=0; artifactId < dependency.connectedCount; artifactId++)
             {
-                if (SemVerCmp(artifact.min_version, (*lockedDependencies)[foundIndex].min_version) != 0 || SemVerCmp(artifact.min_version, (*lockedDependencies)[foundIndex].min_version) != 0 )
+                struct DependencyNode artifact = graph->nodes[artifactId];
+                if (SemVerCmp(artifact.min_version, lockedArtifact.min_version) != 0 || SemVerCmp(artifact.min_version, lockedArtifact.min_version) != 0 )
                 {
                     continue; // Try the next artifact
+                }
+
+                if (strcmp(artifact.repository, lockedArtifact.repository) != 0 && strlen(dependency.repository) != 0)
+                {
+                    continue; // Artifact repo mismatch + we actually care
                 }
 
                 // We found an artifact that matches - it MUST be ok
                 validArtifactFound = true;
                 break;
             }
-            else
+        }
+        else
+        {
+            // This is a new artifact to install
+            // Find an artifact that doesn't cause inteference
+            for (size_t artifactId=0; artifactId < dependency.connectedCount; artifactId++)
             {
-                // This is a new artifact to install
+                struct DependencyNode artifact = graph->nodes[artifactId];
+                
                 // Ensure that its own dependencies don't interfere
-                if (ResolveDependencyGraph(graph, artifactId, lockedDependencyCount, lockedDependencies))
+                size_t oldSize = *flattenedDependencyCount;
+                *flattenedDependencies = realloc(*flattenedDependencies, sizeof(struct DependencyNode) * (oldSize+1));
+                memcpy(&flattenedDependencies[oldSize], &artifact, sizeof(struct DependencyNode));
+
+                if (ResolveDependencyGraph(graph, artifactId, flattenedDependencyCount, flattenedDependencies))
                 {
                     // It's all good, man!
-                    *lockedDependencies = realloc(*lockedDependencies, sizeof(struct DependencyNode) * (*lockedDependencyCount)++);
-                    memcpy(&lockedDependencies[(*lockedDependencyCount) - 1], &artifact, sizeof(struct DependencyNode));
                     validArtifactFound = true;
                     break;
+                }
+                else
+                {
+                    // Problem: There will be a conflict in the future
+                    // Solution: Erase the future and try again (with another artifact path)
+                    // @TODO: Check overhead of this
+                    struct DependencyNode* newFlattenedDependencies = malloc(oldSize * sizeof(struct DependencyNode));
+                    memcpy(newFlattenedDependencies, flattenedDependencies, oldSize * sizeof(struct DependencyNode));
+                    free(*flattenedDependencies);
+                    *flattenedDependencies = newFlattenedDependencies;
                 }
             }
         }
