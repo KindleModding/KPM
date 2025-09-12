@@ -143,6 +143,12 @@
         {
           "url": "packages/lua/artifacts/lua_1.2.3_armhf-armel.kpkg",
           "version": [ 1, 2, 3 ],
+          "dependencies": [
+            {
+              "id": "testmin",
+              "min": [ 1, 0, 1 ]
+            }
+          ],
           "supported_arch": [
             "armhf",
             "armel"

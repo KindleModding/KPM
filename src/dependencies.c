@@ -406,3 +406,67 @@ int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph*
 
     return root;
 }
+
+bool CheckIdInDependencyList(char* id, size_t* needleIndex, size_t haystackSize, struct DependencyNode* haystack)
+{
+    for (*needleIndex = 0; *needleIndex < haystackSize; (*needleIndex)++)
+    {
+        if (strcmp(id, haystack[*needleIndex].id) != 0)
+        {
+            continue;
+        }
+
+        return true;
+    }
+
+    return false;
+}
+
+bool ResolveDependencyGraph(struct DependencyGraph* graph, size_t root, size_t* lockedDependencyCount, struct DependencyNode** lockedDependencies)
+{
+    // Iterate dependencies of this graph
+    for (size_t dependencyId=0; dependencyId < graph->nodes[root].connectedCount; dependencyId++)
+    {
+        // Iterate through artifacts in a dependency
+        struct DependencyNode dependency = graph->nodes[dependencyId];
+        bool validArtifactFound=false;
+        for (size_t artifactId=0; artifactId < dependency.connectedCount; artifactId++)
+        {
+            struct DependencyNode artifact = graph->nodes[artifactId];
+            // Check if this artifact id has already been indexed by a different dependency
+            size_t foundIndex=0;
+            if (CheckIdInDependencyList(artifact.id, &foundIndex, *lockedDependencyCount, *lockedDependencies))
+            {
+                if (SemVerCmp(artifact.min_version, (*lockedDependencies)[foundIndex].min_version) != 0 || SemVerCmp(artifact.min_version, (*lockedDependencies)[foundIndex].min_version) != 0 )
+                {
+                    continue; // Try the next artifact
+                }
+
+                // We found an artifact that matches - it MUST be ok
+                validArtifactFound = true;
+                break;
+            }
+            else
+            {
+                // This is a new artifact to install
+                // Ensure that its own dependencies don't interfere
+                if (ResolveDependencyGraph(graph, artifactId, lockedDependencyCount, lockedDependencies))
+                {
+                    // It's all good, man!
+                    *lockedDependencies = realloc(*lockedDependencies, sizeof(struct DependencyNode) * (*lockedDependencyCount)++);
+                    memcpy(&lockedDependencies[(*lockedDependencyCount) - 1], &artifact, sizeof(struct DependencyNode));
+                    validArtifactFound = true;
+                    break;
+                }
+            }
+        }
+
+        if (!validArtifactFound)
+        {
+            // We could not find an artifact that satisfies previous dependencies
+            return false;
+        }
+    }
+
+    return true;
+}
