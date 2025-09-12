@@ -15,6 +15,7 @@ int main()
 
     struct DependencyGraph graph;
     CreateDependencyGraph(&graph, 0);
+    
     assert(Internal_ConstructGraphFromArtifact(&kpm, &graph, &artifacts[0]) != -1);
     
     char* rendered;
@@ -29,6 +30,17 @@ int main()
     fclose(file);
     fprintf(stderr, "file written.\n");
     fprintf(stderr, "\n\n%s\n\n", rendered);
+
+    fprintf(stderr, "Resolving graph...\n");
+    size_t flattenedDependencyCount = 0;
+    struct DependencyNode* flattenedDependencies = NULL;
+    assert(Internal_ResolveDependencyGraph(&graph, 0, &flattenedDependencyCount, &flattenedDependencies));
+
+    fprintf(stderr, "Resolved:\n");
+    for (size_t i=0; i < flattenedDependencyCount; i++)
+    {
+        fprintf(stderr, "- %s (%u.%u.%u)\n", flattenedDependencies[i].id, flattenedDependencies[i].min_version.major, flattenedDependencies[i].min_version.minor, flattenedDependencies[i].min_version.patch);
+    }
 
     KPM_Cleanup(&kpm);
 

@@ -411,28 +411,34 @@ bool CheckIdInDependencyList(char* id, size_t* needleIndex, size_t haystackSize,
 {
     for (*needleIndex = 0; *needleIndex < haystackSize; (*needleIndex)++)
     {
-        if (strcmp(id, haystack[*needleIndex].id) != 0)
+        if (strcmp(id, haystack[*needleIndex].id) == 0)
         {
-            continue;
+            return true;
         }
-
-        return true;
     }
 
     return false;
 }
 
-bool ResolveDependencyGraph(struct DependencyGraph* graph, size_t root, size_t* flattenedDependencyCount, struct DependencyNode** flattenedDependencies)
+bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, size_t root, size_t* flattenedDependencyCount, struct DependencyNode** flattenedDependencies)
 {
     // Add this artifact to the flattened list (it should've already been checked)
-    *flattenedDependencies = realloc(*flattenedDependencies, sizeof(struct DependencyNode) * (*flattenedDependencyCount)++);
-    memcpy(&flattenedDependencies[*flattenedDependencyCount-1], &graph->nodes[root], sizeof(struct DependencyNode));
+    *flattenedDependencies = realloc(*flattenedDependencies, sizeof(struct DependencyNode) * ++(*flattenedDependencyCount));
+    (*flattenedDependencies)[*flattenedDependencyCount - 1].type = graph->nodes[root].type;
+    (*flattenedDependencies)[*flattenedDependencyCount - 1].id = strdup(graph->nodes[root].id);
+    (*flattenedDependencies)[*flattenedDependencyCount - 1].repository = strdup(graph->nodes[root].repository);
+    (*flattenedDependencies)[*flattenedDependencyCount - 1].connectedCount = graph->nodes[root].connectedCount;
+    (*flattenedDependencies)[*flattenedDependencyCount - 1].connected = malloc(sizeof(size_t) * graph->nodes[root].connectedCount);
+    memcpy((*flattenedDependencies)[*flattenedDependencyCount - 1].connected, graph->nodes[root].connected, sizeof(size_t) * graph->nodes[root].connectedCount);
+
+    memcpy(&(*flattenedDependencies)[*flattenedDependencyCount - 1].min_version, &graph->nodes[root].min_version, sizeof(struct SemVer));
+    memcpy(&(*flattenedDependencies)[*flattenedDependencyCount - 1].max_version, &graph->nodes[root].max_version, sizeof(struct SemVer));
 
     // Iterate dependencies of this graph
     for (size_t dependencyId=0; dependencyId < graph->nodes[root].connectedCount; dependencyId++)
     {
         // Iterate through artifacts in a dependency
-        struct DependencyNode dependency = graph->nodes[dependencyId];
+        struct DependencyNode dependency = graph->nodes[graph->nodes[root].connected[dependencyId]];
         bool validArtifactFound=false;
 
         // If this dependency ID is already in the list...
@@ -440,9 +446,9 @@ bool ResolveDependencyGraph(struct DependencyGraph* graph, size_t root, size_t* 
         if (CheckIdInDependencyList(dependency.id, &foundIndex, *flattenedDependencyCount, *flattenedDependencies))
         {
             struct DependencyNode lockedArtifact = (*flattenedDependencies)[foundIndex];
-            for (size_t artifactId=0; artifactId < dependency.connectedCount; artifactId++)
+            for (size_t artifactIndex=0; artifactIndex < dependency.connectedCount; artifactIndex++)
             {
-                struct DependencyNode artifact = graph->nodes[artifactId];
+                struct DependencyNode artifact = graph->nodes[dependency.connected[artifactIndex]];
                 if (SemVerCmp(artifact.min_version, lockedArtifact.min_version) != 0 || SemVerCmp(artifact.min_version, lockedArtifact.min_version) != 0 )
                 {
                     continue; // Try the next artifact
@@ -462,11 +468,11 @@ bool ResolveDependencyGraph(struct DependencyGraph* graph, size_t root, size_t* 
         {
             // This is a new artifact to install
             // Find an artifact that doesn't cause inteference
-            for (size_t artifactId=0; artifactId < dependency.connectedCount; artifactId++)
+            for (size_t artifactIndex=0; artifactIndex < dependency.connectedCount; artifactIndex++)
             {                
                 // Ensure that its own dependencies don't interfere
                 size_t oldSize = *flattenedDependencyCount;
-                if (ResolveDependencyGraph(graph, artifactId, flattenedDependencyCount, flattenedDependencies))
+                if (Internal_ResolveDependencyGraph(graph, dependency.connected[artifactIndex], flattenedDependencyCount, flattenedDependencies))
                 {
                     // It's all good, man!
                     validArtifactFound = true;
@@ -478,7 +484,7 @@ bool ResolveDependencyGraph(struct DependencyGraph* graph, size_t root, size_t* 
                     // Solution: Erase the future and try again (with another artifact path)
                     // @TODO: Check overhead of this
                     struct DependencyNode* newFlattenedDependencies = malloc(oldSize * sizeof(struct DependencyNode));
-                    memcpy(newFlattenedDependencies, flattenedDependencies, oldSize * sizeof(struct DependencyNode));
+                    memcpy(newFlattenedDependencies, *flattenedDependencies, oldSize * sizeof(struct DependencyNode));
                     free(*flattenedDependencies);
                     *flattenedDependencies = newFlattenedDependencies;
                     *flattenedDependencyCount = oldSize;
