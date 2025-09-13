@@ -61,9 +61,9 @@ struct IndexedPackage
 */
 struct IndexedArtifact
 {
-    char* url; /**< URL of the artifact - primary key */
     char* repository; /**< The repository ID */
     char* id; /**< The package ID */
+    char* url; /**< URL of the artifact - primary key */
     struct SemVer version; /**< The version of this artifact */
 };
 
@@ -73,7 +73,9 @@ struct IndexedArtifact
 */
 struct ArtifactDependency
 {
-    char* artifact; /**< URL of the artifact */
+    char* artifact_repository; /**< Repository of the artifact */
+    char* artifact_id; /**< ID of the artifact */
+    char* artifact_url; /**< URL of the artifact */
     char* repository; /**< The repository ID */
     char* id; /**< The package ID */
     struct SemVer min_version; /**< The min version of the dependency (inclusive) */
@@ -156,7 +158,7 @@ enum KPMResult KPM_ListPackageArtifacts(struct KPM* kpm, const char* repositoryI
 // Dependency management functions
 void KPM_FreeArtifactDependency(struct ArtifactDependency* dependency);
 void KPM_FreeArtifactDependencyList(size_t artifactCount, struct ArtifactDependency* dependency);
-enum KPMResult KPM_ListArtifactDependencies(struct KPM* kpm, char* artifact, size_t* dependencyCount, struct ArtifactDependency** dependencies);
+enum KPMResult KPM_ListArtifactDependencies(struct KPM* kpm, char* repository, char* id, char* url, size_t* dependencyCount, struct ArtifactDependency** dependencies);
 
 enum KPMResult KPM_UpdateIndex(struct KPM *kpm, KPMStatusCallback* statusCallback);
 

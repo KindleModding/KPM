@@ -178,7 +178,9 @@ enum KPMResult Internal_GetArtifactDependencies(struct KPM* kpm, struct IndexedA
                 return KPM_PARSE_ERROR;
             }
 
-            (*targetDependencies)[i].artifact = strdup(target->id);
+            (*targetDependencies)[i].artifact_repository = strdup(target->id);
+            (*targetDependencies)[i].artifact_id = strdup(target->id);
+            (*targetDependencies)[i].artifact_url = strdup(target->id);
             (*targetDependencies)[i].id = strdup(cJSON_GetStringValue(cJSON_GetObjectItem(dependencyJSON, "id"))); // 90% sure I don't need to free this
 
             if (cJSON_GetStringValue(cJSON_GetObjectItem(dependencyJSON, "repository")) != NULL)
@@ -224,7 +226,7 @@ enum KPMResult Internal_GetArtifactDependencies(struct KPM* kpm, struct IndexedA
     }
     else
     {
-        return KPM_ListArtifactDependencies(kpm, target->url, targetDependencyCount, targetDependencies);
+        return KPM_ListArtifactDependencies(kpm, target->repository, target->id, target->url, targetDependencyCount, targetDependencies);
     }
 
     return KPM_OK;
@@ -344,7 +346,10 @@ int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph*
 
     size_t dependencyCount;
     struct ArtifactDependency* dependencies;
-    Internal_GetArtifactDependencies(kpm, artifact, &dependencyCount, &dependencies);
+    if (Internal_GetArtifactDependencies(kpm, artifact, &dependencyCount, &dependencies) != KPM_OK)
+    {
+        return -1;
+    }
 
     for (size_t i=0; i < dependencyCount; i++)
     {
