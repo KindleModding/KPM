@@ -65,10 +65,22 @@ size_t AddNode(struct DependencyGraph *graph, struct DependencyNode node)
 
 void AddEdge(struct DependencyGraph* graph, size_t firstNodeIndex, size_t nextNodeIndex)
 {
-    // @TODO: Sort by min version on addition (newest first)
     graph->nodes[firstNodeIndex].connectedCount++;
     graph->nodes[firstNodeIndex].connected = realloc(graph->nodes[firstNodeIndex].connected, graph->nodes[firstNodeIndex].connectedCount);
-    graph->nodes[firstNodeIndex].connected[graph->nodes[firstNodeIndex].connectedCount-1] = nextNodeIndex;
+    
+    // Insert it into the list such that the connected node list is ordered newest to oldest
+    size_t insertionIndex = graph->nodes[firstNodeIndex].connectedCount-1;
+    while (insertionIndex > 0)
+    {
+        if (SemVerCmp(graph->nodes[graph->nodes[firstNodeIndex].connected[insertionIndex-1]].min_version, graph->nodes[nextNodeIndex].min_version) > 0)
+        {
+            break;
+        }
+
+        graph->nodes[firstNodeIndex].connected[insertionIndex] = graph->nodes[firstNodeIndex].connected[insertionIndex-1];
+        insertionIndex--;
+    }
+    graph->nodes[firstNodeIndex].connected[insertionIndex] = nextNodeIndex;
 }
 
 bool FindArtifactNode(struct DependencyGraph* graph, char* repository, char* id, struct SemVer version, size_t* index)
