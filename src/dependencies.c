@@ -473,10 +473,10 @@ bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, size_t root,
             bool conflicts = false;
             size_t conflictingArtifactId;
             size_t conflictingDependencyId;
-            for (size_t i=2; i < *traversedNodeCount; i+=2)
+            for (size_t i=1; i < *traversedNodeCount; i+=2)
             {
-                conflictingDependencyId = (*traversedNodes)[i-1];
-                conflictingArtifactId = *traversedNodes[i];
+                conflictingDependencyId = (*traversedNodes)[i];
+                conflictingArtifactId = (*traversedNodes)[i+1];
                 if (currentNode != conflictingArtifactId && strcmp(graph->nodes[currentNode].id, graph->nodes[conflictingArtifactId].id) == 0)
                 {
                     // Don't need to check if version conflicts because if the node wasn't already traversed
@@ -676,8 +676,10 @@ bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, size_t root,
             {
                 // Go to first dependency
                 currentNode = graph->nodes[currentNode].connected[0];
+                Internal_ArrayAddNode(traversedNodeCount, traversedNodes, currentNode); // Add dependency to traversal list
                 // Go to first artifact candidate
                 currentNode = graph->nodes[currentNode].connected[0];
+                continue;
             }
         }
 
@@ -691,7 +693,7 @@ bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, size_t root,
             }
 
             *traversedNodes = realloc(*traversedNodes, *traversedNodeCount + (*traversedNodeCount - rootIndex));
-            for (size_t i=*traversedNodeCount; i < (*traversedNodeCount - rootIndex); i++)
+            for (size_t i=0; i < (*traversedNodeCount - rootIndex); i++)
             {
                 (*traversedNodes)[*traversedNodeCount + i] = (*traversedNodes)[rootIndex + i];
             }
@@ -710,7 +712,8 @@ bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, size_t root,
 
                 // Nothing to do for this node, move up back to our dependent's artifact
                 size_t traversedDependency = (*traversedNodes)[*traversedNodeCount - 2]; // Dependency we just resolved
-                currentNode = (*traversedNodes)[*traversedNodeCount -= 3]; // Set current node to the dependent artifact
+                *traversedNodeCount -= 2;
+                currentNode = (*traversedNodes)[*traversedNodeCount - 1]; // Set current node to the dependent artifact
 
                 // Find the next dependency
                 for (size_t i=0; i < graph->nodes[currentNode].connectedCount; i++)
@@ -724,6 +727,7 @@ bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, size_t root,
 
                         foundNextDependency = true;
                         currentNode = graph->nodes[currentNode].connected[i+1]; // Set currentNode to the dependency
+                        Internal_ArrayAddNode(traversedNodeCount, traversedNodes, currentNode); // Add dependency to traversal list
                         currentNode = graph->nodes[currentNode].connected[0]; // Set currentNode to our first artifact candidate in the dependency
                         break;
                     }

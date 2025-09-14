@@ -32,14 +32,21 @@ int main()
     fprintf(stderr, "\n\n%s\n\n", rendered);
 
     fprintf(stderr, "Resolving graph...\n");
-    size_t flattenedDependencyCount = 0;
-    struct DependencyNode* flattenedDependencies = NULL;
-    assert(Internal_ResolveDependencyGraph(&graph, 0, &flattenedDependencyCount, &flattenedDependencies));
+    size_t traversedDependencyCount = 0;
+    size_t* traversedDependencies = NULL;
+    assert(Internal_ResolveDependencyGraph(&graph, 0, &traversedDependencyCount, &traversedDependencies));
 
-    fprintf(stderr, "Resolved:\n");
-    for (size_t i=0; i < flattenedDependencyCount; i++)
+    fprintf(stderr, "Traversed:\n");
+    for (size_t i=0; i < traversedDependencyCount; i++)
     {
-        fprintf(stderr, "- %s (%u.%u.%u)\n", flattenedDependencies[i].id, flattenedDependencies[i].min_version.major, flattenedDependencies[i].min_version.minor, flattenedDependencies[i].min_version.patch);
+        if (graph.nodes[traversedDependencies[i]].type == NODE_DEPENDENCY)
+        {
+            fprintf(stderr, "| %s (%u.%u.%u - %u.%u.%u)\n", graph.nodes[traversedDependencies[i]].id, graph.nodes[traversedDependencies[i]].min_version.major, graph.nodes[traversedDependencies[i]].min_version.minor, graph.nodes[traversedDependencies[i]].min_version.patch, graph.nodes[traversedDependencies[i]].max_version.major, graph.nodes[traversedDependencies[i]].max_version.minor, graph.nodes[traversedDependencies[i]].max_version.patch);
+        }
+        else
+        {
+            fprintf(stderr, "\t- %s (%u.%u.%u)\n", graph.nodes[traversedDependencies[i]].id, graph.nodes[traversedDependencies[i]].min_version.major, graph.nodes[traversedDependencies[i]].min_version.minor, graph.nodes[traversedDependencies[i]].min_version.patch);
+        }
     }
 
     KPM_Cleanup(&kpm);
