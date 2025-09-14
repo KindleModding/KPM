@@ -5,6 +5,7 @@
 #include "kpm/kpm.h"
 #include "kpm/semver.h"
 #include <limits.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -438,82 +439,296 @@ bool CheckIdInDependencyList(char* id, size_t* needleIndex, size_t haystackSize,
     return false;
 }
 
-bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, size_t root, size_t* flattenedDependencyCount, struct DependencyNode** flattenedDependencies)
+void Internal_ArrayAddNode(size_t* traversedNodeCount, size_t** traversedNodes, size_t node)
 {
-    // Add this artifact to the flattened list (it should've already been checked)
-    *flattenedDependencies = realloc(*flattenedDependencies, sizeof(struct DependencyNode) * ++(*flattenedDependencyCount));
-    (*flattenedDependencies)[*flattenedDependencyCount - 1].type = graph->nodes[root].type;
-    (*flattenedDependencies)[*flattenedDependencyCount - 1].id = strdup(graph->nodes[root].id);
-    (*flattenedDependencies)[*flattenedDependencyCount - 1].repository = strdup(graph->nodes[root].repository);
-    (*flattenedDependencies)[*flattenedDependencyCount - 1].connectedCount = graph->nodes[root].connectedCount;
-    (*flattenedDependencies)[*flattenedDependencyCount - 1].connected = malloc(sizeof(size_t) * graph->nodes[root].connectedCount);
-    memcpy((*flattenedDependencies)[*flattenedDependencyCount - 1].connected, graph->nodes[root].connected, sizeof(size_t) * graph->nodes[root].connectedCount);
+    (*traversedNodeCount)++;
+    *traversedNodes = realloc(*traversedNodes, *traversedNodeCount * sizeof(size_t));
+    (*traversedNodes)[*traversedNodeCount - 1] = node;
+}
 
-    memcpy(&(*flattenedDependencies)[*flattenedDependencyCount - 1].min_version, &graph->nodes[root].min_version, sizeof(struct SemVer));
-    memcpy(&(*flattenedDependencies)[*flattenedDependencyCount - 1].max_version, &graph->nodes[root].max_version, sizeof(struct SemVer));
+bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, size_t root, size_t* traversedNodeCount, size_t** traversedNodes)
+{
+    *traversedNodes = NULL;
+    *traversedNodeCount = 0;
 
-    // Iterate dependencies of this graph
-    for (size_t dependencyId=0; dependencyId < graph->nodes[root].connectedCount; dependencyId++)
+    size_t currentNode = root;
+    for (;;)
     {
-        // Iterate through artifacts in a dependency
-        struct DependencyNode dependency = graph->nodes[graph->nodes[root].connected[dependencyId]];
-        bool validArtifactFound=false;
-
-        // If this dependency ID is already in the list...
-        size_t foundIndex=0;
-        if (CheckIdInDependencyList(dependency.id, &foundIndex, *flattenedDependencyCount, *flattenedDependencies))
+        // Check if this artifact is already traversed
+        bool alreadyTraversed=false;
+        for (size_t i=0; i < *traversedNodeCount; i++)
         {
-            struct DependencyNode lockedArtifact = (*flattenedDependencies)[foundIndex];
-            for (size_t artifactIndex=0; artifactIndex < dependency.connectedCount; artifactIndex++)
+            if (*traversedNodes[i] == currentNode)
             {
-                struct DependencyNode artifact = graph->nodes[dependency.connected[artifactIndex]];
-                if (SemVerCmp(artifact.min_version, lockedArtifact.min_version) != 0 || SemVerCmp(artifact.min_version, lockedArtifact.min_version) != 0 )
-                {
-                    continue; // Try the next artifact
-                }
-
-                if (strcmp(artifact.repository, lockedArtifact.repository) != 0 && strlen(dependency.repository) != 0)
-                {
-                    continue; // Artifact repo mismatch + we actually care
-                }
-
-                // We found an artifact that matches - it MUST be ok
-                validArtifactFound = true;
+                alreadyTraversed=true;
                 break;
             }
         }
-        else
+
+        Internal_ArrayAddNode(traversedNodeCount, traversedNodes, currentNode);
+
+        if (!alreadyTraversed)
         {
-            // This is a new artifact to install
-            // Find an artifact that doesn't cause inteference
-            for (size_t artifactIndex=0; artifactIndex < dependency.connectedCount; artifactIndex++)
-            {                
-                // Ensure that its own dependencies don't interfere
-                size_t oldSize = *flattenedDependencyCount;
-                if (Internal_ResolveDependencyGraph(graph, dependency.connected[artifactIndex], flattenedDependencyCount, flattenedDependencies))
+            // Ensure this NEW node doesn't conflict with any previously traversed artifacts
+            bool conflicts = false;
+            size_t conflictingArtifactId;
+            size_t conflictingDependencyId;
+            for (size_t i=2; i < *traversedNodeCount; i+=2)
+            {
+                conflictingDependencyId = (*traversedNodes)[i-1];
+                conflictingArtifactId = *traversedNodes[i];
+                if (currentNode != conflictingArtifactId && strcmp(graph->nodes[currentNode].id, graph->nodes[conflictingArtifactId].id) == 0)
                 {
-                    // It's all good, man!
-                    validArtifactFound = true;
+                    // Don't need to check if version conflicts because if the node wasn't already traversed
+                    // It must be conflicting since it wasn't merged
+                    conflicts=true;
                     break;
                 }
-                else
+            }
+
+            // Find an alternative artifact that matches the conflicting artifact
+            size_t dependencyId = (*traversedNodes)[*traversedNodeCount - 2]; // Dependency for current artifact
+            if (conflicts)
+            {
+                // Check if dependency has an artifact that matches the already resolved conflicting one
+                for (size_t i=0; i < graph->nodes[dependencyId].connectedCount; i++)
                 {
-                    // Problem: There will be a conflict in the future
-                    // Solution: Erase the future and try again (with another artifact path)
-                    // @TODO: Check overhead of this
-                    struct DependencyNode* newFlattenedDependencies = malloc(oldSize * sizeof(struct DependencyNode));
-                    memcpy(newFlattenedDependencies, *flattenedDependencies, oldSize * sizeof(struct DependencyNode));
-                    free(*flattenedDependencies);
-                    *flattenedDependencies = newFlattenedDependencies;
-                    *flattenedDependencyCount = oldSize;
+                    if (conflictingArtifactId == graph->nodes[dependencyId].connected[i]) // We can compare nodes directly bc artifact merging
+                    {
+                        (*traversedNodeCount)--; // Remove this node from the traversed nodes
+                        currentNode = conflictingArtifactId; // Prepare to add the proper one
+                        conflicts = false;
+                        break;
+                    }
                 }
+
+                if (!conflicts)
+                {
+                    continue; // Try again but with the now-current next artifact candidate
+                }
+            }
+
+            // Try to rollback to first encounter of the conflicting dependency
+            if (conflicts)
+            {
+                bool circular=false; // Detect a circular dependency by checking if the conflicting artifact is on our current path
+                for (size_t i=(*traversedNodeCount)-1; (*traversedNodes)[i] != root; i--)
+                {
+                    if ((*traversedNodes)[i] == conflictingArtifactId)
+                    {
+                        circular = true;
+                        break;
+                    }
+                }
+
+                if (!circular)
+                {
+                    // If the dependency isn't circular then we can just find a dependency that fits both branches and recompute from there
+                    // There's a fairly high chance that this should work in such scenarios
+                    for (size_t i=0; i < graph->nodes[dependencyId].connectedCount; i++)
+                    {
+                        for (size_t j=0; j < graph->nodes[conflictingDependencyId].connectedCount; j++)
+                        {
+                            if (graph->nodes[dependencyId].connected[i] == graph->nodes[conflictingDependencyId].connected[j])
+                            {
+                                // Find the point to rewind to
+                                for (size_t k=0; k < *traversedNodeCount; k++)
+                                {
+                                    if (*(traversedNodes)[k] == conflictingArtifactId)
+                                    {
+                                        *traversedNodeCount = k+1; // Rewind to dependency node
+                                        currentNode = graph->nodes[conflictingArtifactId].connected[j]; // Set new artifact as current node
+                                        conflicts=false; // Run from there
+                                        break;
+                                    }
+                                }
+                                break;
+                            }
+                        }
+
+                        if (!conflicts)
+                        {
+                            break;
+                        }
+                    }
+
+                    if (!conflicts)
+                    {
+                        continue; // Re-compute from new point
+                    }
+                }
+
+
+                // It's circular OR we couldn't find a trivial solution
+                // This is essentially the nuclear option - we TRY to eliminate the conflicting dependency from this point
+
+                traversedNodeCount--; // We are no longer looking at artifacts!
+                size_t currentDependencyId = dependencyId;
+                while (conflicts)
+                {
+                    // Does a parent artifact really exist?
+                    if ((*traversedNodes)[*traversedNodeCount - 2]  == root) // We cannot rewind further
+                    {
+                        break;
+                    }
+                    
+                    size_t blacklistedDependency = currentDependencyId;
+                    // Go back to the dependent artifact
+                    traversedNodeCount -= 2;
+                    currentDependencyId = (*traversedNodes)[*traversedNodeCount - 1];
+
+                    for (size_t i=0; i < graph->nodes[currentDependencyId].connectedCount; i++)
+                    {
+                        bool blacklistPassed=false;
+                        size_t candidateArtifact = graph->nodes[currentDependencyId].connected[i];
+                        for (size_t j=0; j < graph->nodes[candidateArtifact].connectedCount; j++)
+                        {
+                            if (graph->nodes[candidateArtifact].connected[j] == blacklistedDependency)
+                            {
+                                blacklistPassed=true;
+                                continue;
+                            }
+
+                            // Get the first artifact that doesn't have our blacklisted dependency
+                            // We ignore any before the blacklisted dep as we assume it has already been checked
+                            if (blacklistPassed)
+                            {
+                                currentNode = candidateArtifact;
+                                conflicts=false;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (!conflicts)
+                {
+                    continue;
+                }
+
+                // Somehow that didn't work
+                // Nuke it.
+                // Just nuke the original dependency
+
+                // Find the first time we saw this dependency
+                // And rewind there - then blacklist it!
+                for (size_t i=0; i < *traversedNodeCount; i++)
+                {
+                    if ((*traversedNodes)[i] == dependencyId)
+                    {
+                        currentDependencyId = (*traversedNodes)[i];
+                        *traversedNodeCount = i+1;
+                        break;
+                    }
+                }
+
+                while (conflicts)
+                {
+                    // Does a parent artifact really exist?
+                    if ((*traversedNodes)[*traversedNodeCount - 2]  == root) // We cannot rewind further
+                    {
+                        break;
+                    }
+                    
+                    size_t blacklistedDependency = currentDependencyId;
+                    // Go back to the dependent artifact
+                    traversedNodeCount -= 2;
+                    currentDependencyId = (*traversedNodes)[*traversedNodeCount - 1];
+
+                    for (size_t i=0; i < graph->nodes[currentDependencyId].connectedCount; i++)
+                    {
+                        bool blacklistPassed=false;
+                        size_t candidateArtifact = graph->nodes[currentDependencyId].connected[i];
+                        for (size_t j=0; j < graph->nodes[candidateArtifact].connectedCount; j++)
+                        {
+                            if (graph->nodes[candidateArtifact].connected[j] == blacklistedDependency)
+                            {
+                                blacklistPassed=true;
+                                continue;
+                            }
+
+                            // Get the first artifact that doesn't have our blacklisted dependency
+                            // We ignore any before the blacklisted dep as we assume it has already been checked
+                            if (blacklistPassed)
+                            {
+                                currentNode = candidateArtifact;
+                                conflicts=false;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (!conflicts)
+                {
+                    continue;
+                }
+            }
+
+            if (conflicts)
+            {
+                return false;
+            }
+
+            // No traversal issue AND no conflict?
+            // Move to the next item in this node
+            if (graph->nodes[currentNode].connectedCount > 0)
+            {
+                // Go to first dependency
+                currentNode = graph->nodes[currentNode].connected[0];
+                // Go to first artifact candidate
+                currentNode = graph->nodes[currentNode].connected[0];
             }
         }
 
-        if (!validArtifactFound)
+        if (alreadyTraversed || graph->nodes[currentNode].connectedCount == 0) // Move towards the next dependency artifact
         {
-            // We could not find an artifact for this dependency that satisfies previous dependencies
-            return false;
+            // Construct a new path for the next dependency
+            size_t rootIndex;
+            for (rootIndex=(*traversedNodeCount)-1; (*traversedNodes)[rootIndex] != root; rootIndex--)
+            {
+                continue;
+            }
+
+            *traversedNodes = realloc(*traversedNodes, *traversedNodeCount + (*traversedNodeCount - rootIndex));
+            for (size_t i=*traversedNodeCount; i < (*traversedNodeCount - rootIndex); i++)
+            {
+                (*traversedNodes)[*traversedNodeCount + i] = (*traversedNodes)[rootIndex + i];
+            }
+            *traversedNodeCount+=(*traversedNodeCount-rootIndex);
+
+            // Move up-right until we find the next dependency to traverse
+            bool foundNextDependency=false;
+            while(!foundNextDependency)
+            {
+                // Does a parent artifact really exist?
+                if ((*traversedNodes)[*traversedNodeCount - 1]  == root) // We are the top
+                {
+                    // We are done
+                    return true;
+                }
+
+                // Nothing to do for this node, move up back to our dependent's artifact
+                size_t traversedDependency = (*traversedNodes)[*traversedNodeCount - 2]; // Dependency we just resolved
+                currentNode = (*traversedNodes)[*traversedNodeCount -= 3]; // Set current node to the dependent artifact
+
+                // Find the next dependency
+                for (size_t i=0; i < graph->nodes[currentNode].connectedCount; i++)
+                {
+                    if (graph->nodes[currentNode].connected[i] == traversedDependency)
+                    {
+                        if (i == graph->nodes[currentNode].connectedCount-1)
+                        {
+                            break;
+                        }
+
+                        foundNextDependency = true;
+                        currentNode = graph->nodes[currentNode].connected[i+1]; // Set currentNode to the dependency
+                        currentNode = graph->nodes[currentNode].connected[0]; // Set currentNode to our first artifact candidate in the dependency
+                        break;
+                    }
+                }
+            }
         }
     }
 
