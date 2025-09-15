@@ -63,6 +63,7 @@ int main()
         KPM_FreeIndexedArtifactList(artifactCount, artifacts);
     }
 
+    KPM_FreeRepository(&repository);
     KPM_FreeIndexedPackageList(packageCount, packages);
     KPM_Cleanup(&kpm);
 

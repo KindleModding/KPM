@@ -194,6 +194,7 @@ enum KPMResult KPM_UpdateIndex(struct KPM *kpm, KPMStatusCallback* statusCallbac
         sqlite3_finalize(statement);
         if (status != SQLITE_DONE)
         {
+            KPM_FreeRepositoryList(repositoryCount, repositories);
             statusCallback(KPM_VERBOSITY_ERROR, 0, "Could not clear packages for %s (%i)", repositories[i].id, status);
             SimpleGET_Cleanup(&request);
             sqlite3_exec(kpm->db, "ROLLBACK", NULL, NULL, NULL);
@@ -204,6 +205,7 @@ enum KPMResult KPM_UpdateIndex(struct KPM *kpm, KPMStatusCallback* statusCallbac
         cJSON* json = cJSON_Parse(request.buffer);
         if (json == NULL)
         {
+            KPM_FreeRepositoryList(repositoryCount, repositories);
             SimpleGET_Cleanup(&request);
             statusCallback(KPM_VERBOSITY_ERROR, 0, "Could not parse manifest");
             sqlite3_exec(kpm->db, "ROLLBACK", NULL, NULL, NULL);
@@ -230,6 +232,7 @@ enum KPMResult KPM_UpdateIndex(struct KPM *kpm, KPMStatusCallback* statusCallbac
             statusCallback(KPM_VERBOSITY_ERROR, 0, "Could not index repository [%s]", repositories[i].id);
         }
 
+        KPM_FreeRepositoryList(repositoryCount, repositories);
         sqlite3_exec(kpm->db, "COMMIT", NULL, NULL, NULL);
         cJSON_Delete(json);
         SimpleGET_Cleanup(&request);
