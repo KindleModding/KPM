@@ -14,7 +14,7 @@ void SimpleGET_Initialise(struct SimpleGETRequest* request, const char* url)
     curl_easy_setopt(request->curl, CURLOPT_URL, url);
     curl_easy_setopt(request->curl, CURLOPT_WRITEFUNCTION, SimpleGET_Callback);
     curl_easy_setopt(request->curl, CURLOPT_WRITEDATA, (void *)request); // This _should_ work
-    curl_easy_setopt(request->curl, CURLOPT_FOLLOWLOCATION, CURLFOLLOW_ALL);
+    curl_easy_setopt(request->curl, CURLOPT_FOLLOWLOCATION, 1L); //@TODO: Wth?
     curl_easy_setopt(request->curl, CURLOPT_USERAGENT, "kpm/1.0.0");
     curl_easy_setopt(request->curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2TLS);
     curl_easy_setopt(request->curl, CURLOPT_FTP_SKIP_PASV_IP, 1L);
