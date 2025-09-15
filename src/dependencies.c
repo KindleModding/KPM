@@ -67,7 +67,7 @@ size_t AddNode(struct DependencyGraph *graph, struct DependencyNode node)
 void AddEdge(struct DependencyGraph* graph, size_t firstNodeIndex, size_t nextNodeIndex)
 {
     graph->nodes[firstNodeIndex].connectedCount++;
-    graph->nodes[firstNodeIndex].connected = realloc(graph->nodes[firstNodeIndex].connected, graph->nodes[firstNodeIndex].connectedCount);
+    graph->nodes[firstNodeIndex].connected = realloc(graph->nodes[firstNodeIndex].connected, graph->nodes[firstNodeIndex].connectedCount * sizeof(size_t));
     
     // Insert it into the list such that the connected node list is ordered newest to oldest
     size_t insertionIndex = graph->nodes[firstNodeIndex].connectedCount-1;
@@ -682,7 +682,9 @@ bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, size_t root,
             if (graph->nodes[currentNode].connectedCount > 0)
             {
                 // Go to first dependency
+                printf("currentNode1: %zu\n", currentNode);
                 currentNode = graph->nodes[currentNode].connected[0];
+                printf("currentNode2: %zu\n", currentNode);
                 Internal_ArrayAddNode(traversedNodeCount, traversedNodes, currentNode); // Add dependency to traversal list
                 // Go to first artifact candidate
                 currentNode = graph->nodes[currentNode].connected[0]; // It's guaranteed that a dependency will have viable candidates if it is in the graph
@@ -699,7 +701,7 @@ bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, size_t root,
                 continue;
             }
 
-            *traversedNodes = realloc(*traversedNodes, *traversedNodeCount + (*traversedNodeCount - rootIndex));
+            *traversedNodes = realloc(*traversedNodes, (*traversedNodeCount + (*traversedNodeCount - rootIndex)) * sizeof(size_t));
             for (size_t i=0; i < (*traversedNodeCount - rootIndex); i++)
             {
                 (*traversedNodes)[*traversedNodeCount + i] = (*traversedNodes)[rootIndex + i];

@@ -40,6 +40,7 @@ int main()
     fprintf(stderr, "Testing repository ID\n");
     assert(strcmp(repo.id, "org.kindlemodding.examplerepo") == 0);
 
+    free(uri);
     KPM_FreeRepository(&repo);
     KPM_Cleanup(&kpm);
 
