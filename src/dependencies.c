@@ -446,7 +446,7 @@ void Internal_ArrayAddNode(size_t* traversedNodeCount, size_t** traversedNodes, 
     (*traversedNodes)[*traversedNodeCount - 1] = node;
 }
 
-bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, size_t root, size_t* traversedNodeCount, size_t** traversedNodes)
+bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, size_t root, size_t* traversedNodeCount, size_t** traversedNodes, KPMStatusCallback statusCallback)
 {
     *traversedNodes = NULL;
     *traversedNodeCount = 0;
@@ -454,12 +454,14 @@ bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, size_t root,
     size_t currentNode = root;
     for (;;)
     {
+        statusCallback(KPM_VERBOSITY_DEBUG, 0, "Traversing node: %zu - %s", currentNode, graph->nodes[currentNode].id);
         // Check if this artifact is already traversed
         bool alreadyTraversed=false;
         for (size_t i=0; i < *traversedNodeCount; i++)
         {
-            if (*traversedNodes[i] == currentNode)
+            if ((*traversedNodes)[i] == currentNode)
             {
+                statusCallback(KPM_VERBOSITY_DEBUG, 0, "Already traversed!");
                 alreadyTraversed=true;
                 break;
             }
@@ -467,18 +469,30 @@ bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, size_t root,
 
         Internal_ArrayAddNode(traversedNodeCount, traversedNodes, currentNode);
 
+        statusCallback(KPM_VERBOSITY_DEBUG, 0, "Currently traversed:");
+        for (size_t i=0; i < *traversedNodeCount; i++)
+        {
+            statusCallback(KPM_VERBOSITY_DEBUG, 0, "- %i\t%s (%u.%u.%u)", (*traversedNodes)[i], graph->nodes[(*traversedNodes)[i]].id, graph->nodes[(*traversedNodes)[i]].min_version.major, graph->nodes[(*traversedNodes)[i]].min_version.minor, graph->nodes[(*traversedNodes)[i]].min_version.patch);
+        }
+
         if (!alreadyTraversed)
         {
             // Ensure this NEW node doesn't conflict with ANY previously traversed artifacts
             bool conflicts = false;
             size_t conflictingArtifactId;
             size_t conflictingDependencyId;
-            for (size_t i=2; i < *traversedNodeCount; i+=2) // i=2 so that we start on the first non-root artifact
+            for (size_t i=0; i < *traversedNodeCount; i++) // i=2 so that we start on the first non-root artifact
             {
-                conflictingDependencyId = (*traversedNodes)[i-1];
+                if (graph->nodes[(*traversedNodes)[i]].type != NODE_ARTIFACT || (*traversedNodes)[i] == root)
+                {
+                    continue;
+                }
+
                 conflictingArtifactId = (*traversedNodes)[i];
+                conflictingDependencyId = (*traversedNodes)[i-1];
                 if (currentNode != conflictingArtifactId && strcmp(graph->nodes[currentNode].id, graph->nodes[conflictingArtifactId].id) == 0)
                 {
+                    statusCallback(KPM_VERBOSITY_DEBUG, 0, "Node conflicts with: %zu - %s", conflictingArtifactId, graph->nodes[conflictingArtifactId].id);
                     // Don't need to check if version conflicts because if the node wasn't already traversed
                     // It must be conflicting since it wasn't merged
                     conflicts=true;
@@ -536,7 +550,7 @@ bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, size_t root,
                                 // Find the point to rewind to
                                 for (size_t k=0; k < *traversedNodeCount; k++)
                                 {
-                                    if (*(traversedNodes)[k] == conflictingDependencyId)
+                                    if ((*traversedNodes)[k] == conflictingDependencyId)
                                     {
                                         *traversedNodeCount = k+1; // Rewind to dependency node (remember the count is index+1)
                                         currentNode = graph->nodes[conflictingDependencyId].connected[j]; // Set new artifact as current node
@@ -682,9 +696,7 @@ bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, size_t root,
             if (graph->nodes[currentNode].connectedCount > 0)
             {
                 // Go to first dependency
-                printf("currentNode1: %zu\n", currentNode);
                 currentNode = graph->nodes[currentNode].connected[0];
-                printf("currentNode2: %zu\n", currentNode);
                 Internal_ArrayAddNode(traversedNodeCount, traversedNodes, currentNode); // Add dependency to traversal list
                 // Go to first artifact candidate
                 currentNode = graph->nodes[currentNode].connected[0]; // It's guaranteed that a dependency will have viable candidates if it is in the graph

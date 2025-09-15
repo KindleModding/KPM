@@ -2,7 +2,17 @@
 #include "dependencies.h"
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+
+void statusCallback(enum Verbosity verbosity, uint progress, char * format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    vfprintf(stderr, format, args);
+    fprintf(stderr, "\n");
+    va_end(args);
+}
 
 int main()
 {
@@ -17,6 +27,7 @@ int main()
     CreateDependencyGraph(&graph, 0);
     
     assert(Internal_ConstructGraphFromArtifact(&kpm, &graph, &artifacts[0]) != -1);
+    KPM_FreeIndexedArtifactList(artifactCount, artifacts);
     
     char* rendered;
     fprintf(stderr, "Rendering graph\n");
@@ -34,7 +45,7 @@ int main()
     fprintf(stderr, "Resolving graph...\n");
     size_t traversedDependencyCount = 0;
     size_t* traversedDependencies = NULL;
-    assert(Internal_ResolveDependencyGraph(&graph, 0, &traversedDependencyCount, &traversedDependencies));
+    assert(Internal_ResolveDependencyGraph(&graph, 0, &traversedDependencyCount, &traversedDependencies, statusCallback));
 
     fprintf(stderr, "Traversed:\n");
     for (size_t i=0; i < traversedDependencyCount; i++)
@@ -49,6 +60,8 @@ int main()
         }
     }
 
+    FreeDependencyGraph(&graph);
+    free(traversedDependencies);
     KPM_Cleanup(&kpm);
 
     return 0;
