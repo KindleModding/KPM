@@ -50,13 +50,18 @@ int main()
     fprintf(stderr, "Traversed:\n");
     for (size_t i=0; i < traversedDependencyCount; i++)
     {
+        if (traversedDependencies[i] == 0)
+        {
+            fprintf(stderr, "%s (%u.%u.%u - %u.%u.%u)\n", graph.nodes[traversedDependencies[i]].id, graph.nodes[traversedDependencies[i]].min_version.major, graph.nodes[traversedDependencies[i]].min_version.minor, graph.nodes[traversedDependencies[i]].min_version.patch, graph.nodes[traversedDependencies[i]].max_version.major, graph.nodes[traversedDependencies[i]].max_version.minor, graph.nodes[traversedDependencies[i]].max_version.patch);
+        }
+
         if (graph.nodes[traversedDependencies[i]].type == NODE_DEPENDENCY)
         {
-            fprintf(stderr, "| %s (%u.%u.%u - %u.%u.%u)\n", graph.nodes[traversedDependencies[i]].id, graph.nodes[traversedDependencies[i]].min_version.major, graph.nodes[traversedDependencies[i]].min_version.minor, graph.nodes[traversedDependencies[i]].min_version.patch, graph.nodes[traversedDependencies[i]].max_version.major, graph.nodes[traversedDependencies[i]].max_version.minor, graph.nodes[traversedDependencies[i]].max_version.patch);
+            fprintf(stderr, "  - %s (%u.%u.%u - %u.%u.%u)\n", graph.nodes[traversedDependencies[i]].id, graph.nodes[traversedDependencies[i]].min_version.major, graph.nodes[traversedDependencies[i]].min_version.minor, graph.nodes[traversedDependencies[i]].min_version.patch, graph.nodes[traversedDependencies[i]].max_version.major, graph.nodes[traversedDependencies[i]].max_version.minor, graph.nodes[traversedDependencies[i]].max_version.patch);
         }
         else
         {
-            fprintf(stderr, "\t- %s (%u.%u.%u)\n", graph.nodes[traversedDependencies[i]].id, graph.nodes[traversedDependencies[i]].min_version.major, graph.nodes[traversedDependencies[i]].min_version.minor, graph.nodes[traversedDependencies[i]].min_version.patch);
+            fprintf(stderr, "  - %s (%u.%u.%u)\n", graph.nodes[traversedDependencies[i]].id, graph.nodes[traversedDependencies[i]].min_version.major, graph.nodes[traversedDependencies[i]].min_version.minor, graph.nodes[traversedDependencies[i]].min_version.patch);
         }
     }
 
