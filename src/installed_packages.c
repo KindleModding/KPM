@@ -56,7 +56,7 @@ enum KPMResult KPM_GetInstalledPackage(struct KPM* kpm, const char* packageId, s
 
 enum KPMResult KPM_ListInstalledPackages(struct KPM* kpm, size_t* packageCount, struct InstalledPackage** packages)
 {
-    *packageCount = 0; // @TODO: Ensure consistency
+    *packageCount = 0;
     if (packages != NULL)
     {
         *packages = NULL;

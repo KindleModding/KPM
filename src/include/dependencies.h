@@ -36,5 +36,6 @@ void RenderGraph(struct DependencyGraph* graph, char** output);
 
 enum KPMResult Internal_GetArtifactDependencies(struct KPM* kpm, struct IndexedArtifact* target, size_t* targetDependencyCount, struct ArtifactDependency** targetDependencies);
 bool Internal_NarrowDependency(struct ArtifactDependency* currentDependency, struct ArtifactDependency* targetDependency);
+int Internal_ConstructGraphFromInstalledPackage(struct KPM* kpm, struct DependencyGraph* graph, struct InstalledPackage* installedPackage, size_t installedPackageCount, struct InstalledPackage* installedPackages);
 int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph* graph, struct IndexedArtifact* artifact, size_t installedPackageSize, struct InstalledPackage* installedPackages);
 bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, size_t root, size_t* traversedNodeCount, size_t** traversedNodes, KPMStatusCallback statusCallback);

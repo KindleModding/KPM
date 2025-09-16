@@ -14,6 +14,7 @@
 #include <unistd.h>
 #include "callback.h"
 #include "kpm/semver.h"
+#include "dependencies.h"
 #include "install.h"
 
 static int copy_data(struct archive *ar, struct archive *aw)
@@ -219,14 +220,94 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
         statusCallback = dummyCallback;
     }
 
-    // Get the dependencies
-    size_t dependencyCount = 0;
-    struct InstallTarget* dependencies = NULL;
-    //enum KPMResult result = Internal_GetRecursiveDependencies(target, &dependencyCount, &dependencies, statusCallback);
-    //if (result != KPM_OK)
-    //{
-    //    return result;
-    //}
+    struct IndexedArtifact artifact;
+    if (target->version != NULL)
+    {
+        if (KPM_GetArtifact(kpm, target->repository, target->id, *target->version, &artifact) != KPM_OK)
+        {
+            statusCallback(KPM_VERBOSITY_ERROR, 0, "Could not find artifact for given target.");
+            return KPM_GENERIC_ERROR;
+        }
+    }
+    else
+    {
+        size_t artifactCount;
+        struct IndexedArtifact* artifacts;
+        if (KPM_ListPackageArtifacts(kpm, target->repository, target->id, &artifactCount, &artifacts) != KPM_OK)
+        {
+            statusCallback(KPM_VERBOSITY_ERROR, 0, "Could not find artifact for given target.");
+            return KPM_GENERIC_ERROR;
+        }
+
+        memcpy(&artifact, &artifacts[0], sizeof(struct IndexedArtifact));
+        KPM_FreeIndexedArtifactList(artifactCount, artifacts);
+    }
+
+    // Construct a graph
+    struct DependencyGraph graph;
+    CreateDependencyGraph(&graph, 0);
+
+    struct DependencyNode rootNode = {
+        .type = NODE_ARTIFACT,
+        .connected = NULL,
+        .connectedCount = 0,
+        .id = strdup(""),
+        .repository = strdup(""),
+    };
+
+    int rootId = AddNode(&graph, rootNode);
+
+    // Add installed packages to the graph
+    size_t installedPackageCount;
+    struct InstalledPackage *installedPackages;
+    KPM_ListInstalledPackages(kpm, &installedPackageCount, &installedPackages);
+
+    for (size_t i=0; i < installedPackageCount; i++)
+    {
+        struct DependencyNode depNode = {
+            .type = NODE_DEPENDENCY,
+            .connected = NULL,
+            .connectedCount = 0,
+            .id = strdup(installedPackages[i].id),
+            .repository = strdup("")
+        };
+        int depId = AddNode(&graph, depNode);
+        AddEdge(&graph, rootId, depId, installedPackageCount, installedPackages);
+
+        size_t constructedId = Internal_ConstructGraphFromInstalledPackage(kpm, &graph, &installedPackages[i], installedPackageCount, installedPackages);
+        AddEdge(&graph, depId, constructedId, installedPackageCount, installedPackages);
+    }
+
+    // Add the target to the graph
+    struct DependencyNode depNode = {
+        .type = NODE_DEPENDENCY,
+        .connected = NULL,
+        .connectedCount = 0,
+        .id = strdup(target->id),
+        .repository = strdup(target->repository)
+    };
+    int depId = AddNode(&graph, depNode);
+    AddEdge(&graph, rootId, depId, installedPackageCount, installedPackages);
+
+    size_t constructedId = Internal_ConstructGraphFromArtifact(kpm, &graph, &artifact, installedPackageCount, installedPackages);
+    AddEdge(&graph, depId, constructedId, installedPackageCount, installedPackages);
+
+    // Ok now everything is done...
+    // It's time
+    // Deploy the [thingamajjig]
+    size_t traversedNodeCount;
+    size_t* traversedNodes;
+    if (Internal_ResolveDependencyGraph(&graph, rootId, &traversedNodeCount, &traversedNodes, statusCallback) != KPM_OK)
+    {
+        statusCallback(KPM_VERBOSITY_ERROR, 0, "Could not resolve dependency graph.");
+        statusCallback(KPM_VERBOSITY_ERROR, 0, "If you believe this is a mistake - please submit an issue");
+        return KPM_GENERIC_ERROR;
+    }
+
+    // Now we have a flattened list of artifacts to install
+    // We must first download them ALL
+
+    
 
     return KPM_OK;
 }
