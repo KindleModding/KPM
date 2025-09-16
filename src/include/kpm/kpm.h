@@ -149,6 +149,17 @@ enum KPMResult KPM_GetPackage(struct KPM* kpm, const char* repositoryId, const c
 enum KPMResult KPM_GetPackages(struct KPM* kpm, const char* id, size_t* packageCount, struct IndexedPackage** packages);
 enum KPMResult KPM_SearchPackages(struct KPM* kpm, const char* query, size_t* packageCount, struct IndexedPackage** packages);
 
+// Installed package management functions
+void KPM_FreeInstalledPackage(struct InstalledPackage* package);
+void KPM_FreeInstalledPackageList(size_t packageCount, struct InstalledPackage* packages);
+enum KPMResult KPM_GetInstalledPackage(struct KPM* kpm, const char* packageId, struct InstalledPackage* package);
+enum KPMResult KPM_GetInstalledPackages(struct KPM* kpm, const char* id, size_t* packageCount, struct InstalledPackage** packages);
+
+// Installed dependency management functions
+void KPM_FreeInstalledPackageDependency(struct InstalledDependency* dependency);
+void KPM_FreeInstalledPackageDependencyList(size_t artifactCount, struct InstalledDependency* dependency);
+enum KPMResult KPM_ListInstalledPackageDependencies(struct KPM* kpm, char* id, size_t* dependencyCount, struct InstalledDependency** dependencies);
+
 // Artifact management functions
 void KPM_FreeIndexedArtifact(struct IndexedArtifact* artifact);
 void KPM_FreeIndexedArtifactList(size_t artifactCount, struct IndexedArtifact* artifacts);
@@ -165,13 +176,3 @@ enum KPMResult KPM_UpdateIndex(struct KPM *kpm, KPMStatusCallback* statusCallbac
 void KPM_FreeInstallTarget(struct InstallTarget* target);
 
 enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target, KPMStatusCallback* statusCallback);
-
-//enum KPMResult KPM_DownloadPackages(struct KPM *kpm, size_t packageCount, struct InstallTarget** installTargets, KPMStatusCallback* statusCallback);
-
-// Artifact management functions
-
-/*
-    // Local package functions
-    std::vector<InstalledPackage> GetInstalledPackages();
-    bool InstallPackage(const std::filesystem::path& package);
-    bool UninstallPackage(InstalledPackage package);*/

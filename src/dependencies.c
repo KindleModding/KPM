@@ -4,6 +4,7 @@
 #include "install.h"
 #include "kpm/kpm.h"
 #include "kpm/semver.h"
+#include <assert.h>
 #include <limits.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -69,18 +70,22 @@ void AddEdge(struct DependencyGraph* graph, size_t firstNodeIndex, size_t nextNo
     graph->nodes[firstNodeIndex].connectedCount++;
     graph->nodes[firstNodeIndex].connected = realloc(graph->nodes[firstNodeIndex].connected, graph->nodes[firstNodeIndex].connectedCount * sizeof(size_t));
     
-    // Insert it into the list such that the connected node list is ordered newest to oldest
+    // Insert it into the list such that dependency artifacts are ordered newest to oldest
     size_t insertionIndex = graph->nodes[firstNodeIndex].connectedCount-1;
-    while (insertionIndex > 0)
+    if (graph->nodes[nextNodeIndex].type == NODE_ARTIFACT)
     {
-        if (SemVerCmp(graph->nodes[graph->nodes[firstNodeIndex].connected[insertionIndex-1]].min_version, graph->nodes[nextNodeIndex].min_version) > 0)
+        while (insertionIndex > 0)
         {
-            break;
-        }
+            if (SemVerCmp(graph->nodes[graph->nodes[firstNodeIndex].connected[insertionIndex-1]].min_version, graph->nodes[nextNodeIndex].min_version) > 0)
+            {
+                break;
+            }
 
-        graph->nodes[firstNodeIndex].connected[insertionIndex] = graph->nodes[firstNodeIndex].connected[insertionIndex-1];
-        insertionIndex--;
+            graph->nodes[firstNodeIndex].connected[insertionIndex] = graph->nodes[firstNodeIndex].connected[insertionIndex-1];
+            insertionIndex--;
+        }
     }
+
     graph->nodes[firstNodeIndex].connected[insertionIndex] = nextNodeIndex;
 }
 
@@ -361,6 +366,7 @@ int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph*
     struct ArtifactDependency* dependencies;
     if (Internal_GetArtifactDependencies(kpm, artifact, &dependencyCount, &dependencies) != KPM_OK)
     {
+        fprintf(stderr, "Could not list dependencies for %s (%u.%u.%u)\n", artifact->id, artifact->version.major, artifact->version.minor, artifact->version.patch);
         return -1;
     }
 
@@ -405,6 +411,10 @@ int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph*
             if (!FindArtifactNode(graph, artifacts[j].repository, artifacts[j].id, artifacts[j].version, &artifactNodeId))
             {
                 artifactNodeId = Internal_ConstructGraphFromArtifact(kpm, graph, &artifacts[j]);
+                if (artifactNodeId == (size_t) -1)
+                {
+                    return -1;
+                }
             }
 
             AddEdge(graph, dependencyNodeId, artifactNodeId);
@@ -415,6 +425,7 @@ int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph*
         
         if (!validArtifactFound)
         {
+            fprintf(stderr, "Could not find artifact for %s (%u.%u.%u - %u.%u.%u)\n", dependencyNode.id, dependencyNode.min_version.major, dependencyNode.min_version.minor, dependencyNode.min_version.patch, dependencyNode.max_version.major, dependencyNode.max_version.minor, dependencyNode.max_version.patch);
             KPM_FreeArtifactDependencyList(dependencyCount, dependencies);
             return -1;
         }

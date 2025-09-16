@@ -30,6 +30,8 @@ int main()
     fprintf(stderr, "file written.\n");
     fprintf(stderr, "\n\n%s\n\n", rendered);
 
+    FreeDependencyGraph(&graph);
+    KPM_FreeIndexedArtifactList(artifactCount, artifacts);
     KPM_Cleanup(&kpm);
 
     return 0;

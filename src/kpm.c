@@ -84,7 +84,6 @@ enum KPMResult KPM_Initialise(struct KPM *kpm, const char* dbPath)
             dependent TEXT NOT NULL REFERENCES installed_packages(id) ON DELETE CASCADE,
             dependency_repository TEXT NOT NULL,
             dependency_id TEXT NOT NULL,
-            dependency_type TEXT NOT NULL,
             min_version_major INTEGER NOT NULL,
             min_version_minor INTEGER NOT NULL,
             min_version_patch INTEGER NOT NULL,
