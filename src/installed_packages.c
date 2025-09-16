@@ -54,18 +54,17 @@ enum KPMResult KPM_GetInstalledPackage(struct KPM* kpm, const char* packageId, s
     return KPM_OK;
 }
 
-enum KPMResult KPM_GetInstalledPackages(struct KPM* kpm, const char* id, size_t* packageCount, struct InstalledPackage** packages)
+enum KPMResult KPM_ListInstalledPackages(struct KPM* kpm, size_t* packageCount, struct InstalledPackage** packages)
 {
+    *packageCount = 0; // @TODO: Ensure consistency
     if (packages != NULL)
     {
         *packages = NULL;
     }
 
-    const char* zSQL = "SELECT (SELECT COUNT() FROM packages WHERE id=?), id, name, author, description, version_major, version_minor, version_patch FROM packages WHERE id=?;";
+    const char* zSQL = "SELECT (SELECT COUNT() FROM installed_packages), id, name, author, description, version_major, version_minor, version_patch FROM installed_packages;";
     sqlite3_stmt* statement;
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
-    sqlite3_bind_text(statement, 1, id, -1, SQLITE_STATIC);
-    sqlite3_bind_text(statement, 2, id, -1, SQLITE_STATIC);
 
     int status;
     for (int i=0; (status = sqlite3_step(statement)) == SQLITE_ROW; i++)

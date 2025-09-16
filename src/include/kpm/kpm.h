@@ -153,7 +153,7 @@ enum KPMResult KPM_SearchPackages(struct KPM* kpm, const char* query, size_t* pa
 void KPM_FreeInstalledPackage(struct InstalledPackage* package);
 void KPM_FreeInstalledPackageList(size_t packageCount, struct InstalledPackage* packages);
 enum KPMResult KPM_GetInstalledPackage(struct KPM* kpm, const char* packageId, struct InstalledPackage* package);
-enum KPMResult KPM_GetInstalledPackages(struct KPM* kpm, const char* id, size_t* packageCount, struct InstalledPackage** packages);
+enum KPMResult KPM_ListInstalledPackages(struct KPM* kpm, size_t* packageCount, struct InstalledPackage** packages);
 
 // Installed dependency management functions
 void KPM_FreeInstalledPackageDependency(struct InstalledDependency* dependency);

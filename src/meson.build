@@ -5,6 +5,7 @@ sources = files(
     'device.c',
     'index.c',
     'install.c',
+    'installed_packages.c',
     'kpm.c',
     'package.c',
     'repository.c',
