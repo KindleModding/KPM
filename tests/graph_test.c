@@ -29,7 +29,7 @@ int main()
         .max_version = {0, 1, 5},
     });
 
-    AddEdge(&graph, koreader_100, fbink, 0, NULL);
+    AddEdge(&graph, koreader_100, fbink);
 
     size_t fbink_012 = AddNode(&graph, (struct DependencyNode) {
         .type = NODE_ARTIFACT,
@@ -62,9 +62,9 @@ int main()
     });
 
     fprintf(stderr, "Adding edges\n");
-    AddEdge(&graph, fbink, fbink_012, 0, NULL);
-    AddEdge(&graph, fbink, fbink_013, 0, NULL);
-    AddEdge(&graph, fbink, fbink_014, 0, NULL);
+    AddEdge(&graph, fbink, fbink_012);
+    AddEdge(&graph, fbink, fbink_013);
+    AddEdge(&graph, fbink, fbink_014);
 
 
     size_t koreader_dep = AddNode(&graph, (struct DependencyNode) {
@@ -78,10 +78,10 @@ int main()
     });
 
     fprintf(stderr, "Adding edges\n");
-    AddEdge(&graph, fbink_012, koreader_dep, 0, NULL);
-    AddEdge(&graph, fbink_013, koreader_dep, 0, NULL);
-    AddEdge(&graph, fbink_014, koreader_dep, 0, NULL);
-    AddEdge(&graph, koreader_dep, koreader_100, 0, NULL);
+    AddEdge(&graph, fbink_012, koreader_dep);
+    AddEdge(&graph, fbink_013, koreader_dep);
+    AddEdge(&graph, fbink_014, koreader_dep);
+    AddEdge(&graph, koreader_dep, koreader_100);
 
     size_t index;
     bool result = FindArtifactNode(&graph, "", "org.kindlemodding.koreader", (struct SemVer) { 1, 0, 0 }, &index);

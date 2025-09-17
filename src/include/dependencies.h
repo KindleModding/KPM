@@ -30,12 +30,12 @@ void ExtendDependencyGraph(struct DependencyGraph* graph, int allocate);
 void FreeNode(struct DependencyNode* node);
 void FreeDependencyGraph(struct DependencyGraph* graph);
 size_t AddNode(struct DependencyGraph* graph, struct DependencyNode node);
-void AddEdge(struct DependencyGraph* graph, size_t firstNodeIndex, size_t nextNodeIndex, size_t installedSize, struct InstalledPackage* installed);
+void AddEdge(struct DependencyGraph* graph, size_t firstNodeIndex, size_t nextNodeIndex);
+void AddFirstEdge(struct DependencyGraph* graph, size_t firstNodeIndex, size_t nextNodeIndex);
 bool FindArtifactNode(struct DependencyGraph* graph, char* repository, char* id, struct SemVer version, size_t* index);
 void RenderGraph(struct DependencyGraph* graph, char** output);
 
 enum KPMResult Internal_GetArtifactDependencies(struct KPM* kpm, struct IndexedArtifact* target, size_t* targetDependencyCount, struct ArtifactDependency** targetDependencies);
 bool Internal_NarrowDependency(struct ArtifactDependency* currentDependency, struct ArtifactDependency* targetDependency);
-int Internal_ConstructGraphFromInstalledPackage(struct KPM* kpm, struct DependencyGraph* graph, struct InstalledPackage* installedPackage, size_t installedPackageCount, struct InstalledPackage* installedPackages);
-int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph* graph, struct IndexedArtifact* artifact, size_t installedPackageSize, struct InstalledPackage* installedPackages);
+int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph* graph, struct IndexedArtifact* artifact);
 bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, size_t root, size_t* traversedNodeCount, size_t** traversedNodes, KPMStatusCallback statusCallback);

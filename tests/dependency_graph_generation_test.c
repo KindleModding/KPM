@@ -12,6 +12,7 @@ int main()
     size_t artifactCount;
     struct IndexedArtifact* artifacts;
     assert(KPM_ListPackageArtifacts(&kpm, "", "com.kindlemodding.examplepackage", &artifactCount, &artifacts) == KPM_OK);
+    assert(artifactCount > 0);
 
     size_t installedPackageCount;
     struct InstalledPackage* installedPackages;
@@ -19,7 +20,7 @@ int main()
 
     struct DependencyGraph graph;
     CreateDependencyGraph(&graph, 0);
-    assert(Internal_ConstructGraphFromArtifact(&kpm, &graph, &artifacts[0], installedPackageCount, installedPackages) != -1);
+    assert(Internal_ConstructGraphFromArtifact(&kpm, &graph, &artifacts[0]) != -1);
     
     char* rendered;
     fprintf(stderr, "Rendering graph\n");

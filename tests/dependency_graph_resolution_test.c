@@ -30,7 +30,7 @@ int main()
     struct DependencyGraph graph;
     CreateDependencyGraph(&graph, 0);
     
-    assert(Internal_ConstructGraphFromArtifact(&kpm, &graph, &artifacts[0], installedPackageCount, installedPackages) != -1);
+    assert(Internal_ConstructGraphFromArtifact(&kpm, &graph, &artifacts[0]) != -1);
     KPM_FreeIndexedArtifactList(artifactCount, artifacts);
     
     char* rendered;

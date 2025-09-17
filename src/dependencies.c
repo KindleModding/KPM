@@ -65,42 +65,41 @@ size_t AddNode(struct DependencyGraph *graph, struct DependencyNode node)
     return graph->nodeCount-1;
 }
 
-void AddEdge(struct DependencyGraph* graph, size_t firstNodeIndex, size_t nextNodeIndex, size_t installedSize, struct InstalledPackage* installed)
+void AddEdge(struct DependencyGraph* graph, size_t firstNodeIndex, size_t nextNodeIndex)
 {
     graph->nodes[firstNodeIndex].connectedCount++;
     graph->nodes[firstNodeIndex].connected = realloc(graph->nodes[firstNodeIndex].connected, graph->nodes[firstNodeIndex].connectedCount * sizeof(size_t));
     
     // Insert it into the list such that dependency artifacts are ordered newest to oldest
     size_t insertionIndex = graph->nodes[firstNodeIndex].connectedCount-1;
-
-    bool isInstalled=false;
-    if (insertionIndex > 0)
-    {
-        for (size_t i=0; i < installedSize; i++)
-        {
-            if (strcmp(graph->nodes[graph->nodes[firstNodeIndex].connected[0]].id, installed[i].id) == 0)
-            {
-                insertionIndex = 1; // Must start at 1 as 0 is an installed artifact
-                break;
-            }
-
-            if (strcmp(graph->nodes[nextNodeIndex].id, installed[i].id) == 0)
-            {
-                isInstalled = true; // Will make this installed artifact first
-                break;
-            }
-        }
-    }
-
     if (graph->nodes[nextNodeIndex].type == NODE_ARTIFACT)
     {
         while (insertionIndex > 0)
         {
-            if (!isInstalled && SemVerCmp(graph->nodes[graph->nodes[firstNodeIndex].connected[insertionIndex-1]].min_version, graph->nodes[nextNodeIndex].min_version) > 0)
+            if (SemVerCmp(graph->nodes[graph->nodes[firstNodeIndex].connected[insertionIndex-1]].min_version, graph->nodes[nextNodeIndex].min_version) > 0)
             {
                 break;
             }
 
+            graph->nodes[firstNodeIndex].connected[insertionIndex] = graph->nodes[firstNodeIndex].connected[insertionIndex-1];
+            insertionIndex--;
+        }
+    }
+
+    graph->nodes[firstNodeIndex].connected[insertionIndex] = nextNodeIndex;
+}
+
+void AddFirstEdge(struct DependencyGraph* graph, size_t firstNodeIndex, size_t nextNodeIndex)
+{
+    graph->nodes[firstNodeIndex].connectedCount++;
+    graph->nodes[firstNodeIndex].connected = realloc(graph->nodes[firstNodeIndex].connected, graph->nodes[firstNodeIndex].connectedCount * sizeof(size_t));
+    
+    // Insert it into the list such that dependency artifacts are ordered newest to oldest
+    size_t insertionIndex = graph->nodes[firstNodeIndex].connectedCount-1;
+    if (graph->nodes[nextNodeIndex].type == NODE_ARTIFACT)
+    {
+        while (insertionIndex > 0)
+        {
             graph->nodes[firstNodeIndex].connected[insertionIndex] = graph->nodes[firstNodeIndex].connected[insertionIndex-1];
             insertionIndex--;
         }
@@ -264,7 +263,42 @@ enum KPMResult Internal_GetArtifactDependencies(struct KPM* kpm, struct IndexedA
     }
     else
     {
-        return KPM_ListArtifactDependencies(kpm, target->repository, target->id, target->url, targetDependencyCount, targetDependencies);
+        enum KPMResult status = KPM_OK;
+
+        // If we're using a fakeArtifact object with a localhost repo we should return the installed dependencies
+        if (strcmp(target->repository, "localhost") == 0)
+        {
+            struct InstalledPackage installedPackage;
+            KPM_GetInstalledPackage(kpm, target->id, &installedPackage);
+            if (SemVerCmp(installedPackage.version, target->version) == 0)
+            {
+                size_t extraDependencyCount;
+                struct InstalledDependency* extraDependencies;
+                if ((status = KPM_ListInstalledPackageDependencies(kpm, target->id, &extraDependencyCount, &extraDependencies)) != KPM_OK)
+                {
+                    return status;
+                }
+
+                *targetDependencyCount = extraDependencyCount;
+                *targetDependencies = malloc(extraDependencyCount * sizeof(struct ArtifactDependency));
+                for (size_t i=0; i < *targetDependencyCount; i++)
+                {
+                    (*targetDependencies)[i].artifact_id = strdup(target->id);
+                    (*targetDependencies)[i].artifact_repository = strdup(target->repository);
+                    (*targetDependencies)[i].artifact_url = strdup(target->url);
+                    (*targetDependencies)[i].id = strdup(extraDependencies[i].dependency_id);
+                    (*targetDependencies)[i].repository = strdup(extraDependencies[i].dependency_repository);
+                    (*targetDependencies)[i].min_version = extraDependencies[i].min_version;
+                    (*targetDependencies)[i].max_version = extraDependencies[i].max_version;
+                }
+            }
+        }
+
+        // Otherwise... nah
+        if ((status = KPM_ListArtifactDependencies(kpm, target->repository, target->id, target->url, targetDependencyCount, targetDependencies)) != KPM_OK)
+        {
+            return status;
+        }
     }
 
     return KPM_OK;
@@ -368,102 +402,7 @@ bool Internal_NarrowDependency(struct ArtifactDependency* currentDependency, str
     }
 }
 
-int Internal_ConstructGraphFromInstalledPackage(struct KPM* kpm, struct DependencyGraph* graph, struct InstalledPackage* installedPackage, size_t installedPackageCount, struct InstalledPackage* installedPackages)
-{
-    struct DependencyNode node = {
-        .type = NODE_ARTIFACT,
-        .connected = NULL,
-        .connectedCount = 0,
-        .repository = strdup(""),
-        .id = strdup(installedPackage->id),
-        .min_version = installedPackage->version,
-        .max_version = installedPackage->version
-    };
-    // Add this artifact to the graph
-    int root = AddNode(graph, node);
-
-    size_t dependencyCount;
-    struct InstalledDependency* dependencies;
-    if (KPM_ListInstalledPackageDependencies(kpm, installedPackage->id, &dependencyCount, &dependencies) != KPM_OK)
-    {
-        fprintf(stderr, "Could not list dependencies for %s (%u.%u.%u)\n", installedPackage->id, installedPackage->version.major, installedPackage->version.minor, installedPackage->version.patch);
-        return -1;
-    }
-    
-    for (size_t i=0; i < dependencyCount; i++)
-    {
-        // Check if this dependency is already present
-        size_t dependencyNodeId;
-        if (FindDependencyNode(graph, dependencies[i].dependency_repository, dependencies[i].dependency_repository, dependencies[i].min_version, dependencies[i].max_version, &dependencyNodeId))
-        {
-            AddEdge(graph, root, dependencyNodeId, 0, NULL);
-            continue; // We can skip this dependency if it already exists in the graph
-        }
-
-        struct DependencyNode dependencyNode = {
-            .type = NODE_DEPENDENCY,
-            .connected = NULL,
-            .connectedCount = 0,
-            .repository = strdup(dependencies[i].dependency_repository),
-            .id = strdup(dependencies[i].dependency_id),
-            .min_version = dependencies[i].min_version,
-            .max_version = dependencies[i].max_version
-        };
-
-        dependencyNodeId = AddNode(graph, dependencyNode);
-        AddEdge(graph, root, dependencyNodeId, 0, NULL);
-
-        size_t artifactCount;
-        struct IndexedArtifact* artifacts;
-        KPM_ListPackageArtifacts(kpm, dependencies[i].dependency_repository, dependencies[i].dependency_id, &artifactCount, &artifacts);
-        
-        // Add the locally installed artifact
-        size_t artifactNodeId;
-        struct InstalledPackage installedPackage;
-        KPM_GetInstalledPackage(kpm, dependencies[i].dependency_id, &installedPackage);
-        if (!FindArtifactNode(graph, "", installedPackage.id, installedPackage.version, &artifactNodeId))
-        {
-            artifactNodeId = Internal_ConstructGraphFromInstalledPackage(kpm, graph, &installedPackage, installedPackageCount, installedPackages);
-            if (artifactNodeId == (size_t) -1)
-            {
-                return -1;
-            }
-        }
-        AddEdge(graph, dependencyNodeId, artifactNodeId, 0, NULL);
-        KPM_FreeInstalledPackage(&installedPackage);
-
-        // Also add other nodes that would for whatever reason also resolve this dependency
-        // ...This allows for package upgrades IF needed
-        for (size_t j=0; j < artifactCount; j++)
-        {
-            if (SemVerCmp(artifacts[j].version, dependencies[i].min_version) < 0 || SemVerCmp(artifacts[j].version, dependencies[i].max_version) >= 0)
-            {
-                continue;
-            }
-
-            size_t artifactNodeId;
-            if (!FindArtifactNode(graph, artifacts[j].repository, artifacts[j].id, artifacts[j].version, &artifactNodeId))
-            {
-                artifactNodeId = Internal_ConstructGraphFromArtifact(kpm, graph, &artifacts[j], installedPackageCount, installedPackages);
-                if (artifactNodeId == (size_t) -1)
-                {
-                    return -1;
-                }
-            }
-
-            AddEdge(graph, dependencyNodeId, artifactNodeId, installedPackageCount, installedPackages);
-            //AddEdge(graph, artifactNodeId, Internal_ConstructGraphFromArtifact(kpm, graph, &artifacts[j]));
-        }
-        KPM_FreeIndexedArtifactList(artifactCount, artifacts);
-    }
-
-    KPM_FreeInstalledPackageDependencyList(dependencyCount, dependencies);
-
-
-    return root;
-}
-
-int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph* graph, struct IndexedArtifact* artifact, size_t installedPackageCount, struct InstalledPackage* installedPackages)
+int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph* graph, struct IndexedArtifact* artifact)
 {
     struct DependencyNode node = {
         .type = NODE_ARTIFACT,
@@ -491,7 +430,7 @@ int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph*
         size_t dependencyNodeId;
         if (FindDependencyNode(graph, dependencies[i].repository, dependencies[i].id, dependencies[i].min_version, dependencies[i].max_version, &dependencyNodeId))
         {
-            AddEdge(graph, root, dependencyNodeId, installedPackageCount, installedPackages);
+            AddEdge(graph, root, dependencyNodeId);
             continue; // We can skip this dependency if it already exists in the graph
         }
 
@@ -506,13 +445,15 @@ int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph*
         };
 
         dependencyNodeId = AddNode(graph, dependencyNode);
-        AddEdge(graph, root, dependencyNodeId, installedPackageCount, installedPackages);
+        AddEdge(graph, root, dependencyNodeId);
 
+        bool validArtifactFound = false;
+
+        // Add indexed artifacts that match the dependency
         size_t artifactCount;
         struct IndexedArtifact* artifacts;
         KPM_ListPackageArtifacts(kpm, dependencies[i].repository, dependencies[i].id, &artifactCount, &artifacts);
         
-        bool validArtifactFound = false;
         for (size_t j=0; j < artifactCount; j++)
         {
             if (SemVerCmp(artifacts[j].version, dependencies[i].min_version) < 0 || SemVerCmp(artifacts[j].version, dependencies[i].max_version) >= 0)
@@ -525,18 +466,46 @@ int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph*
             size_t artifactNodeId;
             if (!FindArtifactNode(graph, artifacts[j].repository, artifacts[j].id, artifacts[j].version, &artifactNodeId))
             {
-                artifactNodeId = Internal_ConstructGraphFromArtifact(kpm, graph, &artifacts[j], installedPackageCount, installedPackages);
+                artifactNodeId = Internal_ConstructGraphFromArtifact(kpm, graph, &artifacts[j]);
                 if (artifactNodeId == (size_t) -1)
                 {
                     return -1;
                 }
             }
 
-            AddEdge(graph, dependencyNodeId, artifactNodeId, installedPackageCount, installedPackages);
+            AddEdge(graph, dependencyNodeId, artifactNodeId);
             //AddEdge(graph, artifactNodeId, Internal_ConstructGraphFromArtifact(kpm, graph, &artifacts[j]));
         }
-
         KPM_FreeIndexedArtifactList(artifactCount, artifacts);
+
+        // Add locally installed package if present
+        struct InstalledPackage installedPackage;
+        KPM_GetInstalledPackage(kpm, dependencies[i].id, &installedPackage);
+        if (installedPackage.id != NULL && SemVerCmp(installedPackage.version, dependencies[i].min_version) >= 0 && SemVerCmp(installedPackage.version, dependencies[i].max_version) < 0)
+        {
+            validArtifactFound = true;
+
+            size_t artifactNodeId;
+            if (!FindArtifactNode(graph, "", installedPackage.id, installedPackage.version, &artifactNodeId))
+            {
+                struct IndexedArtifact fakeArtifact = {
+                    .id = strdup(installedPackage.id),
+                    .repository = strdup("localhost"),
+                    .url = strdup(""),
+                    .version = installedPackage.version
+                };
+                artifactNodeId = Internal_ConstructGraphFromArtifact(kpm, graph, &fakeArtifact);
+                KPM_FreeIndexedArtifact(&fakeArtifact);
+                if (artifactNodeId == (size_t) -1)
+                {
+                    return -1;
+                }
+            }
+
+            AddFirstEdge(graph, dependencyNodeId, artifactNodeId);
+            //AddEdge(graph, artifactNodeId, Internal_ConstructGraphFromArtifact(kpm, graph, &artifacts[j]));
+        }
+        KPM_FreeInstalledPackage(&installedPackage);
         
         if (!validArtifactFound)
         {

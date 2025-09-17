@@ -221,26 +221,44 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
     }
 
     struct IndexedArtifact artifact;
-    if (target->version != NULL)
+    if (strncmp(target->id, "file://", strlen("file://")) == 0)
     {
-        if (KPM_GetArtifact(kpm, target->repository, target->id, *target->version, &artifact) != KPM_OK)
+        // We must index this artifact under the localhost repository
+        // We do this because it simplifies so much logic
+        char* outBuffer = NULL;
+        int status;
+        if ((status = Internal_GetManifest(target->id, &outBuffer, statusCallback)) != KPM_OK)
         {
-            statusCallback(KPM_VERBOSITY_ERROR, 0, "Could not find artifact for given target.");
-            return KPM_GENERIC_ERROR;
+            free(outBuffer);
+            return status;
         }
     }
     else
     {
-        size_t artifactCount;
-        struct IndexedArtifact* artifacts;
-        if (KPM_ListPackageArtifacts(kpm, target->repository, target->id, &artifactCount, &artifacts) != KPM_OK)
+        if (target->version != NULL)
         {
-            statusCallback(KPM_VERBOSITY_ERROR, 0, "Could not find artifact for given target.");
-            return KPM_GENERIC_ERROR;
+            if (KPM_GetArtifact(kpm, target->repository, target->id, *target->version, &artifact) != KPM_OK)
+            {
+                statusCallback(KPM_VERBOSITY_ERROR, 0, "Could not find artifact for given target.");
+                return KPM_GENERIC_ERROR;
+            }
         }
+        else
+        {
+            size_t artifactCount;
+            struct IndexedArtifact* artifacts;
+            if (KPM_ListPackageArtifacts(kpm, target->repository, target->id, &artifactCount, &artifacts) != KPM_OK || artifactCount == 0)
+            {
+                statusCallback(KPM_VERBOSITY_ERROR, 0, "Could not find artifact for given target.");
+                return KPM_GENERIC_ERROR;
+            }
 
-        memcpy(&artifact, &artifacts[0], sizeof(struct IndexedArtifact));
-        KPM_FreeIndexedArtifactList(artifactCount, artifacts);
+            artifact.id = strdup(artifacts[0].id);
+            artifact.repository = strdup(artifacts[0].repository);
+            artifact.url = strdup(artifacts[0].url);
+            artifact.version = artifacts[0].version;
+            KPM_FreeIndexedArtifactList(artifactCount, artifacts);
+        }
     }
 
     // Construct a graph
@@ -272,10 +290,18 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
             .repository = strdup("")
         };
         int depId = AddNode(&graph, depNode);
-        AddEdge(&graph, rootId, depId, installedPackageCount, installedPackages);
+        AddEdge(&graph, rootId, depId);
 
-        size_t constructedId = Internal_ConstructGraphFromInstalledPackage(kpm, &graph, &installedPackages[i], installedPackageCount, installedPackages);
-        AddEdge(&graph, depId, constructedId, installedPackageCount, installedPackages);
+        struct IndexedArtifact fakeArtifact = {
+            .id = strdup(installedPackages[i].id),
+            .repository = strdup("localhost"),
+            .url = strdup(installedPackages[i].id),
+            .version = installedPackages[i].version
+        };
+
+        size_t constructedId = Internal_ConstructGraphFromArtifact(kpm, &graph, &fakeArtifact);
+        KPM_FreeIndexedArtifact(&fakeArtifact);
+        AddEdge(&graph, depId, constructedId);
     }
 
     // Add the target to the graph
@@ -287,10 +313,10 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
         .repository = strdup(target->repository)
     };
     int depId = AddNode(&graph, depNode);
-    AddEdge(&graph, rootId, depId, installedPackageCount, installedPackages);
+    AddEdge(&graph, rootId, depId);
 
-    size_t constructedId = Internal_ConstructGraphFromArtifact(kpm, &graph, &artifact, installedPackageCount, installedPackages);
-    AddEdge(&graph, depId, constructedId, installedPackageCount, installedPackages);
+    size_t constructedId = Internal_ConstructGraphFromArtifact(kpm, &graph, &artifact);
+    AddEdge(&graph, depId, constructedId);
 
     // Ok now everything is done...
     // It's time
@@ -307,7 +333,7 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
     // Now we have a flattened list of artifacts to install
     // We must first download them ALL
 
-    
+
 
     return KPM_OK;
 }

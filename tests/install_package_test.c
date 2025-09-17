@@ -22,7 +22,7 @@ int main()
 
     struct InstallTarget target = {
         .id = uri,
-        .repository = NULL,
+        .repository = "",
         .version = NULL
     };
     
