@@ -227,11 +227,14 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
         // We do this because it simplifies so much logic
         char* outBuffer = NULL;
         int status;
-        if ((status = Internal_GetManifest(target->id, &outBuffer, statusCallback)) != KPM_OK)
+        if ((status = Internal_GetManifest(target->id + strlen("file://"), &outBuffer, statusCallback)) != KPM_OK)
         {
             free(outBuffer);
             return status;
         }
+
+        //cJSON* json = cJSON_Parse(outBuffer);
+        return KPM_GENERIC_ERROR; // @TODO: Come back to this later
     }
     else
     {
@@ -318,12 +321,16 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
     size_t constructedId = Internal_ConstructGraphFromArtifact(kpm, &graph, &artifact);
     AddEdge(&graph, depId, constructedId);
 
+    char* out;
+    RenderGraph(&graph, &out);
+    statusCallback(KPM_VERBOSITY_DEBUG, 0, "%s", out);
+
     // Ok now everything is done...
     // It's time
     // Deploy the [thingamajjig]
     size_t traversedNodeCount;
     size_t* traversedNodes;
-    if (Internal_ResolveDependencyGraph(&graph, rootId, &traversedNodeCount, &traversedNodes, statusCallback) != KPM_OK)
+    if (!Internal_ResolveDependencyGraph(&graph, rootId, &traversedNodeCount, &traversedNodes, statusCallback))
     {
         statusCallback(KPM_VERBOSITY_ERROR, 0, "Could not resolve dependency graph.");
         statusCallback(KPM_VERBOSITY_ERROR, 0, "If you believe this is a mistake - please submit an issue");
@@ -332,7 +339,107 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
 
     // Now we have a flattened list of artifacts to install
     // We must first download them ALL
+    /*fprintf(stderr, "Traversed:\n");
+    for (size_t i=0; i < traversedNodeCount; i++)
+    {
+        if (traversedNodes[i] == 0)
+        {
+            fprintf(stderr, "%s (%u.%u.%u - %u.%u.%u)\n", graph.nodes[traversedNodes[i]].id, graph.nodes[traversedNodes[i]].min_version.major, graph.nodes[traversedNodes[i]].min_version.minor, graph.nodes[traversedNodes[i]].min_version.patch, graph.nodes[traversedNodes[i]].max_version.major, graph.nodes[traversedNodes[i]].max_version.minor, graph.nodes[traversedNodes[i]].max_version.patch);
+        }
 
+        if (graph.nodes[traversedNodes[i]].type == NODE_DEPENDENCY)
+        {
+            fprintf(stderr, "  - %s (%u.%u.%u - %u.%u.%u)\n", graph.nodes[traversedNodes[i]].id, graph.nodes[traversedNodes[i]].min_version.major, graph.nodes[traversedNodes[i]].min_version.minor, graph.nodes[traversedNodes[i]].min_version.patch, graph.nodes[traversedNodes[i]].max_version.major, graph.nodes[traversedNodes[i]].max_version.minor, graph.nodes[traversedNodes[i]].max_version.patch);
+        }
+        else
+        {
+            fprintf(stderr, "  - %s (%u.%u.%u)\n", graph.nodes[traversedNodes[i]].id, graph.nodes[traversedNodes[i]].min_version.major, graph.nodes[traversedNodes[i]].min_version.minor, graph.nodes[traversedNodes[i]].min_version.patch);
+        }
+    }*/
+
+    size_t* deduplicatedPackages = NULL;
+    size_t* packageDepth = NULL;
+    size_t deduplicatedPackageCount = 0;
+
+    size_t currentDepth=0;
+    for (size_t i=0; i < traversedNodeCount; i++)
+    {
+        if (graph.nodes[traversedNodes[i]].type == NODE_DEPENDENCY)
+        {
+            continue; // Skip dependencies
+        }
+
+        if (traversedNodes[i] == rootId)
+        {
+            currentDepth = 0;
+            continue;
+        }
+        currentDepth++;
+
+        bool found = false;
+        for (size_t j=0; j < deduplicatedPackageCount; j++)
+        {
+            if (deduplicatedPackages[j] == traversedNodes[i])
+            {
+                found = true;
+                if (currentDepth > packageDepth[j])
+                {
+                    packageDepth[j] = currentDepth;
+                    
+                    // Ensure list is sorted by depth
+                    size_t currentIndex = j-1;
+                    size_t currentPackage = deduplicatedPackages[j];
+                    while (currentIndex > 0)
+                    {
+                        if (packageDepth[currentIndex-1] > currentDepth)
+                        {
+                            break;   
+                        }
+
+                        packageDepth[currentIndex] = packageDepth[currentIndex - 1];
+                        deduplicatedPackages[currentIndex] = deduplicatedPackages[currentIndex - 1];
+                        currentIndex--;
+                    }
+
+                    deduplicatedPackages[currentIndex] = currentPackage;
+                    packageDepth[currentIndex] = currentDepth;
+                }
+                break;
+            }
+        }
+
+        if (found)
+        {
+            continue;
+        }
+
+        deduplicatedPackageCount++;
+        deduplicatedPackages = realloc(deduplicatedPackages, deduplicatedPackageCount * sizeof(size_t));
+        packageDepth = realloc(packageDepth, deduplicatedPackageCount * sizeof(size_t));
+        
+        // Ensure list is sorted by depth
+        size_t currentIndex = deduplicatedPackageCount-1;
+        while (currentIndex > 0)
+        {
+            if (packageDepth[currentIndex-1] > currentDepth)
+            {
+                break;
+            }
+
+            packageDepth[currentIndex] = packageDepth[currentIndex - 1];
+            deduplicatedPackages[currentIndex] = deduplicatedPackages[currentIndex - 1];
+            currentIndex--;
+        }
+
+        deduplicatedPackages[currentIndex] = traversedNodes[i];
+        packageDepth[currentIndex] = currentDepth;
+    }
+
+    statusCallback(KPM_VERBOSITY_INFO, 0, "Preparing to install %i packages", deduplicatedPackageCount);
+    for (size_t i=0; i < deduplicatedPackageCount; i++) // 1 to skip the dummy root
+    {
+        statusCallback(KPM_VERBOSITY_INFO, 0, "(d%i) - %s (%u.%u.%u)", packageDepth[i], graph.nodes[deduplicatedPackages[i]].id, graph.nodes[deduplicatedPackages[i]].min_version.major, graph.nodes[deduplicatedPackages[i]].min_version.minor, graph.nodes[deduplicatedPackages[i]].min_version.patch);
+    }
 
 
     return KPM_OK;
