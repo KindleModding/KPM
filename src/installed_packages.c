@@ -33,19 +33,20 @@ enum KPMResult KPM_GetInstalledPackage(struct KPM* kpm, const char* packageId, s
     package->description = NULL;
 
     sqlite3_stmt* statement;
-    const char* zSQL = "SELECT id, name, author, description, version_major, version_minor, version_patch FROM installed_packages WHERE AND id=? LIMIT 1;";
+    const char* zSQL = "SELECT id, repository, name, author, description, version_major, version_minor, version_patch FROM installed_packages WHERE AND id=? LIMIT 1;";
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
     sqlite3_bind_text(statement, 1, packageId, -1, SQLITE_STATIC);
 
     if (sqlite3_step(statement) == SQLITE_ROW)
     {
         package->id = strdup((const char*) sqlite3_column_text(statement, 0));
-        package->name = strdup((const char*) sqlite3_column_text(statement, 1));
-        package->author = strdup((const char*) sqlite3_column_text(statement, 2));
-        package->description = strdup((const char*) sqlite3_column_text(statement, 3));
-        package->version.major = sqlite3_column_int(statement, 4);
-        package->version.minor = sqlite3_column_int(statement, 5);
-        package->version.patch = sqlite3_column_int(statement, 6);
+        package->repository = strdup((const char*) sqlite3_column_text(statement, 1));
+        package->name = strdup((const char*) sqlite3_column_text(statement, 2));
+        package->author = strdup((const char*) sqlite3_column_text(statement, 3));
+        package->description = strdup((const char*) sqlite3_column_text(statement, 4));
+        package->version.major = sqlite3_column_int(statement, 5);
+        package->version.minor = sqlite3_column_int(statement, 6);
+        package->version.patch = sqlite3_column_int(statement, 7);
     } else {
         return KPM_SQLITE_ERROR;
     }
@@ -62,7 +63,7 @@ enum KPMResult KPM_ListInstalledPackages(struct KPM* kpm, size_t* packageCount, 
         *packages = NULL;
     }
 
-    const char* zSQL = "SELECT (SELECT COUNT() FROM installed_packages), id, name, author, description, version_major, version_minor, version_patch FROM installed_packages;";
+    const char* zSQL = "SELECT (SELECT COUNT() FROM installed_packages), id, repository, name, author, description, version_major, version_minor, version_patch FROM installed_packages;";
     sqlite3_stmt* statement;
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
 
@@ -82,12 +83,13 @@ enum KPMResult KPM_ListInstalledPackages(struct KPM* kpm, size_t* packageCount, 
             }
 
             (*packages)[i].id = strdup((const char*) sqlite3_column_text(statement, 1));
-            (*packages)[i].name = strdup((const char*) sqlite3_column_text(statement, 2));
-            (*packages)[i].author = strdup((const char*) sqlite3_column_text(statement, 3));
-            (*packages)[i].description = strdup((const char*) sqlite3_column_text(statement, 4));
-            (*packages)[i].version.major = sqlite3_column_int(statement, 5);
-            (*packages)[i].version.minor = sqlite3_column_int(statement, 6);
-            (*packages)[i].version.patch = sqlite3_column_int(statement, 7);
+            (*packages)[i].repository = strdup((const char*) sqlite3_column_text(statement, 2));
+            (*packages)[i].name = strdup((const char*) sqlite3_column_text(statement, 3));
+            (*packages)[i].author = strdup((const char*) sqlite3_column_text(statement, 4));
+            (*packages)[i].description = strdup((const char*) sqlite3_column_text(statement, 5));
+            (*packages)[i].version.major = sqlite3_column_int(statement, 6);
+            (*packages)[i].version.minor = sqlite3_column_int(statement, 7);
+            (*packages)[i].version.patch = sqlite3_column_int(statement, 8);
         }
     }
 

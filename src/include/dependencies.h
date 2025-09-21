@@ -34,6 +34,7 @@ void AddEdge(struct DependencyGraph* graph, size_t firstNodeIndex, size_t nextNo
 void AddFirstEdge(struct DependencyGraph* graph, size_t firstNodeIndex, size_t nextNodeIndex);
 bool FindArtifactNode(struct DependencyGraph* graph, char* repository, char* id, struct SemVer version, size_t* index);
 void RenderGraph(struct DependencyGraph* graph, char** output);
+void Internal_ArrayAddNode(size_t* traversedNodeCount, size_t** traversedNodes, size_t node);
 
 enum KPMResult Internal_GetArtifactDependencies(struct KPM* kpm, struct IndexedArtifact* target, size_t* targetDependencyCount, struct ArtifactDependency** targetDependencies);
 bool Internal_NarrowDependency(struct ArtifactDependency* currentDependency, struct ArtifactDependency* targetDependency);

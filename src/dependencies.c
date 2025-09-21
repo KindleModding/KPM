@@ -177,7 +177,7 @@ bool FindDependencyNode(struct DependencyGraph* graph, char* repository, char* i
 
 enum KPMResult Internal_GetArtifactDependencies(struct KPM* kpm, struct IndexedArtifact* target, size_t* targetDependencyCount, struct ArtifactDependency** targetDependencies)
 {
-    if (strncmp(target->url, "file://", strlen("file://")) == 0)
+    if (strlen(target->url) >= strlen("file://") && strncmp(target->url, "file://", strlen("file://")) == 0)
     {
         char* manifestData;
         enum KPMResult result = Internal_GetManifest(target->url+strlen("file://"), &manifestData, NULL);
@@ -191,14 +191,15 @@ enum KPMResult Internal_GetArtifactDependencies(struct KPM* kpm, struct IndexedA
         if (!cJSON_IsArray(cJSON_GetObjectItem(json, "dependencies")) ||
             cJSON_GetArraySize(cJSON_GetObjectItem(json, "dependencies")) == 0)
         {
-            free(manifestData);
-            cJSON_Delete(json);
-
             if (cJSON_GetObjectItem(json, "dependencies") == NULL || cJSON_IsArray(cJSON_GetObjectItem(json, "dependencies")))
             {
+                free(manifestData);
+                cJSON_Delete(json);
                 return KPM_OK;
             }
             else {
+                free(manifestData);
+                cJSON_Delete(json);
                 return KPM_PARSE_ERROR;
             }
         }

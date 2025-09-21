@@ -70,6 +70,7 @@ enum KPMResult KPM_Initialise(struct KPM *kpm, const char* dbPath)
     sqlite3_exec(kpm->db, R"(
         CREATE TABLE IF NOT EXISTS installed_packages (
             id TEXT PRIMARY KEY NOT NULL,
+            repository TEXT NOT NULL,
             name TEXT NOT NULL,
             author TEXT NOT NULL,
             description TEXT NOT NULL,

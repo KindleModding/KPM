@@ -89,6 +89,7 @@ struct ArtifactDependency
 struct InstalledPackage
 {
     char* id; /**< The package ID */
+    char* repository; /**< The repository this was installed from - empty is locally installed from a file */
     char* name; /**< The package name */
     char* author; /**< The package author */
     char* description; /**< The package description */

@@ -211,7 +211,10 @@ enum KPMResult Internal_GetManifest(char* path, char** outBuffer, KPMStatusCallb
     return KPM_OK;
 }
 
+enum KPMResult Internal_InstallItem(struct KPM* kpm, char* url)
+{
 
+}
 
 enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target, KPMStatusCallback* statusCallback)
 {
@@ -234,7 +237,7 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
         }
 
         //cJSON* json = cJSON_Parse(outBuffer);
-        return KPM_GENERIC_ERROR; // @TODO: Come back to this later
+        return KPM_GENERIC_ERROR; // @TODO: Come back to this later - index local packages
     }
     else
     {
@@ -283,6 +286,8 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
     struct InstalledPackage *installedPackages;
     KPM_ListInstalledPackages(kpm, &installedPackageCount, &installedPackages);
 
+    size_t traversedNodeCount;
+    size_t* traversedNodes;
     for (size_t i=0; i < installedPackageCount; i++)
     {
         struct DependencyNode depNode = {
@@ -290,8 +295,12 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
             .connected = NULL,
             .connectedCount = 0,
             .id = strdup(installedPackages[i].id),
-            .repository = strdup("")
+            .repository = strdup(installedPackages[i].repository),
+            .min_version = installedPackages[i].version,
+            .max_version = installedPackages[i].version
         };
+        depNode.max_version.patch += 1;
+
         int depId = AddNode(&graph, depNode);
         AddEdge(&graph, rootId, depId);
 
@@ -305,6 +314,7 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
         size_t constructedId = Internal_ConstructGraphFromArtifact(kpm, &graph, &fakeArtifact);
         KPM_FreeIndexedArtifact(&fakeArtifact);
         AddEdge(&graph, depId, constructedId);
+        Internal_ArrayAddNode(&traversedNodeCount, &traversedNodes, constructedId);
     }
 
     // Add the target to the graph
@@ -325,15 +335,12 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
     RenderGraph(&graph, &out);
     statusCallback(KPM_VERBOSITY_DEBUG, 0, "%s", out);
 
-    // Ok now everything is done...
-    // It's time
-    // Deploy the [thingamajjig]
-    size_t traversedNodeCount;
-    size_t* traversedNodes;
     if (!Internal_ResolveDependencyGraph(&graph, rootId, &traversedNodeCount, &traversedNodes, statusCallback))
     {
         statusCallback(KPM_VERBOSITY_ERROR, 0, "Could not resolve dependency graph.");
         statusCallback(KPM_VERBOSITY_ERROR, 0, "If you believe this is a mistake - please submit an issue");
+        statusCallback(KPM_VERBOSITY_ERROR, 0, "Include the state file at /tmp/kpm_state.md");
+        // @TODO: Export kpm_state.md file
         return KPM_GENERIC_ERROR;
     }
 
