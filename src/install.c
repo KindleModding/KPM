@@ -211,6 +211,34 @@ enum KPMResult Internal_GetManifest(char* path, char** outBuffer, KPMStatusCallb
     return KPM_OK;
 }
 
+void Internal_TraverseNode(struct DependencyGraph* graph, size_t node, size_t* traversedNodeCount, size_t** traversedNodes, size_t installedCount, struct InstalledPackage* installed)
+{
+    // Traverse the dependencies
+    for (size_t i = 0; i < graph->nodes[node].connectedCount; i++)
+    {
+        // Get the first artifact of this dependency that is installed
+        struct DependencyNode dependency = graph->nodes[graph->nodes[node].connected[i]];
+        for (size_t j=0; j < dependency.connectedCount; j++)
+        {
+            struct DependencyNode candidateArtifact = graph->nodes[dependency.connected[j]];
+
+            // Check if this node is installed
+            for (size_t k=0; k < installedCount; k++)
+            {
+                if (strcmp(candidateArtifact.id, installed[k].id) &&
+                    ((strlen(installed[k].repository) == 0 && strlen(candidateArtifact.repository) == 0) || strcmp(candidateArtifact.repository, installed[k].repository)) &&
+                    SemVerCmp(candidateArtifact.min_version, installed[k].version) == 0)
+                    {
+                        // Found the node to traverse next
+                        Internal_TraverseNode(graph, dependency.connected[j], traversedNodeCount, traversedNodes, installedCount, installed);
+                        break;
+                    }
+            }
+        }
+    }
+    Internal_ArrayAddNode(traversedNodeCount, traversedNodes, node);
+}
+
 enum KPMResult Internal_InstallItem(struct KPM* kpm, char* url)
 {
 
@@ -306,7 +334,7 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
 
         struct IndexedArtifact fakeArtifact = {
             .id = strdup(installedPackages[i].id),
-            .repository = strdup("localhost"),
+            .repository = strdup(installedPackages[i].repository),
             .url = strdup(installedPackages[i].id),
             .version = installedPackages[i].version
         };
@@ -315,6 +343,9 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
         KPM_FreeIndexedArtifact(&fakeArtifact);
         AddEdge(&graph, depId, constructedId);
         Internal_ArrayAddNode(&traversedNodeCount, &traversedNodes, constructedId);
+
+        // Add nodes to traversal
+        Internal_TraverseNode(&graph, constructedId, &traversedNodeCount, &traversedNodes, installedPackageCount, installedPackages);
     }
 
     // Add the target to the graph
@@ -344,26 +375,6 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
         return KPM_GENERIC_ERROR;
     }
 
-    // Now we have a flattened list of artifacts to install
-    // We must first download them ALL
-    /*fprintf(stderr, "Traversed:\n");
-    for (size_t i=0; i < traversedNodeCount; i++)
-    {
-        if (traversedNodes[i] == 0)
-        {
-            fprintf(stderr, "%s (%u.%u.%u - %u.%u.%u)\n", graph.nodes[traversedNodes[i]].id, graph.nodes[traversedNodes[i]].min_version.major, graph.nodes[traversedNodes[i]].min_version.minor, graph.nodes[traversedNodes[i]].min_version.patch, graph.nodes[traversedNodes[i]].max_version.major, graph.nodes[traversedNodes[i]].max_version.minor, graph.nodes[traversedNodes[i]].max_version.patch);
-        }
-
-        if (graph.nodes[traversedNodes[i]].type == NODE_DEPENDENCY)
-        {
-            fprintf(stderr, "  - %s (%u.%u.%u - %u.%u.%u)\n", graph.nodes[traversedNodes[i]].id, graph.nodes[traversedNodes[i]].min_version.major, graph.nodes[traversedNodes[i]].min_version.minor, graph.nodes[traversedNodes[i]].min_version.patch, graph.nodes[traversedNodes[i]].max_version.major, graph.nodes[traversedNodes[i]].max_version.minor, graph.nodes[traversedNodes[i]].max_version.patch);
-        }
-        else
-        {
-            fprintf(stderr, "  - %s (%u.%u.%u)\n", graph.nodes[traversedNodes[i]].id, graph.nodes[traversedNodes[i]].min_version.major, graph.nodes[traversedNodes[i]].min_version.minor, graph.nodes[traversedNodes[i]].min_version.patch);
-        }
-    }*/
-
     size_t* deduplicatedPackages = NULL;
     size_t* packageDepth = NULL;
     size_t deduplicatedPackageCount = 0;
@@ -375,7 +386,7 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
         {
             continue; // Skip dependencies
         }
-
+ 
         if (traversedNodes[i] == rootId)
         {
             currentDepth = 0;

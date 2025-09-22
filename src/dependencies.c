@@ -266,8 +266,8 @@ enum KPMResult Internal_GetArtifactDependencies(struct KPM* kpm, struct IndexedA
     {
         enum KPMResult status = KPM_OK;
 
-        // If we're using a fakeArtifact object with a localhost repo we should return the installed dependencies
-        if (strcmp(target->repository, "localhost") == 0)
+        // If there is no repository then the package was installed locally
+        if (strlen(target->repository) == 0)
         {
             struct InstalledPackage installedPackage;
             KPM_GetInstalledPackage(kpm, target->id, &installedPackage);
