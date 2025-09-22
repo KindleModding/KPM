@@ -453,10 +453,53 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
         packageDepth[currentIndex] = currentDepth;
     }
 
-    statusCallback(KPM_VERBOSITY_INFO, 0, "Preparing to install %i packages", deduplicatedPackageCount);
+    size_t updateCount;
+    size_t* update;
+    size_t installCount;
+    size_t* install;
     for (size_t i=0; i < deduplicatedPackageCount; i++) // 1 to skip the dummy root
     {
-        statusCallback(KPM_VERBOSITY_INFO, 0, "(d%i) - %s (%u.%u.%u)", packageDepth[i], graph.nodes[deduplicatedPackages[i]].id, graph.nodes[deduplicatedPackages[i]].min_version.major, graph.nodes[deduplicatedPackages[i]].min_version.minor, graph.nodes[deduplicatedPackages[i]].min_version.patch);
+        bool installed = false; // Already installed
+        bool installing = true; // New package
+        for (size_t j=0; j < installedPackageCount; j++)
+        {
+            if (strcmp(graph.nodes[deduplicatedPackages[i]].id, installedPackages[j].id))
+            {
+                installed = true;
+                if (SemVerCmp(graph.nodes[deduplicatedPackages[i]].min_version, installedPackages[j].version) <= 0)
+                {
+                    installing = false;
+                }
+                break;
+            }
+        }
+
+        if (!installing)
+        {
+            continue;
+        }
+
+        if (installed)
+        {
+            Internal_ArrayAddNode(&updateCount, &update, deduplicatedPackages[i]);
+        }
+        else
+        {
+            Internal_ArrayAddNode(&installCount, &install, deduplicatedPackages[i]);
+        }
+    }
+
+    statusCallback(KPM_VERBOSITY_INFO, 0, "Preparing to upgrade %i packages", updateCount);
+    for (size_t i=0; i < updateCount; i++)
+    {
+        statusCallback(KPM_VERBOSITY_INFO, 0, "(d%i) - %s (%u.%u.%u)", packageDepth[i], graph.nodes[update[i]].id, graph.nodes[update[i]].min_version.major, graph.nodes[update[i]].min_version.minor, graph.nodes[update[i]].min_version.patch);
+    }
+
+
+    statusCallback(KPM_VERBOSITY_INFO, 0, "Preparing to install %i packages", installCount);
+    for (size_t i=0; i < installCount; i++)
+    {
+        statusCallback(KPM_VERBOSITY_INFO, 0, "(d%i) - %s (%u.%u.%u)", packageDepth[i], graph.nodes[install[i]].id, graph.nodes[install[i]].min_version.major, graph.nodes[install[i]].min_version.minor, graph.nodes[install[i]].min_version.patch);
     }
 
 
