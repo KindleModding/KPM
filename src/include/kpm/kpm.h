@@ -137,7 +137,7 @@ enum Verbosity
 
 typedef void KPMLog(enum Verbosity, char* details, ...);
 typedef void KPMLogProgress(uint progress, char* details, ...);
-typedef char* KPMGetInput(char* details, ...);
+typedef bool KPMGetInput(char* details, ...);
 
 struct KPMLogging
 {

@@ -11,8 +11,8 @@ void logProgressStub(uint progress, char* details, ...)
     return;
 }
 
-char* getInputStub(char* details, ...)
+bool getInputStub(char* details, ...)
 {
-    return "";
+    return false;
 }
 

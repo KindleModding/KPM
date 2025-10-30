@@ -5,7 +5,7 @@
 
 void logStub(enum Verbosity, char* details, ...);
 void logProgressStub(uint progress, char* details, ...);
-char* getInputStub(char* details, ...);
+bool getInputStub(char* details, ...);
 
 struct KPMLogging dummyKPMStub = 
 {
