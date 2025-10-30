@@ -316,8 +316,25 @@ bool Internal_InstallItem(struct KPM* kpm, char* path, struct KPMLogging* kpmLog
     // If so, run it
     if (access(installScriptPath, R_OK) == 0)
     {
+        kpmLogging->log(KPM_VERBOSITY_INFO, "Running install hooks for [%s]", id);
         // Run install script
-        if (system(installScriptPath) != 0)
+        int result = -1;
+        FILE* stream = popen(installScriptPath, "r");
+        if (stream != NULL)
+        {
+            int c;
+            while ((c = fgetc(stream)) != EOF)
+            {
+                kpmLogging->stream(fgetc(stream));
+            }
+            result = pclose(stream);
+        }
+        else
+        {
+            kpmLogging->log(KPM_VERBOSITY_ERROR, "Could not run script - POPEN FAILURE");
+        }
+
+        if (result != 0)
         {
             // The install hook failed
             kpmLogging->log(KPM_VERBOSITY_ERROR, "Could not execute install hook for [%s]", id);
@@ -637,7 +654,7 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
 
     for (size_t i=0; i < deduplicatedPackageCount; i++) // 1 to skip the dummy root
     {
-        Internal_InstallItem(kpm, graph.nodes[deduplicatedPackages[i]]);
+        Internal_InstallItem(kpm, graph.nodes[deduplicatedPackages[i]], kpmLogging);
     }
 
     return KPM_OK;

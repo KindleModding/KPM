@@ -135,6 +135,7 @@ enum Verbosity
     KPM_VERBOSITY_ERROR
 };
 
+typedef void KPMStream(char c);
 typedef void KPMLog(enum Verbosity, char* details, ...);
 typedef void KPMLogProgress(uint progress, char* details, ...);
 typedef bool KPMGetInput(char* details, ...);
@@ -142,6 +143,7 @@ typedef bool KPMGetInput(char* details, ...);
 struct KPMLogging
 {
     KPMLog* log;
+    KPMStream* stream;
     KPMLogProgress* logProgress;
     KPMGetInput* getInput;
 };
