@@ -3,6 +3,7 @@
 #include "cjson/cJSON.h"
 #include "kpm/kpm.h"
 #include <assert.h>
+#include <curl/multi.h>
 #include <fcntl.h>
 #include <limits.h>
 #include <stdbool.h>
@@ -38,7 +39,7 @@ static int copy_data(struct archive *ar, struct archive *aw)
   }
 }
 
-enum KPMResult Internal_ExtractArchive(char* path, char* out, KPMStatusCallback* statusCallback)
+enum KPMResult Internal_ExtractArchive(char* path, char* out, struct KPMLogging* kpmLogging)
 {
     if (access(path, R_OK) != 0)
     {
@@ -65,7 +66,7 @@ enum KPMResult Internal_ExtractArchive(char* path, char* out, KPMStatusCallback*
 
     if ((r = archive_read_open_filename(a, path, 10240)))
     {
-        statusCallback(KPM_VERBOSITY_ERROR, 0, "Cold not open file %s", path);
+        kpmLogging->log(KPM_VERBOSITY_ERROR, "Cold not open file %s", path);
         goto libarchive_error;
     }
 
@@ -79,7 +80,7 @@ enum KPMResult Internal_ExtractArchive(char* path, char* out, KPMStatusCallback*
 
         if (r < ARCHIVE_OK)
         {
-            statusCallback(KPM_VERBOSITY_ERROR, 0, "Libarchive error: %s", archive_error_string(a));
+            kpmLogging->log(KPM_VERBOSITY_ERROR, "Libarchive error: %s", archive_error_string(a));
         }
         if (r < ARCHIVE_WARN)
         {
@@ -94,14 +95,14 @@ enum KPMResult Internal_ExtractArchive(char* path, char* out, KPMStatusCallback*
 
         if (r < ARCHIVE_OK)
         {
-            statusCallback(KPM_VERBOSITY_ERROR, 0, "Libarchive error: %s", archive_error_string(a));
+            kpmLogging->log(KPM_VERBOSITY_ERROR, "Libarchive error: %s", archive_error_string(a));
         }
         else if (archive_entry_size(entry) > 0)
         {
             r = copy_data(a, ext);
             if (r < ARCHIVE_OK)
             {
-                statusCallback(KPM_VERBOSITY_ERROR, 0, "Libarchive error: %s", archive_error_string(a));
+                kpmLogging->log(KPM_VERBOSITY_ERROR, "Libarchive error: %s", archive_error_string(a));
             }
             if (r < ARCHIVE_WARN)
             {
@@ -123,11 +124,11 @@ libarchive_error:
     return KPM_LIBARCHIVE_ERROR;
 }
 
-enum KPMResult Internal_GetManifest(char* path, char** outBuffer, KPMStatusCallback* statusCallback)
+enum KPMResult Internal_GetManifest(char* path, char** outBuffer, struct KPMLogging* kpmLogging)
 {
-    if (statusCallback == NULL)
+    if (kpmLogging == NULL)
     {
-        statusCallback = dummyCallback;
+        kpmLogging = &dummyKPMStub;
     }
 
     *outBuffer = NULL;
@@ -146,7 +147,7 @@ enum KPMResult Internal_GetManifest(char* path, char** outBuffer, KPMStatusCallb
 
     if ((r = archive_read_open_filename(a, path, 10240)))
     {
-        statusCallback(KPM_VERBOSITY_ERROR, 0, "Cold not open file %s", path);
+        kpmLogging->log(KPM_VERBOSITY_ERROR, "Cold not open file %s", path);
         archive_read_close(a);
         archive_read_free(a);
         return KPM_LIBARCHIVE_ERROR;
@@ -162,7 +163,7 @@ enum KPMResult Internal_GetManifest(char* path, char** outBuffer, KPMStatusCallb
 
         if (r < ARCHIVE_OK)
         {
-            statusCallback(KPM_VERBOSITY_ERROR, 0, "Libarchive error: %s", archive_error_string(a));
+            kpmLogging->log(KPM_VERBOSITY_ERROR, "Libarchive error: %s", archive_error_string(a));
         }
         if (r < ARCHIVE_WARN)
         {
@@ -193,7 +194,7 @@ enum KPMResult Internal_GetManifest(char* path, char** outBuffer, KPMStatusCallb
 
         if (r < ARCHIVE_OK)
         {
-            statusCallback(KPM_VERBOSITY_ERROR, 0, "Libarchive error: %s", archive_error_string(a));
+            kpmLogging->log(KPM_VERBOSITY_ERROR, "Libarchive error: %s", archive_error_string(a));
             free(*outBuffer);
             *outBuffer = NULL; // Triggers error case
         }
@@ -211,7 +212,7 @@ enum KPMResult Internal_GetManifest(char* path, char** outBuffer, KPMStatusCallb
     return KPM_OK;
 }
 
-void Internal_TraverseNode(struct DependencyGraph* graph, size_t node, size_t* traversedNodeCount, size_t** traversedNodes, size_t installedCount, struct InstalledPackage* installed)
+void Internal_TraverseInstalledNode(struct DependencyGraph* graph, size_t node, size_t* traversedNodeCount, size_t** traversedNodes, size_t installedCount, struct InstalledPackage* installed)
 {
     // Traverse the dependencies
     for (size_t i = 0; i < graph->nodes[node].connectedCount; i++)
@@ -230,7 +231,7 @@ void Internal_TraverseNode(struct DependencyGraph* graph, size_t node, size_t* t
                     SemVerCmp(candidateArtifact.min_version, installed[k].version) == 0)
                     {
                         // Found the node to traverse next
-                        Internal_TraverseNode(graph, dependency.connected[j], traversedNodeCount, traversedNodes, installedCount, installed);
+                        Internal_TraverseInstalledNode(graph, dependency.connected[j], traversedNodeCount, traversedNodes, installedCount, installed);
                         break;
                     }
             }
@@ -239,16 +240,58 @@ void Internal_TraverseNode(struct DependencyGraph* graph, size_t node, size_t* t
     Internal_ArrayAddNode(traversedNodeCount, traversedNodes, node);
 }
 
-enum KPMResult Internal_InstallItem(struct KPM* kpm, char* url)
+enum KPMResult Internal_DownloadGraphItems(struct KPM* kpm, struct DependencyGraph* graph, size_t deduplicatedPackageCount, size_t* deduplicatedPackages)
 {
-
+    CURLM* cm = curl_multi_init();
+    curl_multi_setopt(cm, CURLMOPT_MAXCONNECTS, (long)kpm.);
 }
 
-enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target, KPMStatusCallback* statusCallback)
+bool Internal_InstallItem(struct KPM* kpm, char* path, struct KPMLogging* kpmLogging)
 {
-    if (statusCallback == NULL)
+    char* manifest;
+    Internal_GetManifest(path, &manifest, kpmLogging);
+    cJSON* json = cJSON_Parse(manifest);
+
+    char* id = cJSON_GetStringValue(cJSON_GetObjectItem(json, "id"));
+
+    char* outPath = malloc(strlen(path) + 1 + strlen(id) + 2);
+    sprintf(outPath, "%s/%s/", kpm->pkgPath, id);
+
+    // First unpack the .kpkg file
+    Internal_ExtractArchive(path, outPath, kpmLogging);
+
+    char* installScriptPath = malloc(strlen(outPath) + strlen("install.sh") + 1);
+    sprintf(outPath, "%sinstall.sh", outPath);
+
+    // Check if an install.sh file exists
+    // If so, run it
+    if (access(installScriptPath, R_OK) == 0)
     {
-        statusCallback = dummyCallback;
+        // Run install script
+        if (system(installScriptPath) != 0)
+        {
+            // The install hook failed
+            statusCallback(KPM_VERBOSITY_ERROR, 0, "Could not execute install hook for [%s]", id);
+            free(manifest);
+            cJSON_Delete(json);
+            free(outPath);
+            free(installScriptPath);
+            return false;
+        }
+    }
+
+    free(manifest);
+    cJSON_Delete(json);
+    free(outPath);
+    free(installScriptPath);
+    return true;
+}
+
+enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target, struct KPMLogging* kpmLogging)
+{
+    if (kpmLogging == NULL)
+    {
+        kpmLogging = &dummyKPMStub;
     }
 
     struct IndexedArtifact artifact;
@@ -258,7 +301,7 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
         // We do this because it simplifies so much logic
         char* outBuffer = NULL;
         int status;
-        if ((status = Internal_GetManifest(target->id + strlen("file://"), &outBuffer, statusCallback)) != KPM_OK)
+        if ((status = Internal_GetManifest(target->id + strlen("file://"), &outBuffer, kpmLogging)) != KPM_OK)
         {
             free(outBuffer);
             return status;
@@ -345,7 +388,7 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
         Internal_ArrayAddNode(&traversedNodeCount, &traversedNodes, constructedId);
 
         // Add nodes to traversal
-        Internal_TraverseNode(&graph, constructedId, &traversedNodeCount, &traversedNodes, installedPackageCount, installedPackages);
+        Internal_TraverseInstalledNode(&graph, constructedId, &traversedNodeCount, &traversedNodes, installedPackageCount, installedPackages);
     }
 
     // Add the target to the graph
@@ -366,12 +409,41 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
     RenderGraph(&graph, &out);
     statusCallback(KPM_VERBOSITY_DEBUG, 0, "%s", out);
 
+    /**
+     * @brief Write out a state file for debugging purposes
+     * 
+     */
+    FILE* file = fopen("/tmp/kpm_state.md", "w");
+    if (target->version == NULL)
+    {
+        struct SemVer version = {
+            .major = 0,
+            .minor = 0,
+            .patch = 0
+        };
+        target->version = &version;
+    }
+    int allocate = snprintf(NULL, 0, "Current State:\nInstalling Target: (%s/)%s (%u.%u.%u)\nArtifact Found: (%s/)%s (%u.%u.%u) [%s]\n\nGenerated Graph:\n\n```", target->repository, target->id, target->version->major, target->version->minor, target->version->patch, artifact.repository, artifact.id, artifact.version.major, artifact.version.minor, artifact.version.patch, artifact.url);
+    char* string = malloc(allocate + 1);
+    snprintf(string, allocate, "Current State:\nInstalling Target: (%s/)%s (%u.%u.%u)\nArtifact Found: (%s/)%s (%u.%u.%u) [%s]\n\nGenerated Graph:\n\n```", target->repository, target->id, target->version->major, target->version->minor, target->version->patch, artifact.repository, artifact.id, artifact.version.major, artifact.version.minor, artifact.version.patch, artifact.url);
+    string[allocate] = '\0';
+    fwrite(string, strlen(string), 1, file);
+
+    char* rendered;
+    RenderGraph(&graph, &rendered);
+    fwrite(rendered, strlen(rendered), 1, file);
+    fwrite("```", strlen("```"), 1, file);
+    fclose(file);
+    free(rendered);
+    free(string);
+
+    // @TODO: Validate that it's starting from the right point when handling already-installed artifacts
     if (!Internal_ResolveDependencyGraph(&graph, rootId, &traversedNodeCount, &traversedNodes, statusCallback))
     {
         statusCallback(KPM_VERBOSITY_ERROR, 0, "Could not resolve dependency graph.");
         statusCallback(KPM_VERBOSITY_ERROR, 0, "If you believe this is a mistake - please submit an issue");
         statusCallback(KPM_VERBOSITY_ERROR, 0, "Include the state file at /tmp/kpm_state.md");
-        // @TODO: Export kpm_state.md file
+
         return KPM_GENERIC_ERROR;
     }
 
@@ -502,6 +574,21 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
         statusCallback(KPM_VERBOSITY_INFO, 0, "(d%i) - %s (%u.%u.%u)", packageDepth[i], graph.nodes[install[i]].id, graph.nodes[install[i]].min_version.major, graph.nodes[install[i]].min_version.minor, graph.nodes[install[i]].min_version.patch);
     }
 
+    if (kpm->confirmInstall)
+    {
+        if (!statusCallback(KPM_VERBOSITY_INFO, 0, "Would you like to proceed?"))
+        {
+            statusCallback(KPM_VERBOSITY_INFO, 0, "Aborted.");
+            return KPM_OK; // @TODO
+        }
+    }
+    
+    Internal_DownloadGraphItems(kpm, &graph, deduplicatedPackageCount, deduplicatedPackages);
+
+    for (size_t i=0; i < deduplicatedPackageCount; i++) // 1 to skip the dummy root
+    {
+        Internal_InstallItem(kpm, graph.nodes[deduplicatedPackages[i]]);
+    }
 
     return KPM_OK;
 }

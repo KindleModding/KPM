@@ -7,7 +7,7 @@
 #include <stdbool.h>
 #include "callback.h"
 
-bool indexDependency(struct KPM* kpm, char* artifact_repository, char* artifact_id, char* artifact_url, cJSON* dependency, KPMStatusCallback* statusCallback)
+bool indexDependency(struct KPM* kpm, char* artifact_repository, char* artifact_id, char* artifact_url, cJSON* dependency, struct KPMLogging* kpmLogging)
 {
     const char* zSQL = "INSERT INTO artifact_dependencies (artifact_repository, artifact_id, artifact_url, repository, id, min_version_major, min_version_minor, min_version_patch, max_version_major, max_version_minor, max_version_patch) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
     sqlite3_stmt* statement;
@@ -56,7 +56,7 @@ bool indexDependency(struct KPM* kpm, char* artifact_repository, char* artifact_
     if ((status = sqlite3_step(statement)) != SQLITE_DONE)
     {
         sqlite3_finalize(statement);
-        statusCallback(KPM_VERBOSITY_ERROR, 0, "SQLite error: (%i)", status);
+        kpmLogging->log(KPM_VERBOSITY_ERROR, "SQLite error: (%i)", status);
         return false;
     }
 
@@ -64,7 +64,7 @@ bool indexDependency(struct KPM* kpm, char* artifact_repository, char* artifact_
     return true;
 }
 
-bool indexArtifact(struct KPM* kpm, char* repositoryId, char* packageId, cJSON* artifact, KPMStatusCallback* statusCallback)
+bool indexArtifact(struct KPM* kpm, char* repositoryId, char* packageId, cJSON* artifact, struct KPMLogging* kpmLogging)
 {
     const char* zSQL = "INSERT INTO artifacts (url, repository, id, version_major, version_minor, version_patch) VALUES (?, ?, ?, ?, ?, ?);";
     sqlite3_stmt* statement;
@@ -79,7 +79,7 @@ bool indexArtifact(struct KPM* kpm, char* repositoryId, char* packageId, cJSON* 
     int status;
     if ((status = sqlite3_step(statement)) != SQLITE_DONE)
     {
-        statusCallback(KPM_VERBOSITY_ERROR, 0, "SQLite3 error (%i)", status);
+        kpmLogging->log(KPM_VERBOSITY_ERROR, "SQLite3 error (%i)", status);
         sqlite3_finalize(statement);
         return false;
     }
@@ -89,9 +89,9 @@ bool indexArtifact(struct KPM* kpm, char* repositoryId, char* packageId, cJSON* 
     cJSON* dependency;
     cJSON_ArrayForEach(dependency, cJSON_GetObjectItem(artifact, "dependencies"))
     {
-        if (!indexDependency(kpm, repositoryId, packageId, cJSON_GetStringValue(cJSON_GetObjectItem(artifact, "url")), dependency, statusCallback))
+        if (!indexDependency(kpm, repositoryId, packageId, cJSON_GetStringValue(cJSON_GetObjectItem(artifact, "url")), dependency, kpmLogging))
         {
-            statusCallback(KPM_VERBOSITY_ERROR, 0, "Could not index artifact dependencies for [%s] (%s)", packageId, cJSON_GetStringValue(cJSON_GetObjectItem(artifact, "url")));
+            kpmLogging->log(KPM_VERBOSITY_ERROR, "Could not index artifact dependencies for [%s] (%s)", packageId, cJSON_GetStringValue(cJSON_GetObjectItem(artifact, "url")));
             return false;
         }
     }
@@ -99,7 +99,7 @@ bool indexArtifact(struct KPM* kpm, char* repositoryId, char* packageId, cJSON* 
     return true;
 }
 
-bool indexPackage(struct KPM* kpm, char* repositoryId, cJSON* package, KPMStatusCallback* statusCallback)
+bool indexPackage(struct KPM* kpm, char* repositoryId, cJSON* package, struct KPMLogging* kpmLogging)
 {
     // Ensure the package is well-formed
     if (cJSON_GetObjectItem(package, "name") == NULL ||
@@ -108,7 +108,7 @@ bool indexPackage(struct KPM* kpm, char* repositoryId, cJSON* package, KPMStatus
     cJSON_GetObjectItem(package, "artifacts") == NULL ||
     cJSON_GetArraySize(cJSON_GetObjectItem(package, "artifacts")) == 0)
     {
-        statusCallback(KPM_VERBOSITY_ERROR, 0, "Could not parse package %s", package->string);
+        kpmLogging->log(KPM_VERBOSITY_ERROR, "Could not parse package %s", package->string);
         return false;
     }
 
@@ -123,7 +123,7 @@ bool indexPackage(struct KPM* kpm, char* repositoryId, cJSON* package, KPMStatus
     sqlite3_bind_text(statement, 5, cJSON_GetStringValue(cJSON_GetObjectItem(package, "description")), -1, SQLITE_STATIC);
     if (sqlite3_step(statement) != SQLITE_DONE)
     {
-        statusCallback(KPM_VERBOSITY_ERROR, 0, "SQLite error encountered when indexing package %s", package->string);
+        kpmLogging->log(KPM_VERBOSITY_ERROR, "SQLite error encountered when indexing package %s", package->string);
         sqlite3_finalize(statement);
         return false;
     }
@@ -135,9 +135,9 @@ bool indexPackage(struct KPM* kpm, char* repositoryId, cJSON* package, KPMStatus
     cJSON* artifact;
     cJSON_ArrayForEach(artifact, cJSON_GetObjectItem(package, "artifacts"))
     {
-        if (!indexArtifact(kpm, repositoryId, package->string, artifact, statusCallback)) // Dependency failed
+        if (!indexArtifact(kpm, repositoryId, package->string, artifact, kpmLogging)) // Dependency failed
         {
-            statusCallback(KPM_VERBOSITY_ERROR, 0, "Could not index artifact for [%s]", package->string);
+            kpmLogging->log(KPM_VERBOSITY_ERROR, "Could not index artifact for [%s]", package->string);
             return false; // Stop adding packages if one fails
         }
     }
@@ -152,28 +152,28 @@ bool indexPackage(struct KPM* kpm, char* repositoryId, cJSON* package, KPMStatus
  * @param statusCallback A callback for progress information
  * @return enum KPMResult 
  */
-enum KPMResult KPM_UpdateIndex(struct KPM *kpm, KPMStatusCallback* statusCallback)
+enum KPMResult KPM_UpdateIndex(struct KPM *kpm, struct KPMLogging* kpmLogging)
 {
-    if (statusCallback == NULL)
+    if (kpmLogging == NULL)
     {
-        statusCallback = dummyCallback;
+        kpmLogging = &dummyKPMStub;
     }
 
-    statusCallback(KPM_VERBOSITY_INFO, 0, "Getting repositories...");
+    kpmLogging->log(KPM_VERBOSITY_INFO, "Getting repositories...");
 
     size_t repositoryCount;
     struct Repository* repositories;
     enum KPMResult result;
     if ((result = KPM_ListRepositories(kpm, &repositoryCount, &repositories)) != KPM_OK)
     {
-        statusCallback(KPM_VERBOSITY_ERROR, 0, "Unable to list KPM repositories");
+        kpmLogging->log(KPM_VERBOSITY_ERROR, "Unable to list KPM repositories");
         return result;
     }
 
     struct SimpleGETRequest request;
     for (size_t i=0; i < repositoryCount; i++)
     {
-        statusCallback(KPM_VERBOSITY_INFO, 0, "Downloading index [%s]", repositories[i].url);
+        kpmLogging->log(KPM_VERBOSITY_INFO, "Downloading index [%s]", repositories[i].url);
         SimpleGET_Initialise(&request, repositories[i].url);
         SimpleGET_Perform(&request);
 
@@ -183,7 +183,7 @@ enum KPMResult KPM_UpdateIndex(struct KPM *kpm, KPMStatusCallback* statusCallbac
 
 
         // Clear indexed packages
-        statusCallback(KPM_VERBOSITY_DEBUG, 0, "Clearing index");
+        kpmLogging->log(KPM_VERBOSITY_DEBUG, "Clearing index");
         const char* zSQL = "DELETE FROM packages WHERE repository=?;";
         sqlite3_stmt* statement;
         sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
@@ -195,7 +195,7 @@ enum KPMResult KPM_UpdateIndex(struct KPM *kpm, KPMStatusCallback* statusCallbac
         if (status != SQLITE_DONE)
         {
             KPM_FreeRepositoryList(repositoryCount, repositories);
-            statusCallback(KPM_VERBOSITY_ERROR, 0, "Could not clear packages for %s (%i)", repositories[i].id, status);
+            kpmLogging->log(KPM_VERBOSITY_ERROR, "Could not clear packages for %s (%i)", repositories[i].id, status);
             SimpleGET_Cleanup(&request);
             sqlite3_exec(kpm->db, "ROLLBACK", NULL, NULL, NULL);
             break; // Move onto next repo
@@ -207,7 +207,7 @@ enum KPMResult KPM_UpdateIndex(struct KPM *kpm, KPMStatusCallback* statusCallbac
         {
             KPM_FreeRepositoryList(repositoryCount, repositories);
             SimpleGET_Cleanup(&request);
-            statusCallback(KPM_VERBOSITY_ERROR, 0, "Could not parse manifest");
+            kpmLogging->log(KPM_VERBOSITY_ERROR, "Could not parse manifest");
             sqlite3_exec(kpm->db, "ROLLBACK", NULL, NULL, NULL);
             continue; // Move onto next repo
         }
@@ -219,7 +219,7 @@ enum KPMResult KPM_UpdateIndex(struct KPM *kpm, KPMStatusCallback* statusCallbac
         cJSON* package;
         cJSON_ArrayForEach(package, cJSON_GetObjectItem(json, "packages"))
         {
-            if (!indexPackage(kpm, repositories[i].id, package, statusCallback))
+            if (!indexPackage(kpm, repositories[i].id, package, kpmLogging))
             {
                 success = false;
                 break;
@@ -229,7 +229,7 @@ enum KPMResult KPM_UpdateIndex(struct KPM *kpm, KPMStatusCallback* statusCallbac
         if (!success) // Repository failed
         {
             sqlite3_exec(kpm->db, "ROLLBACK", NULL, NULL, NULL);
-            statusCallback(KPM_VERBOSITY_ERROR, 0, "Could not index repository [%s]", repositories[i].id);
+            kpmLogging->log(KPM_VERBOSITY_ERROR, "Could not index repository [%s]", repositories[i].id);
         }
 
         KPM_FreeRepositoryList(repositoryCount, repositories);

@@ -542,7 +542,7 @@ void Internal_ArrayAddNode(size_t* traversedNodeCount, size_t** traversedNodes, 
     (*traversedNodes)[*traversedNodeCount - 1] = node;
 }
 
-bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, size_t root, size_t* traversedNodeCount, size_t** traversedNodes, KPMStatusCallback statusCallback)
+bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, size_t root, size_t* traversedNodeCount, size_t** traversedNodes, struct KPMLogging* kpmLogging)
 {
     *traversedNodes = NULL;
     *traversedNodeCount = 0;
@@ -550,14 +550,14 @@ bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, size_t root,
     size_t currentNode = root;
     for (;;)
     {
-        statusCallback(KPM_VERBOSITY_DEBUG, 0, "Traversing node: %zu - %s", currentNode, graph->nodes[currentNode].id);
+        kpmLogging->log(KPM_VERBOSITY_DEBUG, "Traversing node: %zu - %s", currentNode, graph->nodes[currentNode].id);
         // Check if this artifact is already traversed
         bool alreadyTraversed=false;
         for (size_t i=0; i < *traversedNodeCount; i++)
         {
             if ((*traversedNodes)[i] == currentNode)
             {
-                statusCallback(KPM_VERBOSITY_DEBUG, 0, "Already traversed!");
+                kpmLogging->log(KPM_VERBOSITY_DEBUG, "Already traversed!");
                 alreadyTraversed=true;
                 break;
             }
@@ -565,10 +565,10 @@ bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, size_t root,
 
         Internal_ArrayAddNode(traversedNodeCount, traversedNodes, currentNode);
 
-        statusCallback(KPM_VERBOSITY_DEBUG, 0, "Currently traversed:");
+        kpmLogging->log(KPM_VERBOSITY_DEBUG, "Currently traversed:");
         for (size_t i=0; i < *traversedNodeCount; i++)
         {
-            statusCallback(KPM_VERBOSITY_DEBUG, 0, "- %i\t%s (%u.%u.%u)", (*traversedNodes)[i], graph->nodes[(*traversedNodes)[i]].id, graph->nodes[(*traversedNodes)[i]].min_version.major, graph->nodes[(*traversedNodes)[i]].min_version.minor, graph->nodes[(*traversedNodes)[i]].min_version.patch);
+            kpmLogging->log(KPM_VERBOSITY_DEBUG, "- %i\t%s (%u.%u.%u)", (*traversedNodes)[i], graph->nodes[(*traversedNodes)[i]].id, graph->nodes[(*traversedNodes)[i]].min_version.major, graph->nodes[(*traversedNodes)[i]].min_version.minor, graph->nodes[(*traversedNodes)[i]].min_version.patch);
         }
 
         if (!alreadyTraversed)
@@ -588,7 +588,7 @@ bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, size_t root,
                 conflictingDependencyId = (*traversedNodes)[i-1];
                 if (currentNode != conflictingArtifactId && strcmp(graph->nodes[currentNode].id, graph->nodes[conflictingArtifactId].id) == 0)
                 {
-                    statusCallback(KPM_VERBOSITY_DEBUG, 0, "Node conflicts with: %zu - %s", conflictingArtifactId, graph->nodes[conflictingArtifactId].id);
+                    kpmLogging->log(KPM_VERBOSITY_DEBUG, "Node conflicts with: %zu - %s", conflictingArtifactId, graph->nodes[conflictingArtifactId].id);
                     // Don't need to check if version conflicts because if the node wasn't already traversed
                     // It must be conflicting since it wasn't merged
                     conflicts=true;

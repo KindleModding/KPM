@@ -109,13 +109,7 @@ struct InstalledDependency
     struct SemVer max_version; /**< The max version of the dependency (exclusive) */
 };
 
-enum Verbosity
-{
-    KPM_VERBOSITY_DEBUG,
-    KPM_VERBOSITY_INFO,
-    KPM_VERBOSITY_WARN,
-    KPM_VERBOSITY_ERROR
-};
+
 
 struct InstallTarget
 {
@@ -126,10 +120,31 @@ struct InstallTarget
 
 struct KPM
 {
-    sqlite3* db;
+    sqlite3* db; /**< The sqlite db object */
+    char* pkgPath; /**< The path to KPM packages */
+    bool prompt; /**< Should prompt user for things */
+    bool confirmInstall; /**< Should confirm install */
+    int maxConnections; /**< Maximum number of parallel connections to hold when downloading stuff */
 };
 
-typedef void KPMStatusCallback(enum Verbosity verbosity, uint progress, char* details, ...);
+enum Verbosity
+{
+    KPM_VERBOSITY_DEBUG,
+    KPM_VERBOSITY_INFO,
+    KPM_VERBOSITY_WARN,
+    KPM_VERBOSITY_ERROR
+};
+
+typedef void KPMLog(enum Verbosity, char* details, ...);
+typedef void KPMLogProgress(uint progress, char* details, ...);
+typedef char* KPMGetInput(char* details, ...);
+
+struct KPMLogging
+{
+    KPMLog* log;
+    KPMLogProgress* logProgress;
+    KPMGetInput* getInput;
+};
 
 enum KPMResult KPM_Initialise(struct KPM *kpm, const char* dbPath);
 void KPM_Cleanup(struct KPM *kpm);
@@ -172,8 +187,8 @@ void KPM_FreeArtifactDependency(struct ArtifactDependency* dependency);
 void KPM_FreeArtifactDependencyList(size_t artifactCount, struct ArtifactDependency* dependency);
 enum KPMResult KPM_ListArtifactDependencies(struct KPM* kpm, char* repository, char* id, char* url, size_t* dependencyCount, struct ArtifactDependency** dependencies);
 
-enum KPMResult KPM_UpdateIndex(struct KPM *kpm, KPMStatusCallback* statusCallback);
+enum KPMResult KPM_UpdateIndex(struct KPM *kpm, struct KPMLogging* kpmLogging);
 
 void KPM_FreeInstallTarget(struct InstallTarget* target);
 
-enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target, KPMStatusCallback* statusCallback);
+enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target, struct KPMLogging* kpmLogging);
