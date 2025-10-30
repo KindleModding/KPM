@@ -37,7 +37,7 @@ void FreeNode(struct DependencyNode* node)
 
 void FreeDependencyGraph(struct DependencyGraph* graph)
 {
-    for (size_t i=0; i < graph->nodeCount; i++)
+    for (NodeIndex_t i=0; i < graph->nodeCount; i++)
     {
         FreeNode(&graph->nodes[i]);
     }
@@ -54,7 +54,7 @@ void ExtendDependencyGraph(struct DependencyGraph* graph, int allocate)
     graph->nodes = realloc(graph->nodes, sizeof(struct DependencyNode) * graph->allocated);
 }
 
-size_t AddNode(struct DependencyGraph *graph, struct DependencyNode node)
+NodeIndex_t AddNode(struct DependencyGraph *graph, struct DependencyNode node)
 {
     if (graph->nodeCount == graph->allocated)
     {
@@ -65,13 +65,13 @@ size_t AddNode(struct DependencyGraph *graph, struct DependencyNode node)
     return graph->nodeCount-1;
 }
 
-void AddEdge(struct DependencyGraph* graph, size_t firstNodeIndex, size_t nextNodeIndex)
+void AddEdge(struct DependencyGraph* graph, NodeIndex_t firstNodeIndex, NodeIndex_t nextNodeIndex)
 {
     graph->nodes[firstNodeIndex].connectedCount++;
     graph->nodes[firstNodeIndex].connected = realloc(graph->nodes[firstNodeIndex].connected, graph->nodes[firstNodeIndex].connectedCount * sizeof(size_t));
     
     // Insert it into the list such that dependency artifacts are ordered newest to oldest
-    size_t insertionIndex = graph->nodes[firstNodeIndex].connectedCount-1;
+    NodeIndex_t insertionIndex = graph->nodes[firstNodeIndex].connectedCount-1;
     if (graph->nodes[nextNodeIndex].type == NODE_ARTIFACT)
     {
         while (insertionIndex > 0)
@@ -89,13 +89,13 @@ void AddEdge(struct DependencyGraph* graph, size_t firstNodeIndex, size_t nextNo
     graph->nodes[firstNodeIndex].connected[insertionIndex] = nextNodeIndex;
 }
 
-void AddFirstEdge(struct DependencyGraph* graph, size_t firstNodeIndex, size_t nextNodeIndex)
+void AddFirstEdge(struct DependencyGraph* graph, NodeIndex_t firstNodeIndex, NodeIndex_t nextNodeIndex)
 {
     graph->nodes[firstNodeIndex].connectedCount++;
     graph->nodes[firstNodeIndex].connected = realloc(graph->nodes[firstNodeIndex].connected, graph->nodes[firstNodeIndex].connectedCount * sizeof(size_t));
     
     // Insert it into the list such that dependency artifacts are ordered newest to oldest
-    size_t insertionIndex = graph->nodes[firstNodeIndex].connectedCount-1;
+    NodeIndex_t insertionIndex = graph->nodes[firstNodeIndex].connectedCount-1;
     if (graph->nodes[nextNodeIndex].type == NODE_ARTIFACT)
     {
         while (insertionIndex > 0)
@@ -108,9 +108,9 @@ void AddFirstEdge(struct DependencyGraph* graph, size_t firstNodeIndex, size_t n
     graph->nodes[firstNodeIndex].connected[insertionIndex] = nextNodeIndex;
 }
 
-bool FindArtifactNode(struct DependencyGraph* graph, char* repository, char* id, struct SemVer version, size_t* index)
+bool FindArtifactNode(struct DependencyGraph* graph, char* repository, char* id, struct SemVer version, NodeIndex_t* index)
 {
-    for (size_t i=0; i < graph->nodeCount; i++)
+    for (NodeIndex_t i=0; i < graph->nodeCount; i++)
     {
         if (graph->nodes[i].type == NODE_DEPENDENCY)
         {
@@ -139,9 +139,9 @@ bool FindArtifactNode(struct DependencyGraph* graph, char* repository, char* id,
     return false;
 }
 
-bool FindDependencyNode(struct DependencyGraph* graph, char* repository, char* id, struct SemVer min_version, struct SemVer max_version, size_t* index)
+bool FindDependencyNode(struct DependencyGraph* graph, char* repository, char* id, struct SemVer min_version, struct SemVer max_version, NodeIndex_t* index)
 {
-    for (size_t i=0; i < graph->nodeCount; i++)
+    for (NodeIndex_t i=0; i < graph->nodeCount; i++)
     {
         if (graph->nodes[i].type == NODE_ARTIFACT)
         {
@@ -314,7 +314,7 @@ void stringConcatenate(char* dest, char* src, size_t* length, bool dry)
     }
 }
 
-void getNameFromNode(struct DependencyGraph* graph, size_t index, char** output, bool declaration)
+void getNameFromNode(struct DependencyGraph* graph, NodeIndex_t index, char** output, bool declaration)
 {
     if (declaration)
     {
@@ -345,7 +345,7 @@ int Internal_RenderGraph(struct DependencyGraph* graph, char* output, bool dry)
     size_t outputLength=0;
     stringConcatenate(output, "flowchart\n", &outputLength, dry);
 
-    for (size_t i=0; i < graph->nodeCount; i++)
+    for (NodeIndex_t i=0; i < graph->nodeCount; i++)
     {
         char* nodeName = NULL;
         getNameFromNode(graph, i, &nodeName, true);
@@ -428,7 +428,7 @@ int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph*
     for (size_t i=0; i < dependencyCount; i++)
     {
         // Check if this dependency is already present
-        size_t dependencyNodeId;
+        NodeIndex_t dependencyNodeId;
         if (FindDependencyNode(graph, dependencies[i].repository, dependencies[i].id, dependencies[i].min_version, dependencies[i].max_version, &dependencyNodeId))
         {
             AddEdge(graph, root, dependencyNodeId);
@@ -464,11 +464,11 @@ int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph*
 
             validArtifactFound = true;
 
-            size_t artifactNodeId;
+            NodeIndex_t artifactNodeId;
             if (!FindArtifactNode(graph, artifacts[j].repository, artifacts[j].id, artifacts[j].version, &artifactNodeId))
             {
                 artifactNodeId = Internal_ConstructGraphFromArtifact(kpm, graph, &artifacts[j]);
-                if (artifactNodeId == (size_t) -1)
+                if (artifactNodeId == (NodeIndex_t) -1)
                 {
                     return -1;
                 }
@@ -486,7 +486,7 @@ int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph*
         {
             validArtifactFound = true;
 
-            size_t artifactNodeId;
+            NodeIndex_t artifactNodeId;
             if (!FindArtifactNode(graph, "", installedPackage.id, installedPackage.version, &artifactNodeId))
             {
                 struct IndexedArtifact fakeArtifact = {
@@ -497,7 +497,7 @@ int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph*
                 };
                 artifactNodeId = Internal_ConstructGraphFromArtifact(kpm, graph, &fakeArtifact);
                 KPM_FreeIndexedArtifact(&fakeArtifact);
-                if (artifactNodeId == (size_t) -1)
+                if (artifactNodeId == (NodeIndex_t) -1)
                 {
                     return -1;
                 }
@@ -522,7 +522,7 @@ int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph*
     return root;
 }
 
-bool CheckIdInDependencyList(char* id, size_t* needleIndex, size_t haystackSize, struct DependencyNode* haystack)
+bool CheckIdInDependencyList(char* id, NodeIndex_t* needleIndex, size_t haystackSize, struct DependencyNode* haystack)
 {
     for (*needleIndex = 0; *needleIndex < haystackSize; (*needleIndex)++)
     {
@@ -535,19 +535,19 @@ bool CheckIdInDependencyList(char* id, size_t* needleIndex, size_t haystackSize,
     return false;
 }
 
-void Internal_ArrayAddNode(size_t* traversedNodeCount, size_t** traversedNodes, size_t node)
+void Internal_ArrayAddNode(size_t* traversedNodeCount, NodeIndex_t** traversedNodes, NodeIndex_t node)
 {
     (*traversedNodeCount)++;
-    *traversedNodes = realloc(*traversedNodes, *traversedNodeCount * sizeof(size_t));
+    *traversedNodes = realloc(*traversedNodes, *traversedNodeCount * sizeof(NodeIndex_t));
     (*traversedNodes)[*traversedNodeCount - 1] = node;
 }
 
-bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, size_t root, size_t* traversedNodeCount, size_t** traversedNodes, struct KPMLogging* kpmLogging)
+bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, NodeIndex_t root, size_t* traversedNodeCount, NodeIndex_t** traversedNodes, struct KPMLogging* kpmLogging)
 {
     *traversedNodes = NULL;
     *traversedNodeCount = 0;
 
-    size_t currentNode = root;
+    NodeIndex_t currentNode = root;
     for (;;)
     {
         kpmLogging->log(KPM_VERBOSITY_DEBUG, "Traversing node: %zu - %s", currentNode, graph->nodes[currentNode].id);
@@ -575,9 +575,9 @@ bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, size_t root,
         {
             // Ensure this NEW node doesn't conflict with ANY previously traversed artifacts
             bool conflicts = false;
-            size_t conflictingArtifactId;
-            size_t conflictingDependencyId;
-            for (size_t i=0; i < *traversedNodeCount; i++) // i=2 so that we start on the first non-root artifact
+            NodeIndex_t conflictingArtifactId;
+            NodeIndex_t conflictingDependencyId;
+            for (size_t i=0; i < *traversedNodeCount; i++)
             {
                 if (graph->nodes[(*traversedNodes)[i]].type != NODE_ARTIFACT || (*traversedNodes)[i] == root)
                 {
@@ -599,7 +599,7 @@ bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, size_t root,
             // Find an alternative artifact that matches the conflicting artifact
             if (conflicts)
             {
-                size_t dependencyId = (*traversedNodes)[*traversedNodeCount - 2]; // Dependency for current artifact (traversedNodeCount must be at least 2 for a conflict to occur) (REMEMBER THAT -1 IS THE CURRENT -> -2 IS THE LAST!)
+                NodeIndex_t dependencyId = (*traversedNodes)[*traversedNodeCount - 2]; // Dependency for current artifact (traversedNodeCount must be at least 2 for a conflict to occur) (REMEMBER THAT -1 IS THE CURRENT -> -2 IS THE LAST!)
                 // Check if dependency has an artifact that matches the already resolved conflicting one
                 for (size_t i=0; i < graph->nodes[dependencyId].connectedCount; i++)
                 {
@@ -621,7 +621,7 @@ bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, size_t root,
             // Try to rollback to first encounter of the conflicting dependency
             if (conflicts)
             {
-                size_t dependencyId = (*traversedNodes)[*traversedNodeCount - 2]; // Dependency for current artifact (traversedNodeCount must be at least 2 for a conflict to occur) (REMEMBER THAT -1 IS THE CURRENT -> -2 IS THE LAST!)
+                NodeIndex_t dependencyId = (*traversedNodes)[*traversedNodeCount - 2]; // Dependency for current artifact (traversedNodeCount must be at least 2 for a conflict to occur) (REMEMBER THAT -1 IS THE CURRENT -> -2 IS THE LAST!)
                 
                 bool circular=false; // Detect a circular dependency by checking if the conflicting artifact is on our current path
                 for (size_t i=(*traversedNodeCount)-1; (*traversedNodes)[i] != root; i--)
@@ -675,7 +675,7 @@ bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, size_t root,
                 // This is essentially the nuclear option - we TRY to eliminate the conflicting dependency from this point
 
                 (*traversedNodeCount)--; // We are no longer looking at artifacts! (No need to bounds check because a circular dependency cannot just happen like that)
-                size_t currentDependencyId = dependencyId;
+                NodeIndex_t currentDependencyId = dependencyId;
                 while (conflicts)
                 {
                     // Does a parent artifact really exist?
@@ -684,7 +684,7 @@ bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, size_t root,
                         break;
                     }
                     
-                    size_t blacklistedDependency = currentDependencyId;
+                    NodeIndex_t blacklistedDependency = currentDependencyId;
                     // Go back to the dependent dependency :p
                     (*traversedNodeCount) -= 2;
                     currentDependencyId = (*traversedNodes)[*traversedNodeCount - 1];
@@ -694,7 +694,7 @@ bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, size_t root,
                     for (size_t i=0; i < graph->nodes[currentDependencyId].connectedCount; i++)
                     {
                         bool artifactBlacklisted = false;
-                        size_t candidateArtifact = graph->nodes[currentDependencyId].connected[i];
+                        NodeIndex_t candidateArtifact = graph->nodes[currentDependencyId].connected[i];
                         for (size_t j=0; j < graph->nodes[candidateArtifact].connectedCount; j++)
                         {
                             if (graph->nodes[candidateArtifact].connected[j] == blacklistedDependency)
@@ -745,7 +745,7 @@ bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, size_t root,
                         break;
                     }
                     
-                    size_t blacklistedDependency = currentDependencyId;
+                    NodeIndex_t blacklistedDependency = currentDependencyId;
                     // Go back to the dependent dependency :p
                     (*traversedNodeCount) -= 2;
                     currentDependencyId = (*traversedNodes)[*traversedNodeCount - 1];
@@ -754,7 +754,7 @@ bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, size_t root,
                     for (size_t i=0; i < graph->nodes[currentDependencyId].connectedCount; i++)
                     {
                         bool artifactBlacklisted = false;
-                        size_t candidateArtifact = graph->nodes[currentDependencyId].connected[i];
+                        NodeIndex_t candidateArtifact = graph->nodes[currentDependencyId].connected[i];
                         for (size_t j=0; j < graph->nodes[candidateArtifact].connectedCount; j++)
                         {
                             if (graph->nodes[candidateArtifact].connected[j] == blacklistedDependency)
@@ -803,7 +803,7 @@ bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, size_t root,
         if (alreadyTraversed || graph->nodes[currentNode].connectedCount == 0) // Move towards the next dependency artifact
         {
             // Construct a new path for the next dependency
-            size_t rootIndex;
+            NodeIndex_t rootIndex;
             for (rootIndex=(*traversedNodeCount)-1; (*traversedNodes)[rootIndex] != root; rootIndex--)
             {
                 continue;
@@ -828,7 +828,7 @@ bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, size_t root,
                 }
 
                 // Nothing to do for this node, move up back to our dependent's artifact
-                size_t traversedDependency = (*traversedNodes)[*traversedNodeCount - 2]; // Dependency we just resolved
+                NodeIndex_t traversedDependency = (*traversedNodes)[*traversedNodeCount - 2]; // Dependency we just resolved
                 (*traversedNodeCount) -= 2; // Move up
                 currentNode = (*traversedNodes)[*traversedNodeCount - 1]; // Set current node to the dependent artifact
 

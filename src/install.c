@@ -212,7 +212,7 @@ enum KPMResult Internal_GetManifest(char* path, char** outBuffer, struct KPMLogg
     return KPM_OK;
 }
 
-void Internal_TraverseInstalledNode(struct DependencyGraph* graph, size_t node, size_t* traversedNodeCount, size_t** traversedNodes, size_t installedCount, struct InstalledPackage* installed)
+void Internal_TraverseInstalledNode(struct DependencyGraph* graph, NodeIndex_t node, size_t* traversedNodeCount, NodeIndex_t** traversedNodes, size_t installedCount, struct InstalledPackage* installed)
 {
     // Traverse the dependencies
     for (size_t i = 0; i < graph->nodes[node].connectedCount; i++)
@@ -240,10 +240,59 @@ void Internal_TraverseInstalledNode(struct DependencyGraph* graph, size_t node, 
     Internal_ArrayAddNode(traversedNodeCount, traversedNodes, node);
 }
 
-enum KPMResult Internal_DownloadGraphItems(struct KPM* kpm, struct DependencyGraph* graph, size_t deduplicatedPackageCount, size_t* deduplicatedPackages)
+size_t Internal_DownloadCallback(char* ptr, size_t size, size_t nmemb, void* userdata)
 {
-    CURLM* cm = curl_multi_init();
-    curl_multi_setopt(cm, CURLMOPT_MAXCONNECTS, (long)kpm.);
+    return write(*((int*) userdata), ptr, size * nmemb);
+}
+
+enum KPMResult Internal_DownloadGraphItems(struct KPM* kpm, struct DependencyGraph* graph, size_t deduplicatedPackageCount, NodeIndex_t* deduplicatedPackages)
+{
+    for (size_t i=0; i < deduplicatedPackageCount; i++)
+    {
+        struct IndexedArtifact artifact;
+        KPM_GetArtifact(kpm, graph->nodes[deduplicatedPackages[i]].repository, graph->nodes[deduplicatedPackages[i]].id, graph->nodes[deduplicatedPackages[i]].min_version, &artifact);
+
+        char* filename = artifact.url + strlen(artifact.url)-1;
+        while (*filename != '/' && filename >= artifact.url)
+        {
+            filename--;
+        }
+        filename++;
+
+        char* path = malloc(strlen(kpm->pkgPath) + strlen("/tmp/") + strlen(filename));
+        sprintf(path, "%s/tmp/%s", kpm->pkgPath, filename);
+        int fd = open(path, O_CREAT|O_SYNC|O_TRUNC|O_WRONLY);
+        free(path);
+        if (fd == -1)
+        {
+            KPM_FreeIndexedArtifact(&artifact);
+            return KPM_FILE_SYSTEM_ERROR; // @TODO
+        }
+
+        CURL* curl = curl_easy_init();
+        curl_easy_setopt(curl, CURLOPT_URL, artifact.url);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, Internal_DownloadCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &fd); // This _should_ work
+        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L); //@TODO: Wth?
+        curl_easy_setopt(curl, CURLOPT_USERAGENT, "kpm/1.0.0");
+        curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2TLS);
+        curl_easy_setopt(curl, CURLOPT_FTP_SKIP_PASV_IP, 1L);
+        curl_easy_setopt(curl, CURLOPT_TCP_KEEPALIVE, 1L);
+        curl_easy_perform(curl);
+        long response_code;
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
+        close(fd);
+        curl_easy_cleanup(curl);
+
+        KPM_FreeIndexedArtifact(&artifact);
+
+        if (response_code != 200)
+        {
+            return KPM_CURL_ERROR;
+        }
+    }
+
+    return KPM_OK;
 }
 
 bool Internal_InstallItem(struct KPM* kpm, char* path, struct KPMLogging* kpmLogging)
@@ -271,7 +320,7 @@ bool Internal_InstallItem(struct KPM* kpm, char* path, struct KPMLogging* kpmLog
         if (system(installScriptPath) != 0)
         {
             // The install hook failed
-            statusCallback(KPM_VERBOSITY_ERROR, 0, "Could not execute install hook for [%s]", id);
+            kpmLogging->log(KPM_VERBOSITY_ERROR, "Could not execute install hook for [%s]", id);
             free(manifest);
             cJSON_Delete(json);
             free(outPath);
@@ -316,7 +365,7 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
         {
             if (KPM_GetArtifact(kpm, target->repository, target->id, *target->version, &artifact) != KPM_OK)
             {
-                statusCallback(KPM_VERBOSITY_ERROR, 0, "Could not find artifact for given target.");
+                kpmLogging->log(KPM_VERBOSITY_ERROR, "Could not find artifact for given target.");
                 return KPM_GENERIC_ERROR;
             }
         }
@@ -326,7 +375,7 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
             struct IndexedArtifact* artifacts;
             if (KPM_ListPackageArtifacts(kpm, target->repository, target->id, &artifactCount, &artifacts) != KPM_OK || artifactCount == 0)
             {
-                statusCallback(KPM_VERBOSITY_ERROR, 0, "Could not find artifact for given target.");
+                kpmLogging->log(KPM_VERBOSITY_ERROR, "Could not find artifact for given target.");
                 return KPM_GENERIC_ERROR;
             }
 
@@ -358,7 +407,7 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
     KPM_ListInstalledPackages(kpm, &installedPackageCount, &installedPackages);
 
     size_t traversedNodeCount;
-    size_t* traversedNodes;
+    NodeIndex_t* traversedNodes;
     for (size_t i=0; i < installedPackageCount; i++)
     {
         struct DependencyNode depNode = {
@@ -382,7 +431,7 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
             .version = installedPackages[i].version
         };
 
-        size_t constructedId = Internal_ConstructGraphFromArtifact(kpm, &graph, &fakeArtifact);
+        NodeIndex_t constructedId = Internal_ConstructGraphFromArtifact(kpm, &graph, &fakeArtifact);
         KPM_FreeIndexedArtifact(&fakeArtifact);
         AddEdge(&graph, depId, constructedId);
         Internal_ArrayAddNode(&traversedNodeCount, &traversedNodes, constructedId);
@@ -402,12 +451,12 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
     int depId = AddNode(&graph, depNode);
     AddEdge(&graph, rootId, depId);
 
-    size_t constructedId = Internal_ConstructGraphFromArtifact(kpm, &graph, &artifact);
+    NodeIndex_t constructedId = Internal_ConstructGraphFromArtifact(kpm, &graph, &artifact);
     AddEdge(&graph, depId, constructedId);
 
     char* out;
     RenderGraph(&graph, &out);
-    statusCallback(KPM_VERBOSITY_DEBUG, 0, "%s", out);
+    kpmLogging->log(KPM_VERBOSITY_DEBUG, "%s", out);
 
     /**
      * @brief Write out a state file for debugging purposes
@@ -438,16 +487,16 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
     free(string);
 
     // @TODO: Validate that it's starting from the right point when handling already-installed artifacts
-    if (!Internal_ResolveDependencyGraph(&graph, rootId, &traversedNodeCount, &traversedNodes, statusCallback))
+    if (!Internal_ResolveDependencyGraph(&graph, rootId, &traversedNodeCount, &traversedNodes, kpmLogging))
     {
-        statusCallback(KPM_VERBOSITY_ERROR, 0, "Could not resolve dependency graph.");
-        statusCallback(KPM_VERBOSITY_ERROR, 0, "If you believe this is a mistake - please submit an issue");
-        statusCallback(KPM_VERBOSITY_ERROR, 0, "Include the state file at /tmp/kpm_state.md");
+        kpmLogging->log(KPM_VERBOSITY_ERROR, "Could not resolve dependency graph.");
+        kpmLogging->log(KPM_VERBOSITY_ERROR, "If you believe this is a mistake - please submit an issue");
+        kpmLogging->log(KPM_VERBOSITY_ERROR, "Include the state file at /tmp/kpm_state.md");
 
         return KPM_GENERIC_ERROR;
     }
 
-    size_t* deduplicatedPackages = NULL;
+    NodeIndex_t* deduplicatedPackages = NULL;
     size_t* packageDepth = NULL;
     size_t deduplicatedPackageCount = 0;
 
@@ -478,7 +527,7 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
                     
                     // Ensure list is sorted by depth
                     size_t currentIndex = j-1;
-                    size_t currentPackage = deduplicatedPackages[j];
+                    NodeIndex_t currentPackage = deduplicatedPackages[j];
                     while (currentIndex > 0)
                     {
                         if (packageDepth[currentIndex-1] > currentDepth)
@@ -504,7 +553,7 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
         }
 
         deduplicatedPackageCount++;
-        deduplicatedPackages = realloc(deduplicatedPackages, deduplicatedPackageCount * sizeof(size_t));
+        deduplicatedPackages = realloc(deduplicatedPackages, deduplicatedPackageCount * sizeof(NodeIndex_t));
         packageDepth = realloc(packageDepth, deduplicatedPackageCount * sizeof(size_t));
         
         // Ensure list is sorted by depth
@@ -525,10 +574,11 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
         packageDepth[currentIndex] = currentDepth;
     }
 
+    // @TODO: Ensure downgrades are checked
     size_t updateCount;
-    size_t* update;
+    NodeIndex_t* update;
     size_t installCount;
-    size_t* install;
+    NodeIndex_t* install;
     for (size_t i=0; i < deduplicatedPackageCount; i++) // 1 to skip the dummy root
     {
         bool installed = false; // Already installed
@@ -561,24 +611,24 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
         }
     }
 
-    statusCallback(KPM_VERBOSITY_INFO, 0, "Preparing to upgrade %i packages", updateCount);
+    kpmLogging->log(KPM_VERBOSITY_INFO, "Preparing to upgrade %i packages", updateCount);
     for (size_t i=0; i < updateCount; i++)
     {
-        statusCallback(KPM_VERBOSITY_INFO, 0, "(d%i) - %s (%u.%u.%u)", packageDepth[i], graph.nodes[update[i]].id, graph.nodes[update[i]].min_version.major, graph.nodes[update[i]].min_version.minor, graph.nodes[update[i]].min_version.patch);
+        kpmLogging->log(KPM_VERBOSITY_INFO, "(d%i) - %s (%u.%u.%u)", packageDepth[i], graph.nodes[update[i]].id, graph.nodes[update[i]].min_version.major, graph.nodes[update[i]].min_version.minor, graph.nodes[update[i]].min_version.patch);
     }
 
 
-    statusCallback(KPM_VERBOSITY_INFO, 0, "Preparing to install %i packages", installCount);
+    kpmLogging->log(KPM_VERBOSITY_INFO, "Preparing to install %i packages", installCount);
     for (size_t i=0; i < installCount; i++)
     {
-        statusCallback(KPM_VERBOSITY_INFO, 0, "(d%i) - %s (%u.%u.%u)", packageDepth[i], graph.nodes[install[i]].id, graph.nodes[install[i]].min_version.major, graph.nodes[install[i]].min_version.minor, graph.nodes[install[i]].min_version.patch);
+        kpmLogging->log(KPM_VERBOSITY_INFO, "(d%i) - %s (%u.%u.%u)", packageDepth[i], graph.nodes[install[i]].id, graph.nodes[install[i]].min_version.major, graph.nodes[install[i]].min_version.minor, graph.nodes[install[i]].min_version.patch);
     }
 
     if (kpm->confirmInstall)
     {
-        if (!statusCallback(KPM_VERBOSITY_INFO, 0, "Would you like to proceed?"))
+        if (!kpmLogging->getInput("Would you like to proceed?"))
         {
-            statusCallback(KPM_VERBOSITY_INFO, 0, "Aborted.");
+            kpmLogging->log(KPM_VERBOSITY_INFO, "Aborted.");
             return KPM_OK; // @TODO
         }
     }
