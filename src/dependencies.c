@@ -11,6 +11,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+/**
+ * @brief Create a Dependency Graph object
+ * 
+ * @param graph Pointer to an empty graph struct to initialise
+ * @param count Number of nodes to allocate in the graph object initially
+ */
 void CreateDependencyGraph(struct DependencyGraph* graph, int count)
 {
     graph->nodeCount = 0;
@@ -24,6 +30,11 @@ void CreateDependencyGraph(struct DependencyGraph* graph, int count)
     }
 }
 
+/**
+ * @brief Free a node object
+ * 
+ * @param node The node to free
+ */
 void FreeNode(struct DependencyNode* node)
 {
     free(node->repository);
@@ -35,6 +46,11 @@ void FreeNode(struct DependencyNode* node)
     node->connectedCount = 0;
 }
 
+/**
+ * @brief Free a dependency graph and all the nodes in it
+ * 
+ * @param graph The graph to free
+ */
 void FreeDependencyGraph(struct DependencyGraph* graph)
 {
     for (NodeIndex_t i=0; i < graph->nodeCount; i++)
@@ -48,12 +64,25 @@ void FreeDependencyGraph(struct DependencyGraph* graph)
     graph->allocated = 0;
 }
 
+/**
+ * @brief Allocate more space for a dependency grpah
+ * 
+ * @param graph The dependency graph object
+ * @param allocate How many nodes to expand it by
+ */
 void ExtendDependencyGraph(struct DependencyGraph* graph, int allocate)
 {
     graph->allocated += allocate;
     graph->nodes = realloc(graph->nodes, sizeof(struct DependencyNode) * graph->allocated);
 }
 
+/**
+ * @brief Add a node to the dependency graph
+ * 
+ * @param graph 
+ * @param node 
+ * @return NodeIndex_t 
+ */
 NodeIndex_t AddNode(struct DependencyGraph *graph, struct DependencyNode node)
 {
     if (graph->nodeCount == graph->allocated)
@@ -65,6 +94,13 @@ NodeIndex_t AddNode(struct DependencyGraph *graph, struct DependencyNode node)
     return graph->nodeCount-1;
 }
 
+/**
+ * @brief Add a connection between two nodes in the graph
+ * 
+ * @param graph 
+ * @param firstNodeIndex 
+ * @param nextNodeIndex 
+ */
 void AddEdge(struct DependencyGraph* graph, NodeIndex_t firstNodeIndex, NodeIndex_t nextNodeIndex)
 {
     graph->nodes[firstNodeIndex].connectedCount++;
@@ -89,12 +125,18 @@ void AddEdge(struct DependencyGraph* graph, NodeIndex_t firstNodeIndex, NodeInde
     graph->nodes[firstNodeIndex].connected[insertionIndex] = nextNodeIndex;
 }
 
+/**
+ * @brief Add an edge to the graph such that this is the first edge for the given firstNode
+ * 
+ * @param graph 
+ * @param firstNodeIndex 
+ * @param nextNodeIndex 
+ */
 void AddFirstEdge(struct DependencyGraph* graph, NodeIndex_t firstNodeIndex, NodeIndex_t nextNodeIndex)
 {
     graph->nodes[firstNodeIndex].connectedCount++;
     graph->nodes[firstNodeIndex].connected = realloc(graph->nodes[firstNodeIndex].connected, graph->nodes[firstNodeIndex].connectedCount * sizeof(size_t));
     
-    // Insert it into the list such that dependency artifacts are ordered newest to oldest
     NodeIndex_t insertionIndex = graph->nodes[firstNodeIndex].connectedCount-1;
     if (graph->nodes[nextNodeIndex].type == NODE_ARTIFACT)
     {
@@ -108,6 +150,17 @@ void AddFirstEdge(struct DependencyGraph* graph, NodeIndex_t firstNodeIndex, Nod
     graph->nodes[firstNodeIndex].connected[insertionIndex] = nextNodeIndex;
 }
 
+/**
+ * @brief Search the graph for an artifact
+ * 
+ * @param graph 
+ * @param repository 
+ * @param id 
+ * @param version 
+ * @param index The index of the artifact's node
+ * @return true Returned if the node is found and index is set
+ * @return false Returned if the node is not found and index is not set
+ */
 bool FindArtifactNode(struct DependencyGraph* graph, char* repository, char* id, struct SemVer version, NodeIndex_t* index)
 {
     for (NodeIndex_t i=0; i < graph->nodeCount; i++)
@@ -139,6 +192,18 @@ bool FindArtifactNode(struct DependencyGraph* graph, char* repository, char* id,
     return false;
 }
 
+/**
+ * @brief Search the graph for a dependency node
+ * 
+ * @param graph 
+ * @param repository 
+ * @param id 
+ * @param min_version 
+ * @param max_version 
+ * @param index 
+ * @return true 
+ * @return false 
+ */
 bool FindDependencyNode(struct DependencyGraph* graph, char* repository, char* id, struct SemVer min_version, struct SemVer max_version, NodeIndex_t* index)
 {
     for (NodeIndex_t i=0; i < graph->nodeCount; i++)
@@ -175,6 +240,15 @@ bool FindDependencyNode(struct DependencyGraph* graph, char* repository, char* i
     return false;
 }
 
+/**
+ * @brief Given a specified artifact, get the list of dependencies it needs
+ * 
+ * @param kpm 
+ * @param target 
+ * @param targetDependencyCount 
+ * @param targetDependencies 
+ * @return enum KPMResult 
+ */
 enum KPMResult Internal_GetArtifactDependencies(struct KPM* kpm, struct IndexedArtifact* target, size_t* targetDependencyCount, struct ArtifactDependency** targetDependencies)
 {
     if (strlen(target->url) >= strlen("file://") && strncmp(target->url, "file://", strlen("file://")) == 0)

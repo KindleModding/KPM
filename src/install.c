@@ -16,8 +16,16 @@
 #include "callback.h"
 #include "kpm/semver.h"
 #include "dependencies.h"
+#include "sqlite3.h"
 #include "install.h"
 
+/**
+ * @brief Copy data between two libarchive archives
+ * 
+ * @param ar 
+ * @param aw 
+ * @return int 
+ */
 static int copy_data(struct archive *ar, struct archive *aw)
 {
   int r;
@@ -39,6 +47,14 @@ static int copy_data(struct archive *ar, struct archive *aw)
   }
 }
 
+/**
+ * @brief Internal function to extract an archive to an output path
+ * 
+ * @param path 
+ * @param out 
+ * @param kpmLogging 
+ * @return enum KPMResult 
+ */
 enum KPMResult Internal_ExtractArchive(char* path, char* out, struct KPMLogging* kpmLogging)
 {
     if (access(path, R_OK) != 0)
@@ -124,6 +140,14 @@ libarchive_error:
     return KPM_LIBARCHIVE_ERROR;
 }
 
+/**
+ * @brief Get the manifest of a KPKG package
+ * 
+ * @param path 
+ * @param outBuffer 
+ * @param kpmLogging 
+ * @return enum KPMResult 
+ */
 enum KPMResult Internal_GetManifest(char* path, char** outBuffer, struct KPMLogging* kpmLogging)
 {
     if (kpmLogging == NULL)
@@ -212,6 +236,16 @@ enum KPMResult Internal_GetManifest(char* path, char** outBuffer, struct KPMLogg
     return KPM_OK;
 }
 
+/**
+ * @brief Traverse installed dependencies
+ * 
+ * @param graph 
+ * @param node 
+ * @param traversedNodeCount 
+ * @param traversedNodes 
+ * @param installedCount 
+ * @param installed 
+ */
 void Internal_TraverseInstalledNode(struct DependencyGraph* graph, NodeIndex_t node, size_t* traversedNodeCount, NodeIndex_t** traversedNodes, size_t installedCount, struct InstalledPackage* installed)
 {
     // Traverse the dependencies
@@ -245,6 +279,15 @@ size_t Internal_DownloadCallback(char* ptr, size_t size, size_t nmemb, void* use
     return write(*((int*) userdata), ptr, size * nmemb);
 }
 
+/**
+ * @brief Download specified packages from a dependency graph
+ * 
+ * @param kpm 
+ * @param graph 
+ * @param deduplicatedPackageCount 
+ * @param deduplicatedPackages 
+ * @return enum KPMResult 
+ */
 enum KPMResult Internal_DownloadGraphItems(struct KPM* kpm, struct DependencyGraph* graph, size_t deduplicatedPackageCount, NodeIndex_t* deduplicatedPackages)
 {
     for (size_t i=0; i < deduplicatedPackageCount; i++)
@@ -295,7 +338,16 @@ enum KPMResult Internal_DownloadGraphItems(struct KPM* kpm, struct DependencyGra
     return KPM_OK;
 }
 
-bool Internal_InstallItem(struct KPM* kpm, char* path, struct KPMLogging* kpmLogging)
+/**
+ * @brief Internally used to install a given kpkg package - DOES NOT CHECK DEPENDENCIES + ASSUMES PACKAGE IS NOT ALREADY PRESENT
+ * 
+ * @param kpm 
+ * @param path 
+ * @param kpmLogging 
+ * @return true 
+ * @return false 
+ */
+bool Internal_InstallItem(struct KPM* kpm, char* repository, char* path, struct KPMLogging* kpmLogging)
 {
     char* manifest;
     Internal_GetManifest(path, &manifest, kpmLogging);
@@ -346,6 +398,29 @@ bool Internal_InstallItem(struct KPM* kpm, char* path, struct KPMLogging* kpmLog
         }
     }
 
+    // Add installed item to the database
+    const char* zSQL = "INSERT INTO installed_package (id, repository, name, author, description, version_major, version_minor, version_patch) VALUES (?, ?, ?, ?, ?, ?, ?, ?);";
+    sqlite3_stmt* statement;
+    sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
+    sqlite3_bind_text(statement, 1, id, -1, SQLITE_STATIC);
+    sqlite3_bind_text(statement, 2, repository, -1, SQLITE_STATIC);
+    sqlite3_bind_text(statement, 3, cJSON_GetStringValue(cJSON_GetObjectItem(json, "name")), -1, SQLITE_STATIC);
+    sqlite3_bind_text(statement, 4, cJSON_GetStringValue(cJSON_GetObjectItem(json, "author")), -1, SQLITE_STATIC);
+    sqlite3_bind_text(statement, 5, cJSON_GetStringValue(cJSON_GetObjectItem(json, "description")), -1, SQLITE_STATIC);
+    sqlite3_bind_int(statement, 6, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(json, "version"), 0)));
+    sqlite3_bind_int(statement, 7, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(json, "version"), 1)));
+    sqlite3_bind_int(statement, 8, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(json, "version"), 2)));
+    if (sqlite3_step(statement) != SQLITE_DONE)
+    {
+        sqlite3_finalize(statement);
+        free(manifest);
+        cJSON_Delete(json);
+        free(outPath);
+        free(installScriptPath);
+        return false; // Failure with adding it to the database - @TODO: This could be bad, we may need better error handling
+    }
+
+    sqlite3_finalize(statement);
     free(manifest);
     cJSON_Delete(json);
     free(outPath);
@@ -416,7 +491,7 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
         .repository = strdup(""),
     };
 
-    int rootId = AddNode(&graph, rootNode);
+    NodeIndex_t rootId = AddNode(&graph, rootNode);
 
     // Add installed packages to the graph
     size_t installedPackageCount;
@@ -436,7 +511,7 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
             .min_version = installedPackages[i].version,
             .max_version = installedPackages[i].version
         };
-        depNode.max_version.patch += 1;
+        depNode.max_version.patch += 1; // @TODO: Allow listing alternative package to upgrade
 
         int depId = AddNode(&graph, depNode);
         AddEdge(&graph, rootId, depId);
@@ -654,7 +729,21 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
 
     for (size_t i=0; i < deduplicatedPackageCount; i++) // 1 to skip the dummy root
     {
-        Internal_InstallItem(kpm, graph.nodes[deduplicatedPackages[i]], kpmLogging);
+        struct IndexedArtifact artifact;
+        KPM_GetArtifact(kpm, graph.nodes[deduplicatedPackages[i]].repository, graph.nodes[deduplicatedPackages[i]].id, graph.nodes[deduplicatedPackages[i]].min_version, &artifact);
+
+        char* filename = artifact.url + strlen(artifact.url)-1;
+        while (*filename != '/' && filename >= artifact.url)
+        {
+            filename--;
+        }
+        filename++;
+
+        char* path = malloc(strlen(kpm->pkgPath) + strlen("/tmp/") + strlen(filename));
+        sprintf(path, "%s/tmp/%s", kpm->pkgPath, filename);
+
+        Internal_InstallItem(kpm, path, kpmLogging);
+        free(path);
     }
 
     return KPM_OK;
