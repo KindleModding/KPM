@@ -6,7 +6,7 @@
 #include <unistd.h>
 #include <libgen.h>
 
-void statusCallback(enum Verbosity verbosity, uint progress, char * format, ...)
+void statusCallback(enum Verbosity verbosity, char * format, ...)
 {
     va_list args;
     va_start(args, format);
@@ -30,7 +30,12 @@ int main()
     assert(KPM_GetRepository(&kpm, "org.kindlemodding.examplerepo", &repository) == KPM_OK);
 
     fprintf(stderr, "Indexing packages\n");
-    assert(KPM_UpdateIndex(&kpm, statusCallback) == KPM_OK);
+    struct KPMLogging logger = 
+    {
+        .log = statusCallback
+
+    };
+    assert(KPM_UpdateIndex(&kpm, &logger) == KPM_OK);
 
     fprintf(stderr, "Testing package list\n");
     size_t packageCount;

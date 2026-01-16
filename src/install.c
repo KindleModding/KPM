@@ -3,6 +3,7 @@
 #include "cjson/cJSON.h"
 #include "kpm/kpm.h"
 #include <assert.h>
+#include <curl/curl.h>
 #include <curl/multi.h>
 #include <fcntl.h>
 #include <limits.h>
@@ -362,7 +363,7 @@ bool Internal_InstallItem(struct KPM* kpm, char* repository, char* path, struct 
     Internal_ExtractArchive(path, outPath, kpmLogging);
 
     char* installScriptPath = malloc(strlen(outPath) + strlen("install.sh") + 1);
-    sprintf(outPath, "%sinstall.sh", outPath);
+    sprintf(installScriptPath, "%sinstall.sh", outPath);
 
     // Check if an install.sh file exists
     // If so, run it

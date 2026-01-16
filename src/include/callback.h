@@ -7,9 +7,4 @@ void logStub(enum Verbosity, char* details, ...);
 void logProgressStub(uint progress, char* details, ...);
 bool getInputStub(char* details, ...);
 
-struct KPMLogging dummyKPMStub = 
-{
-    .log = logStub,
-    .logProgress = logProgressStub,
-    .getInput = getInputStub
-};
+extern struct KPMLogging dummyKPMStub;

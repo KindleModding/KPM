@@ -1,4 +1,5 @@
 #include "kpm/kpm.h"
+#include "cjson/cJSON.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -172,61 +173,4 @@ enum KPMResult KPM_ListInstalledPackageDependencies(struct KPM* kpm, char* id, s
 
     sqlite3_finalize(statement);
     return KPM_OK;
-}
-
-bool indexDependency(struct KPM* kpm, char* artifact_repository, char* artifact_id, char* artifact_url, cJSON* dependency, struct KPMLogging* kpmLogging)
-{
-    const char* zSQL = "INSERT INTO artifact_dependencies (artifact_repository, artifact_id, artifact_url, repository, id, min_version_major, min_version_minor, min_version_patch, max_version_major, max_version_minor, max_version_patch) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
-    sqlite3_stmt* statement;
-    sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
-    sqlite3_bind_text(statement, 1, artifact_repository, -1, SQLITE_STATIC);
-    sqlite3_bind_text(statement, 2, artifact_id, -1, SQLITE_STATIC);
-    sqlite3_bind_text(statement, 3, artifact_url, -1, SQLITE_STATIC);
-    sqlite3_bind_text(statement, 5, cJSON_GetStringValue(cJSON_GetObjectItem(dependency, "id")), -1, SQLITE_STATIC);
-
-    cJSON* repositoryObject = cJSON_GetObjectItem(dependency, "repository");
-    if (repositoryObject != NULL && !cJSON_IsNull(repositoryObject))
-    {
-        sqlite3_bind_text(statement, 4, cJSON_GetStringValue(repositoryObject), -1, SQLITE_STATIC);
-    }
-    else {
-        sqlite3_bind_text(statement, 4, "", -1, SQLITE_STATIC);
-    }
-    
-    if (cJSON_GetObjectItem(dependency, "min") != NULL)
-    {
-        sqlite3_bind_int(statement, 6, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "min"), 0)));
-        sqlite3_bind_int(statement, 7, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "min"), 1)));
-        sqlite3_bind_int(statement, 8, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "min"), 2)));
-    }
-    else
-    {
-        sqlite3_bind_int(statement, 6, 0);
-        sqlite3_bind_int(statement, 7, 0);
-        sqlite3_bind_int(statement, 8, 0);
-    }
-
-    if (cJSON_GetObjectItem(dependency, "max") != NULL)
-    {
-        sqlite3_bind_int(statement, 9, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "max"), 0)));
-        sqlite3_bind_int(statement, 10, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "max"), 1)));
-        sqlite3_bind_int(statement, 11, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "max"), 2)));
-    }
-    else
-    {
-        sqlite3_bind_int(statement, 9, VERSION_MAX);
-        sqlite3_bind_int(statement, 10, VERSION_MAX);
-        sqlite3_bind_int(statement, 11, VERSION_MAX);
-    }
-
-    int status;
-    if ((status = sqlite3_step(statement)) != SQLITE_DONE)
-    {
-        sqlite3_finalize(statement);
-        kpmLogging->log(KPM_VERBOSITY_ERROR, "SQLite error: (%i)", status);
-        return false;
-    }
-
-    sqlite3_finalize(statement);
-    return true;
 }

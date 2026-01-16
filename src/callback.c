@@ -16,3 +16,10 @@ bool getInputStub(char* details, ...)
     return false;
 }
 
+struct KPMLogging dummyKPMStub = 
+{
+    .log = logStub,
+    .logProgress = logProgressStub,
+    .getInput = getInputStub
+};
+

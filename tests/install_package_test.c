@@ -6,7 +6,7 @@
 #include <unistd.h>
 #include <libgen.h>
 
-void statusCallback(enum Verbosity verbosity, uint progress, char * format, ...)
+void statusCallback(enum Verbosity verbosity, char * format, ...)
 {
     va_list args;
     va_start(args, format);
@@ -40,7 +40,12 @@ int main()
         .version = NULL
     };
     
-    int status = KPM_InstallPackage(&kpm, &target, statusCallback);
+    struct KPMLogging logger = 
+    {
+        .log = statusCallback
+
+    };
+    int status = KPM_InstallPackage(&kpm, &target, &logger);
     fprintf(stderr, "Status: %i\n", status);
     assert(status == KPM_OK);
 
