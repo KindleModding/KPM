@@ -428,12 +428,21 @@ bool Internal_InstallItem(struct KPM* kpm, char* repository, char* path, struct 
     return true;
 }
 
+/**
+ * @brief Installs/upgrades a target package and its dependencies
+ * 
+ * @param kpm 
+ * @param target 
+ * @param kpmLogging 
+ * @return enum KPMResult 
+ */
 enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target, struct KPMLogging* kpmLogging)
 {
     if (kpmLogging == NULL)
     {
         kpmLogging = &dummyKPMStub;
     }
+    kpmLogging->log(KPM_VERBOSITY_INFO, "Installing package %s/%s (%u.%u.%u)", target->repository, target->id, target->version->major, target->version->minor, target->version->patch);
 
     struct IndexedArtifact artifact;
     if (strncmp(target->id, "file://", strlen("file://")) == 0)
@@ -480,9 +489,12 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
     }
 
     // Construct a graph
+    kpmLogging->log(KPM_VERBOSITY_DEBUG, "Constructing dependency graph...");
     struct DependencyGraph graph;
     CreateDependencyGraph(&graph, 0);
 
+    // Fake rootnode is important so that we can handle previously installed packages
+    // (See the rendered graph)
     struct DependencyNode rootNode = {
         .type = NODE_ARTIFACT,
         .connected = NULL,
@@ -494,6 +506,7 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
     NodeIndex_t rootId = AddNode(&graph, rootNode);
 
     // Add installed packages to the graph
+    kpmLogging->log(KPM_VERBOSITY_DEBUG, "Adding installed packages to graph:");
     size_t installedPackageCount;
     struct InstalledPackage *installedPackages;
     KPM_ListInstalledPackages(kpm, &installedPackageCount, &installedPackages);
@@ -512,6 +525,8 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
             .max_version = installedPackages[i].version
         };
         depNode.max_version.patch += 1; // @TODO: Allow listing alternative package to upgrade
+
+        kpmLogging->log(KPM_VERBOSITY_DEBUG, "\t- %s/%s (%u.%u.%u)", installedPackages[i].repository, installedPackages[i].id, installedPackages[i].version.major, installedPackages[i].version.minor, installedPackages[i].version.patch);
 
         int depId = AddNode(&graph, depNode);
         AddEdge(&graph, rootId, depId);
@@ -532,6 +547,7 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
         Internal_TraverseInstalledNode(&graph, constructedId, &traversedNodeCount, &traversedNodes, installedPackageCount, installedPackages);
     }
 
+    kpmLogging->log(KPM_VERBOSITY_DEBUG, "Adding target to graph");
     // Add the target to the graph
     struct DependencyNode depNode = {
         .type = NODE_DEPENDENCY,
@@ -546,9 +562,10 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
     NodeIndex_t constructedId = Internal_ConstructGraphFromArtifact(kpm, &graph, &artifact);
     AddEdge(&graph, depId, constructedId);
 
+    // Render out the graph and log the data for debugging
     char* out;
     RenderGraph(&graph, &out);
-    kpmLogging->log(KPM_VERBOSITY_DEBUG, "%s", out);
+    kpmLogging->log(KPM_VERBOSITY_DEBUG, "Constructed dependency graph:\n\n%s\n\n", out);
 
     /**
      * @brief Write out a state file for debugging purposes
@@ -582,7 +599,7 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
     if (!Internal_ResolveDependencyGraph(&graph, rootId, &traversedNodeCount, &traversedNodes, kpmLogging))
     {
         kpmLogging->log(KPM_VERBOSITY_ERROR, "Could not resolve dependency graph.");
-        kpmLogging->log(KPM_VERBOSITY_ERROR, "If you believe this is a mistake - please submit an issue");
+        kpmLogging->log(KPM_VERBOSITY_ERROR, "If you believe this is a bug - please submit an issue");
         kpmLogging->log(KPM_VERBOSITY_ERROR, "Include the state file at /tmp/kpm_state.md");
 
         return KPM_GENERIC_ERROR;
@@ -742,7 +759,7 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
         char* path = malloc(strlen(kpm->pkgPath) + strlen("/tmp/") + strlen(filename));
         sprintf(path, "%s/tmp/%s", kpm->pkgPath, filename);
 
-        Internal_InstallItem(kpm, path, kpmLogging);
+        Internal_InstallItem(kpm, graph.nodes[deduplicatedPackages[i]].repository, path, kpmLogging);
         free(path);
     }
 
