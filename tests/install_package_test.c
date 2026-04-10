@@ -24,11 +24,11 @@ int main()
     getcwd(curDir, 2048);
     char* dir = dirname(curDir);
 
-    /*char* uri = malloc(strlen("file://") + strlen(dir) + strlen("/examples/examplerepo/packages/com.kindlemodding.examplepackage/artifacts/com.kindlemodding.examplepackage_1.2.3_armhf-armel.kpkg") + 1);
+    /*char* uri = malloc(strlen("file://") + strlen(dir) + strlen("/examples/examplerepo/packages/com.kindlemodding.examplepackage/artifacts/com.kindlemodding.examplepackage_1.2.3_kindlehf-kindlepw2.kpkg") + 1);
     strcpy(uri, "file://");
     strcpy(uri + strlen("file://"), dir);
-    strcpy(uri + strlen("file://") + strlen(dir), "/examples/examplerepo/packages/com.kindlemodding.examplepackage/artifacts/com.kindlemodding.examplepackage_1.2.3_armhf-armel.kpkg");
-    uri[strlen("file://") + strlen(dir) + strlen("/examples/examplerepo/packages/com.kindlemodding.examplepackage/artifacts/com.kindlemodding.examplepackage_1.2.3_armhf-armel.kpkg")] = '\0';
+    strcpy(uri + strlen("file://") + strlen(dir), "/examples/examplerepo/packages/com.kindlemodding.examplepackage/artifacts/com.kindlemodding.examplepackage_1.2.3_kindlehf-kindlepw2.kpkg");
+    uri[strlen("file://") + strlen(dir) + strlen("/examples/examplerepo/packages/com.kindlemodding.examplepackage/artifacts/com.kindlemodding.examplepackage_1.2.3_kindlehf-kindlepw2.kpkg")] = '\0';
 
     fprintf(stderr, "%s\n", uri);*/
 

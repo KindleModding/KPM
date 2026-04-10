@@ -13,7 +13,7 @@ The file `must` have a `manifest.json` in its root.
     "author": "KOReader Team",
     "description": "KOReader is a feature-rich eBook reader",
     "version": [ 1, 2, 0 ],
-    "supported_arch": [ "armhf" ],
+    "supported_platform": [ "kindlehf" ],
     "dependencies":
     [
         {
@@ -42,10 +42,16 @@ name - The display name of the package
 author - The author of the package
 description - The description of the package
 version - The version of the package (ie: `v1.2.3` -> `[1, 2, 3]`)
-supported_arch - List of supported architectures MUST BE a list containing only `armel`, `armhf` or any combination of the two
+supported_platform - List of supported architectures
 supported_devices - OPTIONAL, List of supported Kindle device codes as integers
 dependencies - A list of package dependencies
 ```
+
+### Supported Architectures
+- `kindle` - K2, DX, DXG, K3
+- `kindle5` - K4, K5, PW1
+- `kindlepw2` - PW2+ (note that `kindlepw2` targets should generally also have `kindle5` natively)
+- `kindlehf` - Any Kindle on FW `>=5.16.3`
 
 ### Dependencies
 

@@ -83,15 +83,15 @@ if (args.add):
     print("Adding artifact...")
     packageFolder = os.path.join("packages", manifest['id'])
     artifactFolder = os.path.join(packageFolder, "artifacts")
-    artifactPath = os.path.join(artifactFolder, f"{manifest['id']}_{'.'.join(str(x) for x in manifest['version'])}_{'-'.join(manifest['supported_arch'])}.kpkg")
+    artifactPath = os.path.join(artifactFolder, f"{manifest['id']}_{'.'.join(str(x) for x in manifest['version'])}_{'-'.join(manifest['supported_platform'])}.kpkg")
 
     for artifact in repositoryManifest["packages"][manifest["id"]]["artifacts"]:
         if (artifact["version"][0] == manifest["version"][0] and
             artifact["version"][1] == manifest["version"][1] and
             artifact["version"][2] == manifest["version"][2]):
             different = False
-            for supported_arch in artifact["supported_arch"]:
-                if (not supported_arch in manifest["supported_arch"]):
+            for supported_platform in artifact["supported_platform"]:
+                if (not supported_platform in manifest["supported_platform"]):
                     different = True
             
             if (not different):
@@ -108,7 +108,7 @@ if (args.add):
         "url": artifactPath,
         "version": manifest["version"],
         "dependencies": manifest["dependencies"],
-        "supported_arch": manifest["supported_arch"],
+        "supported_platform": manifest["supported_platform"],
     })
 
     if ("supported_devices" in manifest):

@@ -13,8 +13,8 @@ Note: You should not be managing a repository manually, instead use the `krm.py`
     - com.kindlemodding.example
         - icon.png
         - artifacts
-            - com.kindlemodding.example_1.2.3_armel.kpkg
-            - com.kindlemodding.example_1.2.3_armhf.kpkg
+            - com.kindlemodding.example_1.2.3_kindlepw2.kpkg
+            - com.kindlemodding.example_1.2.3_kindlehf.kpkg
 - screenshots
     - com.kindlemodding.example
         - screenshots.json
@@ -41,16 +41,16 @@ Note: You should not be managing a repository manually, instead use the `krm.py`
             "artifacts":
             [
                 {
-                    "url": "packages/com.kindlemodding.example/armhf/package_v1.0.0.kpkg",
+                    "url": "packages/com.kindlemodding.example/kindlehf/package_v1.0.0.kpkg",
                     "depencencies": [],
                     "version": [ 1, 0, 0 ],
-                    "supported_arch": [ "armhf" ],
+                    "supported_platform": [ "kindlehf" ],
                 },
                 {
-                    "url": "packages/com.kindlemodding.example/armel/package_v1.0.0.kpkg",
+                    "url": "packages/com.kindlemodding.example/kindlepw2/package_v1.0.0.kpkg",
                     "depencencies": [],
                     "version": [ 1, 0, 0 ],
-                    "supported_arch": [ "armel" ]
+                    "supported_platform": [ "kindlepw2" ]
                 }
             ]
         }
