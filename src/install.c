@@ -819,7 +819,10 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
         char* path;
         asprintf(&path, "%s/tmp/%s", kpm->pkgPath, filename);
 
-        Internal_InstallItem(kpm, graph.nodes[deduplicatedPackages[i]].repository, path, kpmLogging);
+        if (!Internal_InstallItem(kpm, graph.nodes[deduplicatedPackages[i]].repository, path, kpmLogging))
+        {
+            kpmLogging->log(KPM_VERBOSITY_ERROR, "Could not install %s", artifact.id);
+        }
         free(path);
     }
 
