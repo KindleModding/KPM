@@ -426,7 +426,10 @@ bool Internal_InstallItem(struct KPM* kpm, char* repository, char* path, struct 
         kpmLogging->log(KPM_VERBOSITY_INFO, "Running install hooks for [%s]", id);
         // Run install script
         int result = -1;
-        FILE* stream = popen(installScriptPath, "r");
+        char* installCommand = malloc(3 + strlen(installScriptPath) + 1);
+        sprintf(installCommand, "sh %s", installScriptPath);
+        chdir(outPath);
+        FILE* stream = popen(installCommand, "r");
         if (stream != NULL)
         {
             int c;
