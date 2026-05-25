@@ -115,7 +115,7 @@ struct InstallTarget
 {
     char* repository;
     char* id;
-    struct SemVer* version;
+    struct SemVer* version; /**< Note: may be NULL if version doesn't matter */
 };
 
 struct KPM

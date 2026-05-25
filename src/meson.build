@@ -10,7 +10,8 @@ sources = files(
     'package.c',
     'repository.c',
     'simpleGET.c',
-    'utils.c'
+    'utils.c',
+    'internal_utils.c'
 )
 include_dir = include_directories('./include')
 

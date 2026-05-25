@@ -17,7 +17,13 @@ void statusCallback(enum Verbosity verbosity, char * format, ...)
 
 int main()
 {
-    struct KPM kpm;
+    struct KPM kpm = {
+        .pkgPath = "/tmp/",
+        .prompt = false,
+        .confirmInstall = false,
+        .maxConnections = 50
+    };
+
     KPM_Initialise(&kpm, "./repo_test.db");
 
     char curDir[2048];
@@ -32,10 +38,10 @@ int main()
 
     fprintf(stderr, "%s\n", uri);*/
 
-    char* uri = "com.kindlemodding.examplepackage";
+    char* id = "com.kindlemodding.examplepackage";
 
     struct InstallTarget target = {
-        .id = uri,
+        .id = id,
         .repository = "",
         .version = NULL
     };

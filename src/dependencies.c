@@ -565,7 +565,7 @@ int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph*
             {
                 struct IndexedArtifact fakeArtifact = {
                     .id = strdup(installedPackage.id),
-                    .repository = strdup("localhost"),
+                    .repository = installedPackage.repository,
                     .url = strdup(""),
                     .version = installedPackage.version
                 };

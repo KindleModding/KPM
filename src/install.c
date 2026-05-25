@@ -19,6 +19,7 @@
 #include "dependencies.h"
 #include "sqlite3.h"
 #include "install.h"
+#include "internal_utils.h"
 
 /**
  * @brief Copy data between two libarchive archives
@@ -289,12 +290,14 @@ size_t Internal_DownloadCallback(char* ptr, size_t size, size_t nmemb, void* use
  * @param deduplicatedPackages 
  * @return enum KPMResult 
  */
-enum KPMResult Internal_DownloadGraphItems(struct KPM* kpm, struct DependencyGraph* graph, size_t deduplicatedPackageCount, NodeIndex_t* deduplicatedPackages)
+enum KPMResult Internal_DownloadGraphItems(struct KPM* kpm, struct DependencyGraph* graph, size_t deduplicatedPackageCount, NodeIndex_t* deduplicatedPackages, struct KPMLogging* kpmLogging)
 {
     for (size_t i=0; i < deduplicatedPackageCount; i++)
     {
         struct IndexedArtifact artifact;
         KPM_GetArtifact(kpm, graph->nodes[deduplicatedPackages[i]].repository, graph->nodes[deduplicatedPackages[i]].id, graph->nodes[deduplicatedPackages[i]].min_version, &artifact);
+        struct Repository repository;
+        KPM_GetRepository(kpm, artifact.repository, &repository);
 
         char* filename = artifact.url + strlen(artifact.url)-1;
         while (*filename != '/' && filename >= artifact.url)
@@ -303,8 +306,12 @@ enum KPMResult Internal_DownloadGraphItems(struct KPM* kpm, struct DependencyGra
         }
         filename++;
 
+        kpmLogging->log(KPM_VERBOSITY_INFO, "Downloading %s", artifact.id);
         char* path = malloc(strlen(kpm->pkgPath) + strlen("/tmp/") + strlen(filename));
+        sprintf(path, "%s/tmp/", kpm->pkgPath);
+        mkdir_r(path, 0775);
         sprintf(path, "%s/tmp/%s", kpm->pkgPath, filename);
+        kpmLogging->log(KPM_VERBOSITY_DEBUG, "Downloading to %s", path);
         int fd = open(path, O_CREAT|O_SYNC|O_TRUNC|O_WRONLY);
         free(path);
         if (fd == -1)
@@ -314,10 +321,31 @@ enum KPMResult Internal_DownloadGraphItems(struct KPM* kpm, struct DependencyGra
         }
 
         CURL* curl = curl_easy_init();
-        curl_easy_setopt(curl, CURLOPT_URL, artifact.url);
+        char* repo_url = strdup(repository.url);
+        int last_slash = 0;
+        for (int i = 0; i < strlen(repo_url); i++)
+        {
+            if (repo_url[i] == '/')
+                last_slash = i;
+        }
+        repo_url[last_slash] = 0;
+        char* target_url = malloc(strlen(repo_url) + 1 + strlen(artifact.url) + 1);
+        sprintf(target_url, "%s/%s", repo_url, artifact.url);
+        free(repo_url);
+        for (int i = 0; i < strlen(artifact.url); i++)
+        {
+            if (artifact.url[i] == ':')
+            {
+                free(target_url);
+                target_url = strdup(artifact.url);
+                break;
+            }
+        }
+        kpmLogging->log(KPM_VERBOSITY_DEBUG, "Downloading url %s", target_url);
+        curl_easy_setopt(curl, CURLOPT_URL, target_url);
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, Internal_DownloadCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &fd); // This _should_ work
-        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L); //@TODO: Wth?
+        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L); //@FIXME @TODO: Wth?
         curl_easy_setopt(curl, CURLOPT_USERAGENT, "kpm/1.0.0");
         curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2TLS);
         curl_easy_setopt(curl, CURLOPT_FTP_SKIP_PASV_IP, 1L);
@@ -327,11 +355,13 @@ enum KPMResult Internal_DownloadGraphItems(struct KPM* kpm, struct DependencyGra
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
         close(fd);
         curl_easy_cleanup(curl);
+        free(target_url);
 
         KPM_FreeIndexedArtifact(&artifact);
 
         if (response_code != 200)
         {
+            kpmLogging->log(KPM_VERBOSITY_ERROR, "Curl received an invalid response code: %i", response_code);
             return KPM_CURL_ERROR;
         }
     }
@@ -351,10 +381,26 @@ enum KPMResult Internal_DownloadGraphItems(struct KPM* kpm, struct DependencyGra
 bool Internal_InstallItem(struct KPM* kpm, char* repository, char* path, struct KPMLogging* kpmLogging)
 {
     char* manifest;
-    Internal_GetManifest(path, &manifest, kpmLogging);
+    kpmLogging->log(KPM_VERBOSITY_DEBUG, "Reading manifest from %s", path);
+
+    enum KPMResult result;
+    if ((result = Internal_GetManifest(path, &manifest, kpmLogging)) != KPM_OK)
+    {
+        kpmLogging->log(KPM_VERBOSITY_ERROR, "Could not load manifest from %s (%i)", path, result);
+        return false;
+    }
+
+    if (manifest == NULL)
+    {
+        kpmLogging->log(KPM_VERBOSITY_ERROR, "Could not load manifest from %s", path);
+        return false;
+    }
+
+    kpmLogging->log(KPM_VERBOSITY_DEBUG, "%s", manifest);
     cJSON* json = cJSON_Parse(manifest);
 
     char* id = cJSON_GetStringValue(cJSON_GetObjectItem(json, "id"));
+    kpmLogging->log(KPM_VERBOSITY_DEBUG, "Installing item with id: %s", id);
 
     char* outPath = malloc(strlen(path) + 1 + strlen(id) + 2);
     sprintf(outPath, "%s/%s/", kpm->pkgPath, id);
@@ -440,16 +486,16 @@ bool Internal_InstallItem(struct KPM* kpm, char* repository, char* path, struct 
 enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target, struct KPMLogging* kpmLogging)
 {
     if (kpmLogging == NULL)
-    {
         kpmLogging = &dummyKPMStub;
-    }
-    kpmLogging->log(KPM_VERBOSITY_INFO, "Installing package %s/%s (%u.%u.%u)", target->repository, target->id, target->version->major, target->version->minor, target->version->patch);
+    
+    if (target->version == NULL)
+        kpmLogging->log(KPM_VERBOSITY_INFO, "Installing package %s/%s (ANY)", target->repository, target->id);
+    else
+        kpmLogging->log(KPM_VERBOSITY_INFO, "Installing package %s/%s (%u.%u.%u)", target->repository, target->id, target->version->major, target->version->minor, target->version->patch);
 
     struct IndexedArtifact artifact;
     if (strncmp(target->id, "file://", strlen("file://")) == 0)
     {
-        // We must index this artifact under the localhost repository
-        // We do this because it simplifies so much logic
         char* outBuffer = NULL;
         int status;
         if ((status = Internal_GetManifest(target->id + strlen("file://"), &outBuffer, kpmLogging)) != KPM_OK)
@@ -459,7 +505,7 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
         }
 
         //cJSON* json = cJSON_Parse(outBuffer);
-        return KPM_GENERIC_ERROR; // @TODO: Come back to this later - index local packages
+        return KPM_GENERIC_ERROR; // @TODO: Come back to this later - install local package files
     }
     else
     {
@@ -743,7 +789,12 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
         }
     }
     
-    Internal_DownloadGraphItems(kpm, &graph, deduplicatedPackageCount, deduplicatedPackages);
+    enum KPMResult result = Internal_DownloadGraphItems(kpm, &graph, deduplicatedPackageCount, deduplicatedPackages, kpmLogging);
+    if (result != KPM_OK)
+    {
+        kpmLogging->log(KPM_VERBOSITY_ERROR, "Error: Could not download dependency graph (%i)", result);
+        return result;
+    }
 
     for (size_t i=0; i < deduplicatedPackageCount; i++) // 1 to skip the dummy root
     {
