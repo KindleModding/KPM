@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <curl/curl.h>
 #include <curl/multi.h>
+#include <curl/typecheck-gcc.h>
 #include <fcntl.h>
 #include <limits.h>
 #include <stdbool.h>
@@ -355,14 +356,21 @@ enum KPMResult Internal_DownloadGraphItems(struct KPM* kpm, struct DependencyGra
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
         close(fd);
         curl_easy_cleanup(curl);
-        free(target_url);
-
         KPM_FreeIndexedArtifact(&artifact);
+        free(target_url);
 
         if (response_code != 200)
         {
-            kpmLogging->log(KPM_VERBOSITY_ERROR, "Curl received an invalid response code: %i", response_code);
-            return KPM_CURL_ERROR;
+            if (strncmp("file://", target_url, 7) != 0)
+            {
+                kpmLogging->log(KPM_VERBOSITY_DEBUG, "artifact is a file:// URL, ignoring error checking"); // @TODO
+            }
+            else
+            {
+                kpmLogging->log(KPM_VERBOSITY_ERROR, "Curl received an invalid response code: %i", response_code);
+                free(target_url);
+                return KPM_CURL_ERROR;
+            }
         }
     }
 
@@ -628,8 +636,8 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
         };
         target->version = &version;
     }
-    int allocate = snprintf(NULL, 0, "Current State:\nInstalling Target: (%s/)%s (%u.%u.%u)\nArtifact Found: (%s/)%s (%u.%u.%u) [%s]\n\nGenerated Graph:\n\n```", target->repository, target->id, target->version->major, target->version->minor, target->version->patch, artifact.repository, artifact.id, artifact.version.major, artifact.version.minor, artifact.version.patch, artifact.url);
-    char* string = malloc(allocate + 1);
+    int allocate = 1 + snprintf(NULL, 0, "Current State:\nInstalling Target: (%s/)%s (%u.%u.%u)\nArtifact Found: (%s/)%s (%u.%u.%u) [%s]\n\nGenerated Graph:\n\n```", target->repository, target->id, target->version->major, target->version->minor, target->version->patch, artifact.repository, artifact.id, artifact.version.major, artifact.version.minor, artifact.version.patch, artifact.url);
+    char* string = malloc(allocate);
     snprintf(string, allocate, "Current State:\nInstalling Target: (%s/)%s (%u.%u.%u)\nArtifact Found: (%s/)%s (%u.%u.%u) [%s]\n\nGenerated Graph:\n\n```", target->repository, target->id, target->version->major, target->version->minor, target->version->patch, artifact.repository, artifact.id, artifact.version.major, artifact.version.minor, artifact.version.patch, artifact.url);
     string[allocate] = '\0';
     fwrite(string, strlen(string), 1, file);
