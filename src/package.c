@@ -148,8 +148,8 @@ enum KPMResult KPM_SearchPackages(struct KPM* kpm, const char* query, size_t* pa
         *packages = NULL;
     }
 
-    char* paddedQuery = malloc(strlen(query) + 2 + 1);
-    sprintf(paddedQuery, "%%%s%%", query);    
+    char* paddedQuery;
+    asprintf(&paddedQuery, "%%%s%%", query);    
 
     const char* zSQL = "SELECT (SELECT COUNT() FROM packages WHERE id LIKE ? OR name LIKE ?), repository, id, name, author, description FROM packages WHERE id LIKE ? OR name LIKE ?;";
     sqlite3_stmt* statement;

@@ -106,8 +106,8 @@ enum KPMResult Internal_ExtractArchive(char* path, char* out, struct KPMLogging*
             goto libarchive_error;
         }
 
-        char* entryPath = malloc(strlen(archive_entry_pathname(entry)) + strlen(out) + 1 + 1);
-        sprintf(entryPath, "%s/%s", out, archive_entry_pathname(entry));
+        char* entryPath;
+        asprintf(&entryPath, "%s/%s", out, archive_entry_pathname(entry));
         archive_entry_set_pathname(entry, entryPath);
         r = archive_write_header(ext, entry);
         free(entryPath);
@@ -308,7 +308,7 @@ enum KPMResult Internal_DownloadGraphItems(struct KPM* kpm, struct DependencyGra
         filename++;
 
         kpmLogging->log(KPM_VERBOSITY_INFO, "Downloading %s", artifact.id);
-        char* path = malloc(strlen(kpm->pkgPath) + strlen("/tmp/") + strlen(filename));
+        char* path = malloc(strlen(kpm->pkgPath) + strlen("/tmp/") + strlen(filename) + 1);
         sprintf(path, "%s/tmp/", kpm->pkgPath);
         mkdir_r(path, 0775);
         sprintf(path, "%s/tmp/%s", kpm->pkgPath, filename);
@@ -330,8 +330,8 @@ enum KPMResult Internal_DownloadGraphItems(struct KPM* kpm, struct DependencyGra
                 last_slash = i;
         }
         repo_url[last_slash] = 0;
-        char* target_url = malloc(strlen(repo_url) + 1 + strlen(artifact.url) + 1);
-        sprintf(target_url, "%s/%s", repo_url, artifact.url);
+        char* target_url;
+        asprintf(&target_url, "%s/%s", repo_url, artifact.url);
         free(repo_url);
         for (int i = 0; i < strlen(artifact.url); i++)
         {
@@ -410,14 +410,14 @@ bool Internal_InstallItem(struct KPM* kpm, char* repository, char* path, struct 
     char* id = cJSON_GetStringValue(cJSON_GetObjectItem(json, "id"));
     kpmLogging->log(KPM_VERBOSITY_DEBUG, "Installing item with id: %s", id);
 
-    char* outPath = malloc(strlen(path) + 1 + strlen(id) + 2);
-    sprintf(outPath, "%s/%s/", kpm->pkgPath, id);
+    char* outPath;
+    asprintf(&outPath, "%s/%s/", kpm->pkgPath, id);
 
     // First unpack the .kpkg file
     Internal_ExtractArchive(path, outPath, kpmLogging);
 
-    char* installScriptPath = malloc(strlen(outPath) + strlen("install.sh") + 1);
-    sprintf(installScriptPath, "%sinstall.sh", outPath);
+    char* installScriptPath;
+    asprintf(&installScriptPath, "%sinstall.sh", outPath);
 
     // Check if an install.sh file exists
     // If so, run it
@@ -426,10 +426,13 @@ bool Internal_InstallItem(struct KPM* kpm, char* repository, char* path, struct 
         kpmLogging->log(KPM_VERBOSITY_INFO, "Running install hooks for [%s]", id);
         // Run install script
         int result = -1;
-        char* installCommand = malloc(3 + strlen(installScriptPath) + 1);
-        sprintf(installCommand, "sh %s", installScriptPath);
+        char* installCommand;
+        asprintf(&installCommand, "sh %s", installScriptPath);
         chdir(outPath);
+        free(outPath);
+        free(installScriptPath);
         FILE* stream = popen(installCommand, "r");
+        free(installCommand);
         if (stream != NULL)
         {
             int c;
@@ -450,8 +453,6 @@ bool Internal_InstallItem(struct KPM* kpm, char* repository, char* path, struct 
             kpmLogging->log(KPM_VERBOSITY_ERROR, "Could not execute install hook for [%s]", id);
             free(manifest);
             cJSON_Delete(json);
-            free(outPath);
-            free(installScriptPath);
             return false;
         }
     }
@@ -473,16 +474,12 @@ bool Internal_InstallItem(struct KPM* kpm, char* repository, char* path, struct 
         sqlite3_finalize(statement);
         free(manifest);
         cJSON_Delete(json);
-        free(outPath);
-        free(installScriptPath);
         return false; // Failure with adding it to the database - @TODO: This could be bad, we may need better error handling
     }
 
     sqlite3_finalize(statement);
     free(manifest);
     cJSON_Delete(json);
-    free(outPath);
-    free(installScriptPath);
     return true;
 }
 
@@ -819,8 +816,8 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
         }
         filename++;
 
-        char* path = malloc(strlen(kpm->pkgPath) + strlen("/tmp/") + strlen(filename));
-        sprintf(path, "%s/tmp/%s", kpm->pkgPath, filename);
+        char* path;
+        asprintf(&path, "%s/tmp/%s", kpm->pkgPath, filename);
 
         Internal_InstallItem(kpm, graph.nodes[deduplicatedPackages[i]].repository, path, kpmLogging);
         free(path);

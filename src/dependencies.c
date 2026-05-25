@@ -394,22 +394,19 @@ void getNameFromNode(struct DependencyGraph* graph, NodeIndex_t index, char** ou
     {
         if (graph->nodes[index].type == NODE_ARTIFACT)
         {
-            *output = malloc(1 + snprintf(NULL, 0, "%zu[\"%s\n%s\n%u.%u.%u\"]", index, graph->nodes[index].repository, graph->nodes[index].id, graph->nodes[index].min_version.major, graph->nodes[index].min_version.minor, graph->nodes[index].min_version.patch));
-            sprintf(*output, "%zu[\"%s\n%s\n%u.%u.%u\"]", index, graph->nodes[index].repository, graph->nodes[index].id, graph->nodes[index].min_version.major, graph->nodes[index].min_version.minor, graph->nodes[index].min_version.patch);
+            asprintf(output, "%zu[\"%s\n%s\n%u.%u.%u\"]", index, graph->nodes[index].repository, graph->nodes[index].id, graph->nodes[index].min_version.major, graph->nodes[index].min_version.minor, graph->nodes[index].min_version.patch);
             return;
         }
 
         if (graph->nodes[index].type == NODE_DEPENDENCY)
         {
-            *output = malloc(1 + snprintf(NULL, 0, "%zu([\"%s\n%s\n%u.%u.%u to %u.%u.%u\"])", index, graph->nodes[index].repository, graph->nodes[index].id, graph->nodes[index].min_version.major, graph->nodes[index].min_version.minor, graph->nodes[index].min_version.patch, graph->nodes[index].max_version.major, graph->nodes[index].max_version.minor, graph->nodes[index].max_version.patch));
-            sprintf(*output, "%zu([\"%s\n%s\n%u.%u.%u to %zu.%zu.%zu\"])", index, graph->nodes[index].repository, graph->nodes[index].id, graph->nodes[index].min_version.major, graph->nodes[index].min_version.minor, graph->nodes[index].min_version.patch, graph->nodes[index].max_version.major, graph->nodes[index].max_version.minor, graph->nodes[index].max_version.patch);
+            asprintf(output, "%zu([\"%s\n%s\n%u.%u.%u to %zu.%zu.%zu\"])", index, graph->nodes[index].repository, graph->nodes[index].id, graph->nodes[index].min_version.major, graph->nodes[index].min_version.minor, graph->nodes[index].min_version.patch, graph->nodes[index].max_version.major, graph->nodes[index].max_version.minor, graph->nodes[index].max_version.patch);
             return;
         }
     }
     else 
     {
-        *output = malloc(1 + snprintf(NULL, 0, "%zu", index));
-        sprintf(*output, "%zu", index);
+        asprintf(output, "%zu", index);
         return;
     }
 }
