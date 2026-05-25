@@ -417,7 +417,7 @@ void getNameFromNode(struct DependencyGraph* graph, NodeIndex_t index, char** ou
 int Internal_RenderGraph(struct DependencyGraph* graph, char* output, bool dry)
 {
     size_t outputLength=0;
-    stringConcatenate(output, "flowchart\n", &outputLength, dry);
+    stringConcatenate(output, "flowchart TD\n", &outputLength, dry);
 
     for (NodeIndex_t i=0; i < graph->nodeCount; i++)
     {
