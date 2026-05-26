@@ -204,10 +204,11 @@ enum KPMResult Internal_GetManifest(char* path, char** outBuffer, struct KPMLogg
             continue;
         }
 
-        *outBuffer = malloc(archive_entry_size(entry));
+        *outBuffer = malloc(archive_entry_size(entry) + 1);
+        memset(*outBuffer, 0, archive_entry_size(entry) + 1);
         const void* blockBuffer;
-        size_t blockSize;
-        la_int64_t offset;
+        size_t blockSize = 0;
+        la_int64_t offset = 0;
         int r = 0;
         for (;;)
         {
@@ -361,15 +362,15 @@ enum KPMResult Internal_DownloadGraphItems(struct KPM* kpm, struct DependencyGra
 
         if (response_code != 200)
         {
-            if (strncmp("file://", target_url, 7) != 0)
+            if (strncmp("file://", target_url, 7) == 0)
             {
                 free(target_url);
                 kpmLogging->log(KPM_VERBOSITY_DEBUG, "artifact is a file:// URL, ignoring error checking"); // @TODO
             }
             else
             {
-                kpmLogging->log(KPM_VERBOSITY_ERROR, "Curl received an invalid response code: %i", response_code);
                 free(target_url);
+                kpmLogging->log(KPM_VERBOSITY_ERROR, "Curl received an invalid response code: %i", response_code);
                 return KPM_CURL_ERROR;
             }
         }
@@ -745,7 +746,7 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
     NodeIndex_t* update = NULL;
     size_t installCount = 0;
     NodeIndex_t* install = NULL;
-    for (size_t i=0; i < deduplicatedPackageCount; i++) // 1 to skip the dummy root
+    for (size_t i=1; i < deduplicatedPackageCount; i++) // 1 to skip the dummy root
     {
         bool installed = false; // Already installed
         bool installing = true; // New package
