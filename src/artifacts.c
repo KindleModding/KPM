@@ -56,6 +56,7 @@ void KPM_FreeArtifactDependencyList(size_t dependencyCount, struct ArtifactDepen
     {
         KPM_FreeArtifactDependency(dependencies + i);
     }
+    free(dependencies);
 }
 
 enum KPMResult KPM_GetArtifact(struct KPM* kpm, const char* repositoryId, const char* packageId, struct SemVer version, struct IndexedArtifact* artifact)

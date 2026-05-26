@@ -121,6 +121,7 @@ void KPM_FreeInstalledPackageDependencyList(size_t dependencyCount, struct Insta
     {
         KPM_FreeInstalledPackageDependency(dependencies + i);
     }
+    free(dependencies);
 }
 
 

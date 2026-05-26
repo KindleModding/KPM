@@ -351,6 +351,7 @@ enum KPMResult Internal_GetArtifactDependencies(struct KPM* kpm, struct IndexedA
                 struct InstalledDependency* extraDependencies;
                 if ((status = KPM_ListInstalledPackageDependencies(kpm, target->id, &extraDependencyCount, &extraDependencies)) != KPM_OK)
                 {
+                    KPM_FreeInstalledPackageDependencyList(extraDependencyCount, extraDependencies);
                     return status;
                 }
 
@@ -366,7 +367,9 @@ enum KPMResult Internal_GetArtifactDependencies(struct KPM* kpm, struct IndexedA
                     (*targetDependencies)[i].min_version = extraDependencies[i].min_version;
                     (*targetDependencies)[i].max_version = extraDependencies[i].max_version;
                 }
+                KPM_FreeInstalledPackageDependencyList(extraDependencyCount, extraDependencies);
             }
+            KPM_FreeInstalledPackage(&installedPackage);
         }
 
         // Otherwise... nah
@@ -488,10 +491,11 @@ int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph*
     // Add this artifact to the graph
     int root = AddNode(graph, node);
 
-    size_t dependencyCount;
-    struct ArtifactDependency* dependencies;
+    size_t dependencyCount = 0;
+    struct ArtifactDependency* dependencies = NULL;
     if (Internal_GetArtifactDependencies(kpm, artifact, &dependencyCount, &dependencies) != KPM_OK)
     {
+        KPM_FreeArtifactDependencyList(dependencyCount, dependencies);
         fprintf(stderr, "Could not list dependencies for %s (%u.%u.%u)\n", artifact->id, artifact->version.major, artifact->version.minor, artifact->version.patch);
         return -1;
     }
@@ -541,6 +545,7 @@ int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph*
                 artifactNodeId = Internal_ConstructGraphFromArtifact(kpm, graph, &artifacts[j]);
                 if (artifactNodeId == (NodeIndex_t) -1)
                 {
+                    KPM_FreeArtifactDependencyList(dependencyCount, dependencies);
                     return -1;
                 }
             }
@@ -570,6 +575,7 @@ int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph*
                 KPM_FreeIndexedArtifact(&fakeArtifact);
                 if (artifactNodeId == (NodeIndex_t) -1)
                 {
+                    KPM_FreeArtifactDependencyList(dependencyCount, dependencies);
                     return -1;
                 }
             }
@@ -588,8 +594,6 @@ int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph*
     }
 
     KPM_FreeArtifactDependencyList(dependencyCount, dependencies);
-
-
     return root;
 }
 
@@ -609,7 +613,7 @@ bool CheckIdInDependencyList(char* id, NodeIndex_t* needleIndex, size_t haystack
 void Internal_ArrayAddNode(size_t* traversedNodeCount, NodeIndex_t** traversedNodes, NodeIndex_t node)
 {
     (*traversedNodeCount)++;
-    *traversedNodes = realloc(*traversedNodes, *traversedNodeCount * sizeof(NodeIndex_t));
+    *traversedNodes = realloc(*traversedNodes, (*traversedNodeCount) * sizeof(NodeIndex_t));
     (*traversedNodes)[*traversedNodeCount - 1] = node;
 }
 
