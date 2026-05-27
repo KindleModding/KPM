@@ -11,7 +11,7 @@ int main()
 
     size_t artifactCount;
     struct IndexedArtifact* artifacts;
-    assert(KPM_ListPackageArtifacts(&kpm, "", "com.kindlemodding.examplepackage", &artifactCount, &artifacts) == KPM_OK);
+    assert(KPM_ListPackageArtifacts(&kpm, NULL, "com.kindlemodding.examplepackage", &artifactCount, &artifacts) == KPM_OK);
     assert(artifactCount > 0);
 
     size_t installedPackageCount;

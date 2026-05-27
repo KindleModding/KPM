@@ -21,7 +21,7 @@ struct DependencyNode
     enum NodeType type; /**< The type of node this is */
     NodeIndex_t* connected; /**< Dependencies of this node */
     size_t connectedCount; /**< Number of dependencies of this node */
-    char* repository; /**< Package repo */
+    char* repository; /**< Package repo, may be NULL */
     char* id; /**< Package id */
     struct SemVer min_version;
     struct SemVer max_version;

@@ -213,7 +213,7 @@ enum KPMResult KPM_ListPackageArtifacts(struct KPM* kpm, const char* repositoryI
     }
     
     const char* zSQL;
-    if (strlen(repositoryId) == 0)
+    if (repositoryId == NULL)
     {
         zSQL = "SELECT (SELECT COUNT() FROM artifacts WHERE id=?), url, repository, id, version_major, version_minor, version_patch FROM artifacts WHERE id=? ORDER BY version_major DESC, version_minor DESC;";
     }
@@ -225,7 +225,7 @@ enum KPMResult KPM_ListPackageArtifacts(struct KPM* kpm, const char* repositoryI
     sqlite3_stmt* statement;
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
 
-    if (strlen(repositoryId) == 0)
+    if (repositoryId == NULL)
     {
         sqlite3_bind_text(statement, 1, packageId, -1, SQLITE_STATIC);
         sqlite3_bind_text(statement, 2, packageId, -1, SQLITE_STATIC);

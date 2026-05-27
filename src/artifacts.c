@@ -40,10 +40,8 @@ void KPM_FreeArtifactDependency(struct ArtifactDependency* dependency)
     free(dependency->artifact_repository);
     free(dependency->artifact_id);
     free(dependency->artifact_url);
-    free(dependency->repository);
     free(dependency->id);
 
-    dependency->repository = NULL;
     dependency->artifact_repository = NULL;
     dependency->artifact_id = NULL;
     dependency->artifact_url = NULL;
@@ -98,15 +96,14 @@ enum KPMResult KPM_ListArtifactDependencies(struct KPM* kpm, char* repository, c
         *dependencies = NULL;
     }
     
-    const char* zSQL = "SELECT (SELECT COUNT() FROM artifact_dependencies WHERE artifact_repository=? AND artifact_id=? AND artifact_url=?), artifact_repository, artifact_id, artifact_url, repository, id, min_version_major, min_version_minor, min_version_patch, max_version_major, max_version_minor, max_version_patch FROM artifact_dependencies WHERE artifact_repository=? AND artifact_id=? AND artifact_url=?;";
+    const char* zSQL = "SELECT (SELECT COUNT() FROM artifact_dependencies WHERE artifact_repository=? AND artifact_id=? AND artifact_url=?), artifact_repository, artifact_id, artifact_url, id, min_version_major, min_version_minor, min_version_patch, max_version_major, max_version_minor, max_version_patch FROM artifact_dependencies WHERE artifact_repository=? AND artifact_id=? AND artifact_url=?;";
     sqlite3_stmt* statement;
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
     sqlite3_bind_text(statement, 1, repository, -1, SQLITE_STATIC);
     sqlite3_bind_text(statement, 2, id, -1, SQLITE_STATIC);
     sqlite3_bind_text(statement, 3, url, -1, SQLITE_STATIC);
-    sqlite3_bind_text(statement, 4, repository, -1, SQLITE_STATIC);
-    sqlite3_bind_text(statement, 5, id, -1, SQLITE_STATIC);
-    sqlite3_bind_text(statement, 6, url, -1, SQLITE_STATIC);
+    sqlite3_bind_text(statement, 4, id, -1, SQLITE_STATIC);
+    sqlite3_bind_text(statement, 5, url, -1, SQLITE_STATIC);
 
     int status;
     for (int i=0; (status = sqlite3_step(statement)) == SQLITE_ROW; i++)
@@ -126,7 +123,6 @@ enum KPMResult KPM_ListArtifactDependencies(struct KPM* kpm, char* repository, c
             (*dependencies)[i].artifact_repository = strdup((const char*) sqlite3_column_text(statement, 1));
             (*dependencies)[i].artifact_id = strdup((const char*) sqlite3_column_text(statement, 2));
             (*dependencies)[i].artifact_url = strdup((const char*) sqlite3_column_text(statement, 3));
-            (*dependencies)[i].repository = strdup((const char*) sqlite3_column_text(statement, 4));
             (*dependencies)[i].id = strdup((const char*) sqlite3_column_text(statement, 5));
             (*dependencies)[i].min_version.major = sqlite3_column_int(statement, 6);
             (*dependencies)[i].min_version.minor = sqlite3_column_int(statement, 7);

@@ -1,6 +1,6 @@
 # KPKG
 
-A KPM package is defined as a `lzma-compressed tar file` with the `kpkg` extension.  
+A KPM package is defined as an `lzma-compressed tar file` with the `kpkg` extension.  
 
 The file `must` have a `manifest.json` in its root.
 
@@ -18,9 +18,8 @@ The file `must` have a `manifest.json` in its root.
     [
         {
             "id": "fbink",
-            "repository": "org.kindlemodding.repo",
-            "type": "<",
-            "version": [ 3, 0, 0 ]
+            "min": [ 0, 6, 10 ],
+            "max": [ 0, 7, 0 ]
         },
         {
             "id": "fbinput"
@@ -30,7 +29,7 @@ The file `must` have a `manifest.json` in its root.
 ```
 
 This manifest file defines a package with the id of `koreader` (it would installed with `kpm install koreader`).  
-The package has a version of `1.2.0` and depends on `fbink` (any version below `3.0.0` specifically from the `org.kindlemodding.repo` repository.)  
+The package has a version of `1.2.0` and depends on `fbink` (any version newer or equal to `0.6.10` but older than `0.7.0`)  
 
 ### Manifest Spec
 Strings should not contain non-ASCII chars.  
@@ -43,11 +42,10 @@ author - The author of the package
 description - The description of the package
 version - The version of the package (ie: `v1.2.3` -> `[1, 2, 3]`)
 supported_platform - List of supported architectures
-supported_devices - OPTIONAL, List of supported Kindle device codes as integers
 dependencies - A list of package dependencies
 ```
 
-### Supported Architectures
+### Supported Platforms
 - `kindle` - K2, DX, DXG, K3
 - `kindle5` - K4, K5, PW1
 - `kindlepw2` - PW2+ (note that `kindlepw2` targets should generally also have `kindle5` natively)
@@ -57,9 +55,8 @@ dependencies - A list of package dependencies
 
 ```
 id - The id of the package
-repository - String ID of the repo - can be omitted or null
-type - "<=" or ">=" or "<" or ">" or "=" (can be omitted or null)
-version - semver object (can be omitted or null if type is omitted)
+min - OPTIONAL. The min version to support (inclusive)
+max - OPTIONAL. The max version to support (exclusive)
 ```
 
 ## Hooks
@@ -73,7 +70,14 @@ uninstall.sh - Ran when the package is being uninstalled
 launch.sh - Ran when the package is launched by a launcher
 ```
 
-## Example Repository structure:
+## Rootfs
+It is strictly prohibited to remount rootfs in your hooks.  
+This will cause bricks on modern devices, instead it is recommended you use the rootless overlay system:  
+
+A package can contain a folder called `rootfs` which will be overlaid onto the existing kindle `rootfs`.  
+Note that if a package overrides more than one file at a time the user will be prompted for which one to use.
+
+## Example Package structure:
 ```
 - manifest.json
 - launch.sh

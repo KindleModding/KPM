@@ -831,6 +831,9 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
         if (!Internal_InstallItem(kpm, graph.nodes[deduplicatedPackages[i]].repository, path, kpmLogging))
         {
             kpmLogging->log(KPM_VERBOSITY_ERROR, "Could not install %s", artifact.id);
+            KPM_FreeIndexedArtifact(&artifact);
+            free(path);
+            return KPM_GENERIC_ERROR; // @TODO: Implement atomic installation old package if upgrading
         }
 
         KPM_FreeIndexedArtifact(&artifact);

@@ -69,10 +69,4 @@ A `screenshots.json` file can be provided storing a list of every screenshot a p
 ]
 ```
 
-## Dependency object
-```
-id - The id of the package
-repository - String ID of the repo - can be omitted or null
-type - "<=" or ">=" or "<" or ">" or "=" (can be omitted or null)
-version - semver object (can be omitted or null if type is omitted)
-```
+See [Package.md](Package.md) for more info on `supported_platform` and `dependencies`

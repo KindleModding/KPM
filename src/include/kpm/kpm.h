@@ -76,7 +76,6 @@ struct ArtifactDependency
     char* artifact_repository; /**< Repository of the artifact */
     char* artifact_id; /**< ID of the artifact */
     char* artifact_url; /**< URL of the artifact */
-    char* repository; /**< The repository ID */
     char* id; /**< The package ID */
     struct SemVer min_version; /**< The min version of the dependency (inclusive) */
     struct SemVer max_version; /**< The max version of the dependency (exclusive) */
@@ -103,7 +102,6 @@ struct InstalledPackage
 struct InstalledDependency
 {
     char* dependent; /**< ID of installed package */
-    char* dependency_repository; /**< ID of the repository of the dependency */
     char* dependency_id; /**< ID of the dependency */
     struct SemVer min_version; /**< The min version of the dependency (inclusive) */
     struct SemVer max_version; /**< The max version of the dependency (exclusive) */

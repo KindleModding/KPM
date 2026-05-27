@@ -175,11 +175,6 @@ bool FindArtifactNode(struct DependencyGraph* graph, char* repository, char* id,
             continue;
         }
 
-        if (strlen(repository) != 0 && strcmp(graph->nodes[i].repository, repository) != 0)
-        {
-            continue;
-        }
-
         if (SemVerCmp(version, graph->nodes[i].min_version) != 0) // NODE_ARTIFACT is a fixed version
         {
             continue;
@@ -204,7 +199,7 @@ bool FindArtifactNode(struct DependencyGraph* graph, char* repository, char* id,
  * @return true 
  * @return false 
  */
-bool FindDependencyNode(struct DependencyGraph* graph, char* repository, char* id, struct SemVer min_version, struct SemVer max_version, NodeIndex_t* index)
+bool FindDependencyNode(struct DependencyGraph* graph, char* id, struct SemVer min_version, struct SemVer max_version, NodeIndex_t* index)
 {
     for (NodeIndex_t i=0; i < graph->nodeCount; i++)
     {
@@ -214,11 +209,6 @@ bool FindDependencyNode(struct DependencyGraph* graph, char* repository, char* i
         }
 
         if (strcmp(graph->nodes[i].id, id) != 0)
-        {
-            continue;
-        }
-
-        if (strcmp(graph->nodes[i].repository, repository) != 0)
         {
             continue;
         }
@@ -295,15 +285,6 @@ enum KPMResult Internal_GetArtifactDependencies(struct KPM* kpm, struct IndexedA
             (*targetDependencies)[i].artifact_url = strdup(target->id);
             (*targetDependencies)[i].id = strdup(cJSON_GetStringValue(cJSON_GetObjectItem(dependencyJSON, "id"))); // 90% sure I don't need to free this
 
-            if (cJSON_GetStringValue(cJSON_GetObjectItem(dependencyJSON, "repository")) != NULL)
-            {
-                (*targetDependencies[i]).repository = strdup(cJSON_GetStringValue(cJSON_GetObjectItem(dependencyJSON, "repository")));
-            }
-            else
-            {
-                (*targetDependencies)[i].repository = strdup("");
-            }
-
             cJSON* min = cJSON_GetObjectItem(dependencyJSON, "min");
             cJSON* max = cJSON_GetObjectItem(dependencyJSON, "max");
             if (min != NULL && cJSON_GetArraySize(min) == 3)
@@ -363,7 +344,6 @@ enum KPMResult Internal_GetArtifactDependencies(struct KPM* kpm, struct IndexedA
                     (*targetDependencies)[i].artifact_repository = strdup(target->repository);
                     (*targetDependencies)[i].artifact_url = strdup(target->url);
                     (*targetDependencies)[i].id = strdup(extraDependencies[i].dependency_id);
-                    (*targetDependencies)[i].repository = strdup(extraDependencies[i].dependency_repository);
                     (*targetDependencies)[i].min_version = extraDependencies[i].min_version;
                     (*targetDependencies)[i].max_version = extraDependencies[i].max_version;
                 }
@@ -504,7 +484,7 @@ int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph*
     {
         // Check if this dependency is already present
         NodeIndex_t dependencyNodeId;
-        if (FindDependencyNode(graph, dependencies[i].repository, dependencies[i].id, dependencies[i].min_version, dependencies[i].max_version, &dependencyNodeId))
+        if (FindDependencyNode(graph, dependencies[i].id, dependencies[i].min_version, dependencies[i].max_version, &dependencyNodeId))
         {
             AddEdge(graph, root, dependencyNodeId);
             continue; // We can skip this dependency if it already exists in the graph
@@ -514,7 +494,7 @@ int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph*
             .type = NODE_DEPENDENCY,
             .connected = NULL,
             .connectedCount = 0,
-            .repository = strdup(dependencies[i].repository),
+            .repository = NULL,
             .id = strdup(dependencies[i].id),
             .min_version = dependencies[i].min_version,
             .max_version = dependencies[i].max_version
@@ -528,7 +508,7 @@ int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph*
         // Add indexed artifacts that match the dependency
         size_t artifactCount;
         struct IndexedArtifact* artifacts;
-        KPM_ListPackageArtifacts(kpm, dependencies[i].repository, dependencies[i].id, &artifactCount, &artifacts);
+        KPM_ListPackageArtifacts(kpm, NULL, dependencies[i].id, &artifactCount, &artifacts);
         
         for (size_t j=0; j < artifactCount; j++)
         {
