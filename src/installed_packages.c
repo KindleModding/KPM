@@ -40,14 +40,14 @@ enum KPMResult KPM_GetInstalledPackage(struct KPM* kpm, const char* packageId, s
 
     if (sqlite3_step(statement) == SQLITE_ROW)
     {
-        package->id = strdup((const char*) sqlite3_column_text(statement, 1));
-        package->repository = strdup((const char*) sqlite3_column_text(statement, 2));
-        package->name = strdup((const char*) sqlite3_column_text(statement, 3));
-        package->author = strdup((const char*) sqlite3_column_text(statement, 4));
-        package->description = strdup((const char*) sqlite3_column_text(statement, 5));
-        package->version.major = sqlite3_column_int(statement, 6);
-        package->version.minor = sqlite3_column_int(statement, 7);
-        package->version.patch = sqlite3_column_int(statement, 8);
+        package->id = strdup((const char*) sqlite3_column_text(statement, 0));
+        package->repository = strdup((const char*) sqlite3_column_text(statement, 1));
+        package->name = strdup((const char*) sqlite3_column_text(statement, 2));
+        package->author = strdup((const char*) sqlite3_column_text(statement, 3));
+        package->description = strdup((const char*) sqlite3_column_text(statement, 4));
+        package->version.major = sqlite3_column_int(statement, 5);
+        package->version.minor = sqlite3_column_int(statement, 6);
+        package->version.patch = sqlite3_column_int(statement, 7);
     } else {
         return KPM_SQLITE_ERROR;
     }

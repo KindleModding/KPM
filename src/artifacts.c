@@ -58,19 +58,29 @@ void KPM_FreeArtifactDependencyList(size_t dependencyCount, struct ArtifactDepen
 }
 
 enum KPMResult KPM_GetArtifact(struct KPM* kpm, const char* repositoryId, const char* packageId, struct SemVer version, struct IndexedArtifact* artifact)
-{   
+{
     const char* zSQL;
-    zSQL = "SELECT url, repository, id, version_major, version_minor, version_patch FROM artifacts WHERE repository=? AND id=? AND version_major=? AND version_minor=? AND version_patch=?;";
-
-
-     
     sqlite3_stmt* statement;
-    sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
-    sqlite3_bind_text(statement, 1, repositoryId, -1, SQLITE_STATIC);
-    sqlite3_bind_text(statement, 2, packageId, -1, SQLITE_STATIC);
-    sqlite3_bind_int(statement, 3, version.major);
-    sqlite3_bind_int(statement, 4, version.minor);
-    sqlite3_bind_int(statement, 5, version.patch);
+
+    if (repositoryId != NULL)
+    {
+        zSQL = "SELECT url, repository, id, version_major, version_minor, version_patch FROM artifacts WHERE repository=? AND id=? AND version_major=? AND version_minor=? AND version_patch=? LIMIT 1;";
+        sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
+        sqlite3_bind_text(statement, 1, repositoryId, -1, SQLITE_STATIC);
+        sqlite3_bind_text(statement, 2, packageId, -1, SQLITE_STATIC);
+        sqlite3_bind_int(statement, 3, version.major);
+        sqlite3_bind_int(statement, 4, version.minor);
+        sqlite3_bind_int(statement, 5, version.patch);
+    }
+    else
+    {
+        zSQL = "SELECT url, repository, id, version_major, version_minor, version_patch FROM artifacts WHERE id=? AND version_major=? AND version_minor=? AND version_patch=? LIMIT 1;";
+        sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
+        sqlite3_bind_text(statement, 1, packageId, -1, SQLITE_STATIC);
+        sqlite3_bind_int(statement, 2, version.major);
+        sqlite3_bind_int(statement, 3, version.minor);
+        sqlite3_bind_int(statement, 4, version.patch);
+    }
 
     if (sqlite3_step(statement) == SQLITE_ROW)
     {
@@ -102,8 +112,9 @@ enum KPMResult KPM_ListArtifactDependencies(struct KPM* kpm, char* repository, c
     sqlite3_bind_text(statement, 1, repository, -1, SQLITE_STATIC);
     sqlite3_bind_text(statement, 2, id, -1, SQLITE_STATIC);
     sqlite3_bind_text(statement, 3, url, -1, SQLITE_STATIC);
-    sqlite3_bind_text(statement, 4, id, -1, SQLITE_STATIC);
-    sqlite3_bind_text(statement, 5, url, -1, SQLITE_STATIC);
+    sqlite3_bind_text(statement, 4, repository, -1, SQLITE_STATIC);
+    sqlite3_bind_text(statement, 5, id, -1, SQLITE_STATIC);
+    sqlite3_bind_text(statement, 6, url, -1, SQLITE_STATIC);
 
     int status;
     for (int i=0; (status = sqlite3_step(statement)) == SQLITE_ROW; i++)
@@ -123,13 +134,13 @@ enum KPMResult KPM_ListArtifactDependencies(struct KPM* kpm, char* repository, c
             (*dependencies)[i].artifact_repository = strdup((const char*) sqlite3_column_text(statement, 1));
             (*dependencies)[i].artifact_id = strdup((const char*) sqlite3_column_text(statement, 2));
             (*dependencies)[i].artifact_url = strdup((const char*) sqlite3_column_text(statement, 3));
-            (*dependencies)[i].id = strdup((const char*) sqlite3_column_text(statement, 5));
-            (*dependencies)[i].min_version.major = sqlite3_column_int(statement, 6);
-            (*dependencies)[i].min_version.minor = sqlite3_column_int(statement, 7);
-            (*dependencies)[i].min_version.patch = sqlite3_column_int(statement,8);
-            (*dependencies)[i].max_version.major = sqlite3_column_int(statement, 9);
-            (*dependencies)[i].max_version.minor = sqlite3_column_int(statement, 10);
-            (*dependencies)[i].max_version.patch = sqlite3_column_int(statement,11);
+            (*dependencies)[i].id = strdup((const char*) sqlite3_column_text(statement, 4));
+            (*dependencies)[i].min_version.major = sqlite3_column_int(statement, 5);
+            (*dependencies)[i].min_version.minor = sqlite3_column_int(statement, 6);
+            (*dependencies)[i].min_version.patch = sqlite3_column_int(statement,7);
+            (*dependencies)[i].max_version.major = sqlite3_column_int(statement, 8);
+            (*dependencies)[i].max_version.minor = sqlite3_column_int(statement, 9);
+            (*dependencies)[i].max_version.patch = sqlite3_column_int(statement,10);
         }
     }
 

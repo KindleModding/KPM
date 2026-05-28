@@ -26,9 +26,9 @@ int main()
 
     KPM_Initialise(&kpm, "./repo_test.db");
 
-    char curDir[2048];
-    getcwd(curDir, 2048);
-    char* dir = dirname(curDir);
+    //char curDir[2048];
+    //getcwd(curDir, 2048);
+    //char* dir = dirname(curDir);
 
     /*char* uri = malloc(strlen("file://") + strlen(dir) + strlen("/examples/examplerepo/packages/com.kindlemodding.examplepackage/artifacts/com.kindlemodding.examplepackage_1.2.3_kindlehf-kindlepw2.kpkg") + 1);
     strcpy(uri, "file://");
@@ -42,7 +42,7 @@ int main()
 
     struct InstallTarget target = {
         .id = id,
-        .repository = "",
+        .repository = NULL,
         .version = NULL
     };
     

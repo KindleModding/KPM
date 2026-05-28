@@ -611,7 +611,17 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
         .connected = NULL,
         .connectedCount = 0,
         .id = strdup(target->id),
-        .repository = strdup(target->repository)
+        .repository = NULL,
+        .min_version = {
+            .major = 0,
+            .minor = 0,
+            .patch = 0
+        },
+        .max_version = {
+            .major = 0,
+            .minor = 0,
+            .patch = 0
+        }
     };
     int depId = AddNode(&graph, depNode);
     AddEdge(&graph, rootId, depId);
