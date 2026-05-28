@@ -5,11 +5,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-/**
- * @brief Free the properties of a package - WILL NOT FREE THE POINTER ITSELF
- * 
- * @param package The package to free the properties of
- */
 void KPM_FreeIndexedPackage(struct IndexedPackage* package)
 {
     free(package->repository);
@@ -25,12 +20,6 @@ void KPM_FreeIndexedPackage(struct IndexedPackage* package)
     package->author = NULL;
 }
 
-/**
- * @brief Free an allocated list of packages - such as returned by KPM_ListRepositoryPackages
- * 
- * @param packageCount The number of packages in the array
- * @param packages The package array
- */
 void KPM_FreeIndexedPackageList(size_t packageCount, struct IndexedPackage* packages)
 {
     for (size_t i=0; i < packageCount; i++)
@@ -40,16 +29,7 @@ void KPM_FreeIndexedPackageList(size_t packageCount, struct IndexedPackage* pack
     free(packages);
 }
 
-/**
- * @brief Get a package given a repositoryId (optional) and a packageId
- * 
- * @param kpm The KPM object
- * @param repositoryId The id of the repository to get the package from (or NULL)
- * @param packageId The id of the package to get
- * @param package A pointer to write the returned package info
- * @return enum KPMResult 
- */
-enum KPMResult KPM_GetPackage(struct KPM* kpm, const char* repositoryId, const char* packageId, struct IndexedPackage* package)
+enum KPMResult KPM_GetPackage(struct KPM* kpm, const char* repository, const char* id, struct IndexedPackage* package)
 {
     package->repository = NULL;
     package->id = NULL;
@@ -58,17 +38,17 @@ enum KPMResult KPM_GetPackage(struct KPM* kpm, const char* repositoryId, const c
     package->author = NULL;
 
     sqlite3_stmt* statement;
-    if (repositoryId == NULL)
+    if (repository == NULL)
     {
         const char* zSQL = "SELECT repository, id, name, author, description FROM packages WHERE AND id=? LIMIT 1;";
         sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
-        sqlite3_bind_text(statement, 1, packageId, strlen(packageId), SQLITE_STATIC);
+        sqlite3_bind_text(statement, 1, id, -1, SQLITE_STATIC);
     }
     else {
         const char* zSQL = "SELECT repository, id, name, author, description FROM packages WHERE repository=? AND id=? LIMIT 1;";
         sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
-        sqlite3_bind_text(statement, 1, repositoryId, strlen(repositoryId), SQLITE_STATIC);
-        sqlite3_bind_text(statement, 2, packageId, strlen(packageId), SQLITE_STATIC);
+        sqlite3_bind_text(statement, 1, repository, -1, SQLITE_STATIC);
+        sqlite3_bind_text(statement, 2, id, -1, SQLITE_STATIC);
     }
 
     if (sqlite3_step(statement) == SQLITE_ROW)
@@ -132,15 +112,6 @@ enum KPMResult KPM_GetPackages(struct KPM* kpm, const char* id, size_t* packageC
     return KPM_OK;
 }
 
-/**
- * @brief Return a list of packages where either the name or id contain the query
- * 
- * @param kpm 
- * @param query 
- * @param packageCount 
- * @param packages 
- * @return enum KPMResult 
- */
 enum KPMResult KPM_SearchPackages(struct KPM* kpm, const char* query, size_t* packageCount, struct IndexedPackage** packages)
 {
     if (packages != NULL)
@@ -155,9 +126,9 @@ enum KPMResult KPM_SearchPackages(struct KPM* kpm, const char* query, size_t* pa
     sqlite3_stmt* statement;
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
     sqlite3_bind_text(statement, 1, paddedQuery, -1, SQLITE_STATIC);
-    sqlite3_bind_text(statement, 2, paddedQuery, strlen(paddedQuery), SQLITE_STATIC);
+    sqlite3_bind_text(statement, 2, paddedQuery, -1, SQLITE_STATIC);
     sqlite3_bind_text(statement, 3, paddedQuery, -1, SQLITE_STATIC);
-    sqlite3_bind_text(statement, 4, paddedQuery, strlen(paddedQuery), SQLITE_STATIC);
+    sqlite3_bind_text(statement, 4, paddedQuery, -1, SQLITE_STATIC);
 
     int status;
     for (int i=0; (status = sqlite3_step(statement)) == SQLITE_ROW; i++)
@@ -194,16 +165,6 @@ enum KPMResult KPM_SearchPackages(struct KPM* kpm, const char* query, size_t* pa
     return KPM_OK;
 }
 
-/**
- * @brief List the indexed artifacts of a package 
- * 
- * @param kpm The KPM object
- * @param repositoryId The repository ID of the package
- * @param packageId The package ID of the package
- * @param artifactCount Pointer to store the artifact count
- * @param artifacts Pointer to store the artifact array
- * @return enum KPMResult 
- */
 enum KPMResult KPM_ListPackageArtifacts(struct KPM* kpm, const char* repositoryId, const char* packageId, size_t* artifactCount, struct IndexedArtifact** artifacts)
 {
     *artifactCount = 0;

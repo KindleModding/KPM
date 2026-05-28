@@ -1,7 +1,5 @@
-/**
-* @brief A dependency used internally for installation purposes
-* 
-*/
+#pragma once
+
 #include "kpm/kpm.h"
 #include <stdbool.h>
 

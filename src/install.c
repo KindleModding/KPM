@@ -485,14 +485,6 @@ bool Internal_InstallItem(struct KPM* kpm, char* repository, char* path, struct 
     return true;
 }
 
-/**
- * @brief Installs/upgrades a target package and its dependencies
- * 
- * @param kpm 
- * @param target 
- * @param kpmLogging 
- * @return enum KPMResult 
- */
 enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target, struct KPMLogging* kpmLogging)
 {
     if (kpmLogging == NULL)
@@ -635,8 +627,7 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
     kpmLogging->log(KPM_VERBOSITY_DEBUG, "Constructed dependency graph:\n\n%s\n\n", rendered);
 
     /**
-     * @brief Write out a state file for debugging purposes
-     * 
+     * Write out a state file for debugging purposes
      */
     FILE* file = fopen("/tmp/kpm_state.md", "w");
     if (target->version == NULL)

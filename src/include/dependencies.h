@@ -1,3 +1,5 @@
+#pragma once
+
 #include "kpm/kpm.h"
 #include "kpm/semver.h"
 

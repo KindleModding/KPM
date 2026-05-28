@@ -136,13 +136,6 @@ bool indexPackage(struct KPM* kpm, char* repositoryId, cJSON* package, struct KP
     return true;
 }
 
-/**
- * @brief Update the local index of package by downloading repository manifests
- * 
- * @param kpm The KPM object
- * @param statusCallback A callback for progress information
- * @return enum KPMResult 
- */
 enum KPMResult KPM_UpdateIndex(struct KPM *kpm, struct KPMLogging* kpmLogging)
 {
     if (kpmLogging == NULL)
@@ -178,7 +171,7 @@ enum KPMResult KPM_UpdateIndex(struct KPM *kpm, struct KPMLogging* kpmLogging)
         const char* zSQL = "DELETE FROM packages WHERE repository=?;";
         sqlite3_stmt* statement;
         sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
-        sqlite3_bind_text(statement, 1, repositories[i].id, strlen(repositories[i].id), SQLITE_STATIC);
+        sqlite3_bind_text(statement, 1, repositories[i].id, -1, SQLITE_STATIC);
         
         int status = SQLITE_ROW;
         status = sqlite3_step(statement);

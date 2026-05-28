@@ -1,3 +1,5 @@
+#pragma once
+
 int getDeviceCodeFromStringHD(char* deviceCode);
 
 /**

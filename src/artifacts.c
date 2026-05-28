@@ -4,11 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-/**
- * @brief Free the properties of a package - WILL NOT FREE THE POINTER ITSELF
- * 
- * @param package The package to free the properties of
- */
 void KPM_FreeIndexedArtifact(struct IndexedArtifact* artifact)
 {
      free(artifact->repository);
@@ -20,12 +15,6 @@ void KPM_FreeIndexedArtifact(struct IndexedArtifact* artifact)
      artifact->url = NULL;
 }
  
- /**
-  * @brief Free an allocated list of packages - such as returned by KPM_ListRepositoryPackages
-  * 
-  * @param packageCount The number of packages in the array
-  * @param packages The package array
-  */
 void KPM_FreeIndexedArtifactList(size_t artifactCount, struct IndexedArtifact* artifacts)
 {
      for (size_t i=0; i < artifactCount; i++)

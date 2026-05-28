@@ -6,11 +6,6 @@
 #include "kpm/kpm.h"
 #include "simpleGET.h"
 
-/**
- * @brief Free a repository object's properties (WILL NOT FREE THE POINTER ITSELF)
- * 
- * @param repository 
- */
 void KPM_FreeRepository(struct Repository *repository)
 {
     free(repository->id);
@@ -23,12 +18,6 @@ void KPM_FreeRepository(struct Repository *repository)
     repository->description = NULL;
 }
 
-/**
- * @brief Free an allocated repository list returned by KPM_ListRepositories
- * 
- * @param repositoryCount The number of repositories in the list
- * @param repositories The list of repositories
- */
 void KPM_FreeRepositoryList(size_t repositoryCount, struct Repository* repositories)
 {
     for (size_t i=0; i < repositoryCount; i++)
@@ -38,14 +27,6 @@ void KPM_FreeRepositoryList(size_t repositoryCount, struct Repository* repositor
     free(repositories);
 }
 
-/**
- * @brief List indexed repositories
- * 
- * @param kpm The KPM object
- * @param repositoryCount A pointer to store the number of repositories indexed
- * @param repositories A pointer to allocate and store store the indexed repository objects in (must be freed with KPM_FreeRepositoryList) - can be NULL to only get a count
- * @return enum KPMResult 
- */
 enum KPMResult KPM_ListRepositories(struct KPM* kpm, size_t* repositoryCount, struct Repository** repositories)
 {
     *repositoryCount = 0;
@@ -91,14 +72,6 @@ enum KPMResult KPM_ListRepositories(struct KPM* kpm, size_t* repositoryCount, st
     return KPM_OK;
 }
 
-/**
- * @brief Get a single indexed repository from its Id
- * 
- * @param kpm The KPM object
- * @param repositoryId The Id of the repository to get
- * @param repository A pointer to return the repository object (Values will be NULL if the repository could not be fetched)
- * @return enum KPMResult 
- */
 enum KPMResult KPM_GetRepository(struct KPM *kpm, const char *repositoryId, struct Repository* repository)
 {
     repository->id = NULL;
@@ -109,7 +82,7 @@ enum KPMResult KPM_GetRepository(struct KPM *kpm, const char *repositoryId, stru
     const char* zSQL = "SELECT id, url, name, description FROM repositories WHERE id=? LIMIT 1;";
     sqlite3_stmt* statement;
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
-    sqlite3_bind_text(statement, 1, repositoryId, strlen(repositoryId), SQLITE_STATIC);
+    sqlite3_bind_text(statement, 1, repositoryId, -1, SQLITE_STATIC);
 
     if (sqlite3_step(statement) == SQLITE_ROW)
     {
@@ -125,14 +98,6 @@ enum KPMResult KPM_GetRepository(struct KPM *kpm, const char *repositoryId, stru
     return KPM_OK;
 }
 
-/**
- * @brief Index a repository from a URL
- * 
- * @param kpm The KPM object
- * @param url The URL to the repository manifest file
- * @param repository A pointer to return the indexed repository object
- * @return enum KPMResult 
- */
 enum KPMResult KPM_AddRepository(struct KPM *kpm, const char *url, struct Repository* repository)
 {
     struct SimpleGETRequest request;
@@ -167,10 +132,10 @@ enum KPMResult KPM_AddRepository(struct KPM *kpm, const char *url, struct Reposi
     const char* zSQL = "INSERT INTO repositories (id, url, name, description) VALUES (?, ?, ?, ?);";
     sqlite3_stmt* statement;
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
-    sqlite3_bind_text(statement, 1, cJSON_GetStringValue(cJSON_GetObjectItem(json, "id")), strlen(cJSON_GetStringValue(cJSON_GetObjectItem(json, "id"))), SQLITE_STATIC);
-    sqlite3_bind_text(statement, 2, url, strlen(url), SQLITE_STATIC);
-    sqlite3_bind_text(statement, 3, cJSON_GetStringValue(cJSON_GetObjectItem(json, "name")), strlen(cJSON_GetStringValue(cJSON_GetObjectItem(json, "name"))), SQLITE_STATIC);
-    sqlite3_bind_text(statement, 4, cJSON_GetStringValue(cJSON_GetObjectItem(json, "description")), strlen(cJSON_GetStringValue(cJSON_GetObjectItem(json, "description"))), SQLITE_STATIC);
+    sqlite3_bind_text(statement, 1, cJSON_GetStringValue(cJSON_GetObjectItem(json, "id")), -1, SQLITE_STATIC);
+    sqlite3_bind_text(statement, 2, url, -1, SQLITE_STATIC);
+    sqlite3_bind_text(statement, 3, cJSON_GetStringValue(cJSON_GetObjectItem(json, "name")), -1, SQLITE_STATIC);
+    sqlite3_bind_text(statement, 4, cJSON_GetStringValue(cJSON_GetObjectItem(json, "description")), -1, SQLITE_STATIC);
 
     if (sqlite3_step(statement) != SQLITE_DONE)
     {
@@ -196,20 +161,13 @@ enum KPMResult KPM_AddRepository(struct KPM *kpm, const char *url, struct Reposi
     return KPM_OK;
 }
 
-/**
- * @brief Remove an indexed repository by its Id
- * 
- * @param kpm The KPM object
- * @param repositoryId The Id of the repository to remove
- * @return enum KPMResult 
- */
 enum KPMResult KPM_RemoveRepository(struct KPM *kpm, const char* repositoryId)
 {
     sqlite3_exec(kpm->db, "BEGIN", NULL, NULL, NULL);
     const char* zSQL = "DELETE FROM repositories WHERE id=?;";
     sqlite3_stmt* statement;
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
-    sqlite3_bind_text(statement, 1, repositoryId, strlen(repositoryId), SQLITE_STATIC);
+    sqlite3_bind_text(statement, 1, repositoryId, -1, SQLITE_STATIC);
 
     if (sqlite3_step(statement) != SQLITE_DONE)
     {
@@ -223,15 +181,6 @@ enum KPMResult KPM_RemoveRepository(struct KPM *kpm, const char* repositoryId)
     return KPM_OK;
 }
 
-/**
- * @brief Return a list of indexed packages under a repository
- * 
- * @param kpm The KPM object
- * @param repositoryId The Id of the repository to get packages for
- * @param packageCount A pointer to return the number of packages indexed
- * @param packages A pointer to allocate and return an array of packages - Must be freed with KPM_FreeIndexedPackageList - Can be NULL to return only a count
- * @return enum KPMResult 
- */
 enum KPMResult KPM_ListRepositoryPackages(struct KPM* kpm, const char* repositoryId, size_t* packageCount, struct IndexedPackage** packages)
 {
     *packageCount = 0;
@@ -243,8 +192,8 @@ enum KPMResult KPM_ListRepositoryPackages(struct KPM* kpm, const char* repositor
     const char* zSQL = "SELECT (SELECT COUNT() FROM packages WHERE repository=?), repository, id, name, author, description FROM packages WHERE repository=?;";
     sqlite3_stmt* statement;
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
-    sqlite3_bind_text(statement, 1, repositoryId, strlen(repositoryId), SQLITE_STATIC);
-    sqlite3_bind_text(statement, 2, repositoryId, strlen(repositoryId), SQLITE_STATIC);
+    sqlite3_bind_text(statement, 1, repositoryId, -1, SQLITE_STATIC);
+    sqlite3_bind_text(statement, 2, repositoryId, -1, SQLITE_STATIC);
 
     int status;
     for (int i=0; (status = sqlite3_step(statement)) == SQLITE_ROW; i++)
