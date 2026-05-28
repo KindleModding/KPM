@@ -1,4 +1,5 @@
 # KPM Repository
+The contents of this file are licensed under the `CC0` license.
 
 A KPM repository is a collection of packages statically hosted on the internet.
 

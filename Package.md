@@ -1,4 +1,5 @@
 # KPKG
+The contents of this file are licensed under the `CC0` license.
 
 A KPM package is defined as an `lzma-compressed tar file` with the `kpkg` extension.  
 

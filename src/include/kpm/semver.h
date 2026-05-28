@@ -12,7 +12,7 @@ struct SemVer
 };
 
 /**
- * @brief a - b
+ * @brief If a > b it returns a number > 0, if a < b it returns a number < 0, if a == b it returns 0
  * 
  * @param a 
  * @param b 
@@ -34,26 +34,3 @@ static inline long SemVerCmp(struct SemVer a, struct SemVer b)
     }
     return 0;
 }
-
-/*
-// Testament to frogginess
-inline bool IsSemVerLessThan(struct SemVer a, struct SemVer b)
-{
-    return SemVerCmp(a, b) < 0;
-}
-
-inline bool IsSemVerGreaterThan(struct SemVer a, struct SemVer b)
-{
-    return SemVerCmp(a, b) > 0;
-}
-
-inline bool IsSemVerLessThanEqualTo(struct SemVer a, struct SemVer b)
-{
-    return SemVerCmp(a, b) <= 0;
-}
-
-inline bool IsSemVerGreaterThanEqualTo(struct SemVer a, struct SemVer b)
-{
-    return SemVerCmp(a, b) >= 0;
-}
-*/
