@@ -383,7 +383,7 @@ void getNameFromNode(struct DependencyGraph* graph, NodeIndex_t index, char** ou
 
         if (graph->nodes[index].type == NODE_DEPENDENCY)
         {
-            asprintf(output, "%zu([\"%s\n%s\n%u.%u.%u to %zu.%zu.%zu\"])", index, graph->nodes[index].repository, graph->nodes[index].id, graph->nodes[index].min_version.major, graph->nodes[index].min_version.minor, graph->nodes[index].min_version.patch, graph->nodes[index].max_version.major, graph->nodes[index].max_version.minor, graph->nodes[index].max_version.patch);
+            asprintf(output, "%zu([\"%s\n%s\n%u.%u.%u to %u.%u.%u\"])", index, graph->nodes[index].repository, graph->nodes[index].id, graph->nodes[index].min_version.major, graph->nodes[index].min_version.minor, graph->nodes[index].min_version.patch, graph->nodes[index].max_version.major, graph->nodes[index].max_version.minor, graph->nodes[index].max_version.patch);
             return;
         }
     }

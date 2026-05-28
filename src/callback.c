@@ -1,7 +1,7 @@
 #include "kpm/kpm.h"
 #include "callback.h"
 
-void logStub(enum Verbosity, char* details, ...)
+void logStub(enum Verbosity verbosity, char* details, ...)
 {
     return;
 }
