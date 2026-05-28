@@ -42,8 +42,8 @@ name - The display name of the package
 author - The author of the package
 description - The description of the package
 version - The version of the package (ie: `v1.2.3` -> `[1, 2, 3]`)
-supported_platform - List of supported architectures
-dependencies - A list of package dependencies
+supported_platform - List of supported architectures, optional
+dependencies - A list of package dependencies, optional
 ```
 
 ### Supported Platforms

@@ -9,12 +9,27 @@ import tarfile
 import json
 import os
 
+valid_supported_platform = [
+    "kindleany",
+    "kindle",
+    "kindle5",
+    "kindlepw2",
+    "kindlehf",
+]
+
 class Package:
     def init(args):
-        args.filepath: pathlib.Path
+        args.path: pathlib.Path
 
         manifest = {
-            "manifest_version": 1
+            "manifest_version": 1,
+            "id": "",
+            "name": "",
+            "author": "",
+            "description": "",
+            "version": [],
+            "supported_platform": ["kindleany"],
+            "dependencies": []
         }
 
         while True:
@@ -40,14 +55,14 @@ class Package:
                 try:
                     manifest["version"].append(int(version_component))
                 except:
-                    print("[ERROR] Package version must be in the format a.b.c where a, b and c are integers")
-                    continue
-            if (len(manifest["version"]) > 3):
+                    manifest["version"] = []
+                    break
+            if (len(manifest["version"]) != 3):
                 print("[ERROR] Package version must be in the format a.b.c where a, b and c are integers")
                 continue
             break
 
-        manifest_path = os.path.join(args.filepath, "manifest.json")
+        manifest_path = os.path.join(args.path, "manifest.json")
         with open(manifest_path, 'w') as file:
             file.write(json.dumps(manifest, indent=2))
         print(f"\n\nWrote manifest file to {manifest_path}")
@@ -81,7 +96,7 @@ class Package:
 
 class Repo:
     def init(args):
-        args.filepath: pathlib.Path
+        args.path: pathlib.Path
 
         manifest = {
             "manifest_version": 1
@@ -104,7 +119,7 @@ class Repo:
         manifest["description"] = input("Enter repository description: ")
         manifest["packages"] = {}
 
-        manifest_path = os.path.join(args.filepath, "manifest.json")
+        manifest_path = os.path.join(args.path, "manifest.json")
         with open(manifest_path, 'w') as file:
             file.write(json.dumps(manifest, indent=2))
         print(f"\n\nWrote manifest file to {manifest_path}")
