@@ -106,8 +106,7 @@ enum KPMResult Internal_ExtractArchive(char* path, char* out, struct KPMLogging*
             goto libarchive_error;
         }
 
-        char* entryPath;
-        asprintf(&entryPath, "%s/%s", out, archive_entry_pathname(entry));
+        char* entryPath = asprintf_hd("%s/%s", out, archive_entry_pathname(entry));
         archive_entry_set_pathname(entry, entryPath);
         r = archive_write_header(ext, entry);
         free(entryPath);
@@ -331,8 +330,7 @@ enum KPMResult Internal_DownloadGraphItems(struct KPM* kpm, struct DependencyGra
                 last_slash = i;
         }
         repo_url[last_slash] = 0;
-        char* target_url;
-        asprintf(&target_url, "%s/%s", repo_url, artifact.url);
+        char* target_url = asprintf_hd("%s/%s", repo_url, artifact.url);
         free(repo_url);
         for (int i = 0; i < strlen(artifact.url); i++)
         {
@@ -412,14 +410,12 @@ bool Internal_InstallItem(struct KPM* kpm, char* repository, char* path, struct 
     char* id = cJSON_GetStringValue(cJSON_GetObjectItem(json, "id"));
     kpmLogging->log(KPM_VERBOSITY_DEBUG, "Installing item with id: %s", id);
 
-    char* outPath;
-    asprintf(&outPath, "%s/%s/", kpm->pkgPath, id);
+    char* outPath = asprintf_hd("%s/%s/", kpm->pkgPath, id);
 
     // First unpack the .kpkg file
     Internal_ExtractArchive(path, outPath, kpmLogging);
 
-    char* installScriptPath;
-    asprintf(&installScriptPath, "%sinstall.sh", outPath);
+    char* installScriptPath = asprintf_hd( "%sinstall.sh", outPath);
 
     // Check if an install.sh file exists
     // If so, run it
@@ -428,8 +424,7 @@ bool Internal_InstallItem(struct KPM* kpm, char* repository, char* path, struct 
         kpmLogging->log(KPM_VERBOSITY_INFO, "Running install hooks for [%s]", id);
         // Run install script
         int result = -1;
-        char* installCommand;
-        asprintf(&installCommand, "sh %s", installScriptPath);
+        char* installCommand = asprintf_hd("sh %s", installScriptPath);
         chdir(outPath);
         free(outPath);
         free(installScriptPath);
@@ -639,8 +634,7 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
         };
         target->version = &version;
     }
-    char* string;
-    asprintf(&string, "Current State:\nInstalling Target: (%s/)%s (%u.%u.%u)\nArtifact Found: (%s/)%s (%u.%u.%u) [%s]\n\nGenerated Graph:\n\n```", target->repository, target->id, target->version->major, target->version->minor, target->version->patch, artifact.repository, artifact.id, artifact.version.major, artifact.version.minor, artifact.version.patch, artifact.url);
+    char* string = asprintf_hd("Current State:\nInstalling Target: (%s/)%s (%u.%u.%u)\nArtifact Found: (%s/)%s (%u.%u.%u) [%s]\n\nGenerated Graph:\n\n```", target->repository, target->id, target->version->major, target->version->minor, target->version->patch, artifact.repository, artifact.id, artifact.version.major, artifact.version.minor, artifact.version.patch, artifact.url);
     KPM_FreeIndexedArtifact(&artifact);
     fwrite(string, strlen(string), 1, file);
     free(string);
@@ -826,8 +820,7 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
         }
         filename++;
 
-        char* path;
-        asprintf(&path, "%s/tmp/%s", kpm->pkgPath, filename);
+        char* path = asprintf_hd("%s/tmp/%s", kpm->pkgPath, filename);
 
         if (!Internal_InstallItem(kpm, graph.nodes[deduplicatedPackages[i]].repository, path, kpmLogging))
         {

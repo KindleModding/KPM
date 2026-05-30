@@ -1,4 +1,4 @@
 {
-    "C_Cpp.default.compileCommands": "./builddir/compile_commands.json",
+    "C_Cpp.default.compileCommands": "/home/hackerdude/Projects/Kindle/KPM/builddir/compile_commands.json",
     "C_Cpp.default.configurationProvider": "mesonbuild.mesonbuild"
 }

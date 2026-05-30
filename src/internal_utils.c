@@ -1,4 +1,5 @@
 #include <stdarg.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -22,4 +23,25 @@ void mkdir_r(char* path, __mode_t mode)
             mkdir(current_path, mode);
     }
     free(current_path);
+}
+
+/**
+ * @brief asprintf implementation
+ * 
+ * @param format 
+ * @param ... 
+ * @return char* 
+ */
+char* asprintf_hd(char * format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    va_list args2;
+    va_copy (args2, args);
+    int size = vsnprintf(NULL, 0, format, args) + 1;
+    char* str = malloc(size);
+    vsnprintf(str, size, format, args2);
+    va_end(args);
+    va_end(args2);
+    return str;
 }
