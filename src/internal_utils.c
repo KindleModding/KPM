@@ -32,7 +32,7 @@ void mkdir_r(char* path, __mode_t mode)
  * @param ... 
  * @return char* 
  */
-char* asprintf_hd(char * format, ...)
+char* asprintf_hd(const char * format, ...)
 {
     va_list args;
     va_start(args, format);
