@@ -403,3 +403,13 @@ void KPM_FreeInstallTarget(struct InstallTarget* target);
  * @return enum KPMResult 
  */
 enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target, struct KPMLogging* kpmLogging);
+
+/**
+ * @brief Uninstalls a package
+ * 
+ * @param kpm 
+ * @param packageId 
+ * @param kpmLogging 
+ * @return enum KPMResult 
+ */
+enum KPMResult KPM_UninstallPackage(struct KPM* kpm, const char* packageId, struct KPMLogging* kpmLogging);

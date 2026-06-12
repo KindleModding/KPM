@@ -421,7 +421,7 @@ bool Internal_InstallItem(struct KPM* kpm, char* repository, char* path, struct 
     // If so, run it
     if (access(installScriptPath, R_OK) == 0)
     {
-        kpmLogging->log(KPM_VERBOSITY_INFO, "Running install hooks for [%s]", id);
+        kpmLogging->log(KPM_VERBOSITY_INFO, "Running install script for [%s]", id);
         // Run install script
         int result = -1;
         char* installCommand = asprintf_hd("sh %s", installScriptPath);

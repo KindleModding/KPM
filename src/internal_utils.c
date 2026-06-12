@@ -5,6 +5,9 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#define __USE_XOPEN_EXTENDED   /* See feature_test_macros(7) */
+#include <ftw.h>
+
 /**
  * @brief Recursively create a folder and its parents
  * 
@@ -25,6 +28,51 @@ void mkdir_r(char* path, __mode_t mode)
     free(current_path);
 }
 
+int internal_delete(const char* fpath, const struct stat* sb, int typeflag, struct FTW *ftwbuf)
+{
+    switch (typeflag)
+    {
+        case FTW_F:
+            remove(fpath);
+            break;
+        case FTW_D:
+            rmdir(fpath);
+            break;
+        default:
+            break;
+    }
+    return 0;
+}
+
+/**
+ * @brief Deletes a folder recursively, equivalent to "rm -rf"
+ * 
+ * @param path 
+ */
+void rmdir_r(char* path)
+{
+    nftw(path, &internal_delete, 256, FTW_DEPTH);
+    rmdir(path);
+}
+
+/**
+ * @brief vasprintf implementation
+ * 
+ * @param format 
+ * @param args
+ * @return char* 
+ */
+char* vasprintf_hd(const char * format, va_list args)
+{
+    va_list args2;
+    va_copy (args2, args);
+    int size = vsnprintf(NULL, 0, format, args) + 1;
+    char* str = malloc(size);
+    vsnprintf(str, size, format, args2);
+    va_end(args2);
+    return str;
+}
+
 /**
  * @brief asprintf implementation
  * 
@@ -36,12 +84,6 @@ char* asprintf_hd(const char * format, ...)
 {
     va_list args;
     va_start(args, format);
-    va_list args2;
-    va_copy (args2, args);
-    int size = vsnprintf(NULL, 0, format, args) + 1;
-    char* str = malloc(size);
-    vsnprintf(str, size, format, args2);
+    return vasprintf_hd(format, args);
     va_end(args);
-    va_end(args2);
-    return str;
 }
