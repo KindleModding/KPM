@@ -386,7 +386,7 @@ enum KPMResult Internal_DownloadGraphItems(struct KPM* kpm, struct DependencyGra
  * @return true 
  * @return false 
  */
-bool Internal_InstallItem(struct KPM* kpm, char* repository, char* path, struct KPMLogging* kpmLogging)
+bool Internal_InstallItem(struct KPM* kpm, char* repository, char* path, bool installed_as_dependency, struct KPMLogging* kpmLogging)
 {
     char* manifest;
     kpmLogging->log(KPM_VERBOSITY_DEBUG, "Reading manifest from %s", path);
@@ -421,7 +421,7 @@ bool Internal_InstallItem(struct KPM* kpm, char* repository, char* path, struct 
     // If so, run it
     if (access(installScriptPath, R_OK) == 0)
     {
-        kpmLogging->log(KPM_VERBOSITY_INFO, "Running install script for [%s]", id);
+        kpmLogging->log(KPM_VERBOSITY_DEBUG, "Running install script for [%s]", id);
         // Run install script
         int result = -1;
         char* installCommand = asprintf_hd("sh %s", installScriptPath);
@@ -455,7 +455,7 @@ bool Internal_InstallItem(struct KPM* kpm, char* repository, char* path, struct 
     }
 
     // Add installed item to the database
-    const char* zSQL = "INSERT INTO installed_package (id, repository, name, author, description, version_major, version_minor, version_patch) VALUES (?, ?, ?, ?, ?, ?, ?, ?);";
+    const char* zSQL = "INSERT INTO installed_packages (id, repository, name, author, description, version_major, version_minor, version_patch, installed_as_dependency) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);";
     sqlite3_stmt* statement;
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
     sqlite3_bind_text(statement, 1, id, -1, SQLITE_STATIC);
@@ -466,6 +466,7 @@ bool Internal_InstallItem(struct KPM* kpm, char* repository, char* path, struct 
     sqlite3_bind_int(statement, 6, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(json, "version"), 0)));
     sqlite3_bind_int(statement, 7, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(json, "version"), 1)));
     sqlite3_bind_int(statement, 8, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(json, "version"), 2)));
+    sqlite3_bind_int(statement, 9, installed_as_dependency);
     if (sqlite3_step(statement) != SQLITE_DONE)
     {
         sqlite3_finalize(statement);
@@ -822,7 +823,7 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
 
         char* path = asprintf_hd("%s/tmp/%s", kpm->pkgPath, filename);
 
-        if (!Internal_InstallItem(kpm, graph.nodes[deduplicatedPackages[i]].repository, path, kpmLogging))
+        if (!Internal_InstallItem(kpm, graph.nodes[deduplicatedPackages[i]].repository, path, i != deduplicatedPackageCount-1, kpmLogging)) // The last package installed is our target hence the value of installed_as_dependency
         {
             kpmLogging->log(KPM_VERBOSITY_ERROR, "Could not install %s", artifact.id);
             KPM_FreeIndexedArtifact(&artifact);
@@ -832,6 +833,30 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
 
         KPM_FreeIndexedArtifact(&artifact);
         free(path);
+
+        // If this package is installed so are its dependencies
+        for (int j=0; j < graph.nodes[deduplicatedPackages[i]].connectedCount; j++)
+        {
+            struct DependencyNode dependency = graph.nodes[graph.nodes[deduplicatedPackages[i]].connected[j]];
+            assert(dependency.type == NODE_DEPENDENCY);
+
+            const char* zSQL = "INSERT INTO current_dependencies (dependent, dependency_id, min_version_major, min_version_minor, min_version_patch, max_version_major, max_version_minor, max_version_patch) VALUES (?, ?, ?, ?, ?, ?, ?, ?);";
+            sqlite3_stmt* statement;
+            sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
+            sqlite3_bind_text(statement, 1, graph.nodes[deduplicatedPackages[i]].id, -1, SQLITE_STATIC);
+            sqlite3_bind_text(statement, 2, dependency.id, -1, SQLITE_STATIC);
+            sqlite3_bind_int(statement, 3, dependency.min_version.major);
+            sqlite3_bind_int(statement, 4, dependency.min_version.minor);
+            sqlite3_bind_int(statement, 5, dependency.min_version.patch);
+            sqlite3_bind_int(statement, 6, dependency.max_version.major);
+            sqlite3_bind_int(statement, 7, dependency.max_version.minor);
+            sqlite3_bind_int(statement, 8, dependency.max_version.patch);
+            if (sqlite3_step(statement) != SQLITE_DONE)
+            {
+                sqlite3_finalize(statement);
+                return KPM_SQLITE_ERROR; // Failure with adding it to the database - @TODO: This could be bad, we may need better error handling
+            }
+        }
     }
 
     free(deduplicatedPackages);

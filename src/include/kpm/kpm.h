@@ -93,6 +93,7 @@ struct InstalledPackage
     char* author; /**< The package author */
     char* description; /**< The package description */
     struct SemVer version; /**< The package version */
+    bool installed_as_dependency;
 };
 
 /**

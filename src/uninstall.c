@@ -6,7 +6,7 @@
 
 enum KPMResult KPM_UninstallPackage(struct KPM* kpm, const char* packageId, struct KPMLogging* kpmLogging)
 {
-    kpmLogging->log(KPM_VERBOSITY_INFO, "Preparing to uninstall [%s]", packageId);
+    kpmLogging->log(KPM_VERBOSITY_INFO, "Uninstalling [%s]", packageId);
     struct InstalledPackage package;
     enum KPMResult error;
     if ((error = KPM_GetInstalledPackage(kpm, packageId, &package)) != KPM_OK)
@@ -19,7 +19,7 @@ enum KPMResult KPM_UninstallPackage(struct KPM* kpm, const char* packageId, stru
 
     if (access(uninstallScriptPath, R_OK) == 0)
     {
-        kpmLogging->log(KPM_VERBOSITY_INFO, "Running uninstall script for [%s]", packageId);
+        kpmLogging->log(KPM_VERBOSITY_DEBUG, "Running uninstall script for [%s]", packageId);
         // Run uninstall script
         int result = -1;
         char* uninstallCommand = asprintf_hd("sh %s", uninstallScriptPath);
@@ -50,7 +50,21 @@ enum KPMResult KPM_UninstallPackage(struct KPM* kpm, const char* packageId, stru
         }
     }
 
-    kpmLogging->log(KPM_VERBOSITY_INFO, "Deleting [%s] files", packageId);
+    kpmLogging->log(KPM_VERBOSITY_DEBUG, "Deleting [%s] files", packageId);
     rmdir_r(outPath);
+
+    // Remove installed item from the database
+    const char* zSQL = "DELETE FROM installed_package WHERE id=?";
+    sqlite3_stmt* statement;
+    sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
+    sqlite3_bind_text(statement, 1, packageId, -1, SQLITE_STATIC);
+    if (sqlite3_step(statement) != SQLITE_DONE)
+    {
+        sqlite3_finalize(statement);
+        return KPM_SQLITE_ERROR; // Failure with adding it to the database - @TODO: This could be bad, we may need better error handling
+    }
+    sqlite3_finalize(statement);
+
+    kpmLogging->log(KPM_VERBOSITY_INFO, "Uninstalled [%s]", packageId);
     return KPM_OK;
 }

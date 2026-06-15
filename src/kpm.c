@@ -67,14 +67,15 @@ enum KPMResult KPM_Initialise(struct KPM *kpm, const char* dbPath)
             description TEXT NOT NULL,
             version_major INTEGER NOT NULL,
             version_minor INTEGER NOT NULL,
-            version_patch INTEGER NOT NULL
+            version_patch INTEGER NOT NULL,
+            installed_as_dependency INTEGER NOT NULL
         ) STRICT;
     )", NULL, NULL, NULL);
 
     sqlite3_exec(kpm->db, R"(
         CREATE TABLE IF NOT EXISTS current_dependencies (
             dependent TEXT NOT NULL REFERENCES installed_packages(id) ON DELETE CASCADE,
-            dependency_id TEXT NOT NULL,
+            dependency_id TEXT NOT NULL REFERENCES installed_packages(id) ON DELETE CASCADE,
             min_version_major INTEGER NOT NULL,
             min_version_minor INTEGER NOT NULL,
             min_version_patch INTEGER NOT NULL,

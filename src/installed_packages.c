@@ -33,7 +33,7 @@ enum KPMResult KPM_GetInstalledPackage(struct KPM* kpm, const char* packageId, s
     package->description = NULL;
 
     sqlite3_stmt* statement;
-    const char* zSQL = "SELECT id, repository, name, author, description, version_major, version_minor, version_patch FROM installed_packages WHERE AND id=? LIMIT 1;";
+    const char* zSQL = "SELECT id, repository, name, author, description, version_major, version_minor, version_patch, installed_as_dependency FROM installed_packages WHERE AND id=? LIMIT 1;";
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
     sqlite3_bind_text(statement, 1, packageId, -1, SQLITE_STATIC);
 
@@ -47,6 +47,7 @@ enum KPMResult KPM_GetInstalledPackage(struct KPM* kpm, const char* packageId, s
         package->version.major = sqlite3_column_int(statement, 5);
         package->version.minor = sqlite3_column_int(statement, 6);
         package->version.patch = sqlite3_column_int(statement, 7);
+        package->installed_as_dependency = sqlite3_column_int(statement, 8);
     } else {
         return KPM_SQLITE_ERROR;
     }
@@ -63,7 +64,7 @@ enum KPMResult KPM_ListInstalledPackages(struct KPM* kpm, size_t* packageCount, 
         *packages = NULL;
     }
 
-    const char* zSQL = "SELECT (SELECT COUNT() FROM installed_packages), id, repository, name, author, description, version_major, version_minor, version_patch FROM installed_packages;";
+    const char* zSQL = "SELECT (SELECT COUNT() FROM installed_packages), id, repository, name, author, description, version_major, version_minor, version_patch, installed_as_dependency FROM installed_packages;";
     sqlite3_stmt* statement;
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
 
@@ -90,6 +91,7 @@ enum KPMResult KPM_ListInstalledPackages(struct KPM* kpm, size_t* packageCount, 
             (*packages)[i].version.major = sqlite3_column_int(statement, 6);
             (*packages)[i].version.minor = sqlite3_column_int(statement, 7);
             (*packages)[i].version.patch = sqlite3_column_int(statement, 8);
+            (*packages)[i].installed_as_dependency = sqlite3_column_int(statement, 9);
         }
     }
 
