@@ -31,6 +31,9 @@ void kpm_log(enum Verbosity verbosity, const char* format, ...)
     switch (verbosity)
     {
         case KPM_VERBOSITY_DEBUG:
+#ifdef NDEBUG
+            return;
+#endif
             prefixed_format = asprintf_hd("\x1b[0;1;36m[DEBUG] %s", format);
             break;
         case KPM_VERBOSITY_WARN:
