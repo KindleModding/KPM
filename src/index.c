@@ -57,6 +57,7 @@ bool indexDependency(struct KPM* kpm, char* artifact_repository, char* artifact_
 
 bool indexArtifact(struct KPM* kpm, char* repositoryId, char* packageId, cJSON* artifact, struct KPMLogging* kpmLogging)
 {
+    kpmLogging->log(KPM_VERBOSITY_DEBUG, "  indexing artifact (%.0f.%.0f.%.0f)", packageId, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(artifact, "version"), 0)), cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(artifact, "version"), 1)), cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(artifact, "version"), 2)));
     const char* zSQL = "INSERT INTO artifacts (url, repository, id, version_major, version_minor, version_patch) VALUES (?, ?, ?, ?, ?, ?);";
     sqlite3_stmt* statement;
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
@@ -103,6 +104,8 @@ bool indexPackage(struct KPM* kpm, char* repositoryId, cJSON* package, struct KP
         return false;
     }
 
+    kpmLogging->log(KPM_VERBOSITY_DEBUG, "indexing package [%s]", package->string);
+
     // INSERT that package INTO the DATABASE (deltarune reference???)
     const char* zSQL = "INSERT INTO packages (repository, id, name, author, description) VALUES (?, ?, ?, ?, ?);";
     sqlite3_stmt* statement;
@@ -125,7 +128,7 @@ bool indexPackage(struct KPM* kpm, char* repositoryId, cJSON* package, struct KP
     // Now we index artifacts
     cJSON* artifact;
     cJSON_ArrayForEach(artifact, cJSON_GetObjectItem(package, "artifacts"))
-    {
+    { // @TODO: Implement supported_platform support
         if (!indexArtifact(kpm, repositoryId, package->string, artifact, kpmLogging)) // Dependency failed
         {
             kpmLogging->log(KPM_VERBOSITY_ERROR, "Could not index artifact for [%s]", package->string);

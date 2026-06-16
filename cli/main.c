@@ -51,7 +51,7 @@ int main(int argc, char* argv[])
         .maxConnections = 5, // @TODO
         .pkgPath = "/tmp/packages/"
     };
-    KPM_Initialise(&kpm, "./repo-test.db");
+    KPM_Initialise(&kpm, "./repo_test.db");
 
     if (strcmp(argv[command_index], "version") == 0)
     {
@@ -117,6 +117,15 @@ int main(int argc, char* argv[])
             logging.log(KPM_VERBOSITY_INFO, "There are no repositories to show");
         for (int i=0; i < repository_count; i++)
             logging.log(KPM_VERBOSITY_INFO, "  - %s - %s (%s)", repositories[i].id, repositories[i].name, repositories[i].url);
+    }
+    else if (strcmp(argv[command_index], "update") == 0)
+    {
+        if ((error = KPM_UpdateIndex(&kpm, &logging)) != KPM_OK)
+        {
+            logging.log(KPM_VERBOSITY_ERROR, "Could not update indexed packages (%i)", error);
+            return error;
+        }
+        logging.log(KPM_VERBOSITY_INFO, "Updated indexed packages.");
     }
     else
     {
