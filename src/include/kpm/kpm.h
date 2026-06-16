@@ -168,6 +168,8 @@ enum KPMResult KPM_Initialise(struct KPM *kpm, const char* dbPath);
  */
 void KPM_Cleanup(struct KPM *kpm);
 
+enum KPMPlatform KPM_GetDevice();
+
 // Repo management functions
 /**
  * @brief Free a repository object's properties (WILL NOT FREE THE POINTER ITSELF)

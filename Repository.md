@@ -45,13 +45,13 @@ Note: You should not be managing a repository manually, instead use the `krm.py`
                     "url": "packages/com.kindlemodding.example/kindlehf/package_v1.0.0.kpkg",
                     "depencencies": [],
                     "version": [ 1, 0, 0 ],
-                    "supported_platform": [ "kindlehf" ],
+                    "supported_platforms": [ "kindlehf" ],
                 },
                 {
                     "url": "packages/com.kindlemodding.example/kindlepw2/package_v1.0.0.kpkg",
                     "depencencies": [],
                     "version": [ 1, 0, 0 ],
-                    "supported_platform": [ "kindlepw2" ]
+                    "supported_platforms": [ "kindlepw2" ]
                 }
             ]
         }
@@ -70,4 +70,4 @@ A `screenshots.json` file can be provided storing a list of every screenshot a p
 ]
 ```
 
-See [Package.md](Package.md) for more info on `supported_platform` and `dependencies`
+See [Package.md](Package.md) for more info on `supported_platforms` and `dependencies`

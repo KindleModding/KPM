@@ -5,7 +5,7 @@
     "author": "Hackerdude",
     "description": "This is a test package",
     "version": [ 1, 2, 3 ],
-    "supported_platform": [ "kindlehf", "kindlepw2" ],
+    "supported_platforms": [ "kindlehf", "kindlepw2" ],
     "dependencies": [
         {
             "id": "fbink"

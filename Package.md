@@ -14,7 +14,7 @@ The file `must` have a `manifest.json` in its root.
     "author": "KOReader Team",
     "description": "KOReader is a feature-rich eBook reader",
     "version": [ 1, 2, 0 ],
-    "supported_platform": [ "kindlehf" ],
+    "supported_platforms": [ "kindlehf" ],
     "dependencies":
     [
         {
@@ -42,7 +42,7 @@ name - The display name of the package
 author - The author of the package
 description - The description of the package
 version - The version of the package (ie: `v1.2.3` -> `[1, 2, 3]`)
-supported_platform - List of supported architectures, optional
+supported_platforms - List of supported architectures, optional
 dependencies - A list of package dependencies, optional
 ```
 

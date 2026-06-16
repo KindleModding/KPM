@@ -10,6 +10,10 @@
 #define CLI_VERSION_MINOR 0
 #define CLI_VERSION_PATCH 0
 
+#ifndef KPM_PLATFORM
+#define KPM_PLATFORM "unknown"
+#endif
+
 struct CLIState cli_state = {
     .fbink = false,
     .confirm = true
@@ -55,6 +59,7 @@ int main(int argc, char* argv[])
     {
         logging.log(KPM_VERBOSITY_INFO, "cli v%i.%i.%i", CLI_VERSION_MAJOR, CLI_VERSION_MINOR, CLI_VERSION_PATCH);
         logging.log(KPM_VERBOSITY_INFO, "libkpm v%i.%i.%i", KPM_VERSION_MAJOR, KPM_VERSION_MINOR, KPM_VERSION_PATCH);
+        logging.log(KPM_VERBOSITY_INFO, "built for platform: %s", KPM_PLATFORM);
     }
     else if (strcmp(argv[command_index], "add-repo") == 0)
     {

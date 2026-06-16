@@ -128,7 +128,25 @@ bool indexPackage(struct KPM* kpm, char* repositoryId, cJSON* package, struct KP
     // Now we index artifacts
     cJSON* artifact;
     cJSON_ArrayForEach(artifact, cJSON_GetObjectItem(package, "artifacts"))
-    { // @TODO: Implement supported_platform support
+    {
+        // Check if this artifact's supported_platforms
+        if (cJSON_IsArray(cJSON_GetObjectItem(artifact, "supported_platforms")))
+        {
+            bool supported=false;
+            cJSON* supported_platform;
+            cJSON_ArrayForEach(supported_platform, cJSON_GetObjectItem(artifact, "supported_platforms"))
+            {
+                if (strcmp(supported_platform->valuestring, KPM_PLATFORM) == 0)
+                {
+                    supported = true;
+                    break;
+                }
+            }
+
+            if (!supported)
+                continue;
+        }
+
         if (!indexArtifact(kpm, repositoryId, package->string, artifact, kpmLogging)) // Dependency failed
         {
             kpmLogging->log(KPM_VERBOSITY_ERROR, "Could not index artifact for [%s]", package->string);

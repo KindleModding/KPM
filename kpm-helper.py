@@ -9,8 +9,7 @@ import tarfile
 import json
 import os
 
-valid_supported_platform = [
-    "kindleany",
+valid_supported_platforms = [
     "kindle",
     "kindle5",
     "kindlepw2",
@@ -28,7 +27,6 @@ class Package:
             "author": "",
             "description": "",
             "version": [],
-            "supported_platform": ["kindleany"],
             "dependencies": []
         }
 
@@ -85,7 +83,7 @@ class Package:
         print(f"Author: {manifest['author']}")
         print("Packing...")
 
-        packageFilename = f"./{manifest['id']}_{'.'.join(str(x) for x in manifest['version'])}_{'-'.join(manifest['supported_platform'])}.kpkg"
+        packageFilename = f"./{manifest['id']}_{'.'.join(str(x) for x in manifest['version'])}_{'-'.join(manifest.get('supported_platforms', ['kindleany']))}.kpkg"
         with tarfile.open(packageFilename, "w|xz") as file:
             for source_item_name in os.listdir(args.path):
                 print(f"- {source_item_name}")
@@ -170,15 +168,15 @@ class Repo:
         print("Adding artifact...")
         packageFolder = os.path.join("packages", manifest['id'])
         artifactFolder = os.path.join(packageFolder, "artifacts")
-        artifactPath = os.path.join(artifactFolder, f"{manifest['id']}_{'.'.join(str(x) for x in manifest['version'])}_{'-'.join(manifest['supported_platform'])}.kpkg")
+        artifactPath = os.path.join(artifactFolder, f"{manifest['id']}_{'.'.join(str(x) for x in manifest['version'])}_{'-'.join(manifest.get('supported_platforms', ['kindleany']))}.kpkg")
 
         for artifact in repositoryManifest["packages"][manifest["id"]]["artifacts"]:
             if (artifact["version"][0] == manifest["version"][0] and
                 artifact["version"][1] == manifest["version"][1] and
                 artifact["version"][2] == manifest["version"][2]):
                 different = False
-                for supported_platform in artifact["supported_platform"]:
-                    if (not supported_platform in manifest["supported_platform"]):
+                for supported_platform in artifact.get('supported_platforms', []):
+                    if (not supported_platform in manifest.get('supported_platforms', [])):
                         different = True
                 
                 if (not different):
@@ -194,9 +192,10 @@ class Repo:
         repositoryManifest["packages"][manifest["id"]]["artifacts"].append({
             "url": artifactPath,
             "version": manifest["version"],
-            "dependencies": manifest["dependencies"],
-            "supported_platform": manifest["supported_platform"],
+            "dependencies": manifest["dependencies"]
         })
+        if ("supported_platforms" in manifest):
+            repositoryManifest["packages"][manifest["id"]]["artifacts"][-1]["supported_platforms"] = manifest["supported_platforms"]
 
         if ("supported_devices" in manifest):
             repositoryManifest["packages"][manifest["id"]]["artifacts"][-1]["supported_devices"] = manifest["supported_devices"]

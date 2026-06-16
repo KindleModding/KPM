@@ -30,7 +30,7 @@
               "max": [ 1, 0, 0 ]
             }
           ],
-          "supported_platform": [
+          "supported_platforms": [
             "kindlehf",
             "kindlepw2"
           ]
@@ -55,7 +55,7 @@
               "max": [ 1, 0, 0 ]
             }
           ],
-          "supported_platform": [
+          "supported_platforms": [
             "kindlehf",
             "kindlepw2"
           ]
@@ -73,7 +73,7 @@
               "max": [ 1, 0, 0 ]
             }
           ],
-          "supported_platform": [
+          "supported_platforms": [
             "kindlehf",
             "kindlepw2"
           ]
@@ -91,7 +91,7 @@
               "max": [ 1, 0, 0 ]
             }
           ],
-          "supported_platform": [
+          "supported_platforms": [
             "kindlehf",
             "kindlepw2"
           ]
@@ -109,7 +109,7 @@
               "max": [ 1, 0, 0 ]
             }
           ],
-          "supported_platform": [
+          "supported_platforms": [
             "kindlehf",
             "kindlepw2"
           ]
@@ -127,7 +127,7 @@
               "max": [ 1, 0, 0 ]
             }
           ],
-          "supported_platform": [
+          "supported_platforms": [
             "kindlehf",
             "kindlepw2"
           ]
@@ -149,7 +149,7 @@
               "max": [ 1, 9, 0 ]
             }
           ],
-          "supported_platform": [
+          "supported_platforms": [
             "kindlehf",
             "kindlepw2"
           ]
@@ -164,7 +164,7 @@
               "max": [ 1, 9, 0 ]
             }
           ],
-          "supported_platform": [
+          "supported_platforms": [
             "kindlehf",
             "kindlepw2"
           ]
@@ -179,7 +179,7 @@
               "max": [ 2, 0, 0 ]
             }
           ],
-          "supported_platform": [
+          "supported_platforms": [
             "kindlehf",
             "kindlepw2"
           ]
@@ -194,7 +194,7 @@
         {
           "url": "packages/testmin/artifacts/testmin_0.1.2_kindlehf-kindlepw2.kpkg",
           "version": [ 0, 1, 2 ],
-          "supported_platform": [
+          "supported_platforms": [
             "kindlehf",
             "kindlepw2"
           ]
@@ -202,7 +202,7 @@
         {
           "url": "packages/testmin/artifacts/testmin_0.2.3_kindlehf-kindlepw2.kpkg",
           "version": [ 0, 2, 3 ],
-          "supported_platform": [
+          "supported_platforms": [
             "kindlehf",
             "kindlepw2"
           ]
@@ -210,7 +210,7 @@
         {
           "url": "packages/testmin/artifacts/testmin_0.99.99_kindlehf-kindlepw2.kpkg",
           "version": [ 0, 99, 99 ],
-          "supported_platform": [
+          "supported_platforms": [
             "kindlehf",
             "kindlepw2"
           ]
@@ -218,7 +218,7 @@
         {
           "url": "packages/testmin/artifacts/testmin_1.0.0_kindlehf-kindlepw2.kpkg",
           "version": [ 1, 0, 0 ],
-          "supported_platform": [
+          "supported_platforms": [
             "kindlehf",
             "kindlepw2"
           ]
@@ -226,7 +226,7 @@
         {
           "url": "packages/testmin/artifacts/testmin_1.1.1_kindlehf-kindlepw2.kpkg",
           "version": [ 1, 1, 1 ],
-          "supported_platform": [
+          "supported_platforms": [
             "kindlehf",
             "kindlepw2"
           ]
@@ -234,7 +234,7 @@
         {
           "url": "packages/testmin/artifacts/testmin_1.999.999_kindlehf-kindlepw2.kpkg",
           "version": [ 1, 999, 999 ],
-          "supported_platform": [
+          "supported_platforms": [
             "kindlehf",
             "kindlepw2"
           ]
@@ -249,7 +249,7 @@
         {
           "url": "packages/testmax/artifacts/testmax_0.1.2_kindlehf-kindlepw2.kpkg",
           "version": [ 0, 1, 2 ],
-          "supported_platform": [
+          "supported_platforms": [
             "kindlehf",
             "kindlepw2"
           ]
@@ -257,7 +257,7 @@
         {
           "url": "packages/testmax/artifacts/testmax_0.2.3_kindlehf-kindlepw2.kpkg",
           "version": [ 0, 2, 3 ],
-          "supported_platform": [
+          "supported_platforms": [
             "kindlehf",
             "kindlepw2"
           ]
@@ -265,7 +265,7 @@
         {
           "url": "packages/testmax/artifacts/testmax_0.99.99_kindlehf-kindlepw2.kpkg",
           "version": [ 0, 99, 99 ],
-          "supported_platform": [
+          "supported_platforms": [
             "kindlehf",
             "kindlepw2"
           ]
@@ -273,7 +273,7 @@
         {
           "url": "packages/testmax/artifacts/testmax_1.0.0_kindlehf-kindlepw2.kpkg",
           "version": [ 1, 0, 0 ],
-          "supported_platform": [
+          "supported_platforms": [
             "kindlehf",
             "kindlepw2"
           ]
@@ -281,7 +281,7 @@
         {
           "url": "packages/testmax/artifacts/testmax_1.1.1_kindlehf-kindlepw2.kpkg",
           "version": [ 1, 1, 1 ],
-          "supported_platform": [
+          "supported_platforms": [
             "kindlehf",
             "kindlepw2"
           ]
@@ -289,7 +289,7 @@
         {
           "url": "packages/testmax/artifacts/testmax_1.999.999_kindlehf-kindlepw2.kpkg",
           "version": [ 1, 999, 999 ],
-          "supported_platform": [
+          "supported_platforms": [
             "kindlehf",
             "kindlepw2"
           ]

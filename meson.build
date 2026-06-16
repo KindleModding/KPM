@@ -1,5 +1,11 @@
 project('kpm', 'c', version : '1.0.0', license : 'GPL', default_options: ['b_ndebug=if-release'])
-add_global_arguments('-DKPM_ARCH="' + meson.get_external_property('kpm_arch', host_machine.cpu_family()) + '"', language: 'c')
+
+KPM_PLATFORM = meson.get_external_property('kindle_platform', get_option('kindle_platform'))
+if KPM_PLATFORM == ''
+    KPM_PLATFORM = host_machine.cpu_family()
+endif
+
+add_global_arguments('-DKPM_PLATFORM="' + KPM_PLATFORM + '"', language: 'c')
 
 kmc_lib_dir = '/var/local/kmc/lib'
 
@@ -22,3 +28,12 @@ subdir('./tests')
 if get_option('cli').enabled()
     subdir('./cli')
 endif
+
+summary(
+  {
+    'arch': host_machine.cpu_family(),
+    'kpm_platform': KPM_PLATFORM,
+    'cli': get_option('cli').enabled()
+  },
+  bool_yn: true,
+)
