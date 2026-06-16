@@ -12,7 +12,6 @@
 
 struct CLIState cli_state = {
     .fbink = false,
-    .dry = false,
     .confirm = true
 };
 
@@ -35,8 +34,6 @@ int main(int argc, char* argv[])
             goto help;
         else if (strcmp(arg, "--fbink") == 0)
             cli_state.fbink = true;
-        else if (strcmp(arg, "--dry") == 0)
-            cli_state.dry = true;
         else if (strcmp(arg, "-y") == 0)
             cli_state.confirm = false;
         else if (strncmp(arg, "--", 2) == 0 || strncmp(arg, "-", 1) == 0)
@@ -213,10 +210,9 @@ err_no_command:
         logging.log(KPM_VERBOSITY_INFO, "No command specified.\n");
         goto help;
 help:
-logging.log(KPM_VERBOSITY_INFO, "usage: kpm [--help, -h] [--fbink] [--dry] [-y] {version | add-repo | remove-repo | list-repo | update | search | install | uninstall} ... \n\
+logging.log(KPM_VERBOSITY_INFO, "usage: kpm [--help, -h] [--fbink] [-y] {version | add-repo | remove-repo | list-repo | update | search | install | uninstall} ... \n\
     --help, -h\tShow this help\n\
     --fbink\tLog to fbink\n\
-    --dry\tDry run only\n\
     -y\tDo not ask for user confirmation\n\
 \n\
 version:\n\

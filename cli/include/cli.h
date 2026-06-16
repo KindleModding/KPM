@@ -4,7 +4,6 @@
 
 struct CLIState {
     bool fbink;
-    bool dry;
     bool confirm;
 };
 
