@@ -1,17 +1,17 @@
 #include "kpm/kpm.h"
 #include "callback.h"
 
-void logStub(enum Verbosity verbosity, char* details, ...)
+void logStub(enum Verbosity verbosity, const char* details, ...)
 {
     return;
 }
 
-void logProgressStub(uint progress, char* details, ...)
+void logProgressStub(uint progress, const char* details, ...)
 {
     return;
 }
 
-bool getInputStub(char* details, ...)
+bool getInputStub(const char* details, ...)
 {
     return false;
 }

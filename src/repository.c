@@ -74,10 +74,13 @@ enum KPMResult KPM_ListRepositories(struct KPM* kpm, size_t* repositoryCount, st
 
 enum KPMResult KPM_GetRepository(struct KPM *kpm, const char *repositoryId, struct Repository* repository)
 {
-    repository->id = NULL;
-    repository->url = NULL;
-    repository->name = NULL;
-    repository->description = NULL;
+    if (repository != NULL)
+    {
+        repository->id = NULL;
+        repository->url = NULL;
+        repository->name = NULL;
+        repository->description = NULL;
+    }
 
     const char* zSQL = "SELECT id, url, name, description FROM repositories WHERE id=? LIMIT 1;";
     sqlite3_stmt* statement;
@@ -86,10 +89,13 @@ enum KPMResult KPM_GetRepository(struct KPM *kpm, const char *repositoryId, stru
 
     if (sqlite3_step(statement) == SQLITE_ROW)
     {
-        repository->id = strdup((const char*) sqlite3_column_text(statement, 0));
-        repository->url = strdup((const char*) sqlite3_column_text(statement, 1));
-        repository->name = strdup((const char*) sqlite3_column_text(statement,2));
-        repository->description = strdup((const char*) sqlite3_column_text(statement, 3));
+        if (repository != NULL)
+        {
+            repository->id = strdup((const char*) sqlite3_column_text(statement, 0));
+            repository->url = strdup((const char*) sqlite3_column_text(statement, 1));
+            repository->name = strdup((const char*) sqlite3_column_text(statement,2));
+            repository->description = strdup((const char*) sqlite3_column_text(statement, 3));
+        }
     } else {
         return KPM_SQLITE_ERROR;
     }

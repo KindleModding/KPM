@@ -6,12 +6,13 @@ sources = files(
     'index.c',
     'install.c',
     'installed_packages.c',
+    'internal_utils.c',
     'kpm.c',
     'package.c',
     'repository.c',
     'simpleGET.c',
-    'utils.c',
-    'internal_utils.c'
+    'uninstall.c',
+    'utils.c'
 )
 include_dir = include_directories('./include')
 

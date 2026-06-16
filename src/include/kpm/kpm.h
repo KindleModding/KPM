@@ -17,6 +17,12 @@
 
 #include "semver.h"
 
+#define KPM_MANIFEST_VERSION 1
+
+#define KPM_VERSION_MAJOR 0
+#define KPM_VERSION_MINOR 1
+#define KPM_VERSION_PATCH 0
+
 enum KPMResult
 {
     KPM_OK,
@@ -121,8 +127,6 @@ struct KPM
 {
     sqlite3* db; /**< The sqlite db object */
     char* pkgPath; /**< The path to KPM packages */
-    bool prompt; /**< Should prompt user for things */
-    bool confirmInstall; /**< Should confirm install */
     int maxConnections; /**< Maximum number of parallel connections to hold when downloading stuff */
 };
 
@@ -135,9 +139,9 @@ enum Verbosity
 };
 
 typedef void KPMStream(char c);
-typedef void KPMLog(enum Verbosity, char* details, ...);
-typedef void KPMLogProgress(uint progress, char* details, ...);
-typedef bool KPMGetInput(char* details, ...);
+typedef void KPMLog(enum Verbosity, const char* format, ...) __attribute__((format(printf, 2, 3)));;
+typedef void KPMLogProgress(uint progress, const char* format, ...) __attribute__((format(printf, 2, 3)));;
+typedef bool KPMGetInput(const char* format, ...) __attribute__((format(printf, 1, 2)));;
 
 struct KPMLogging
 {
@@ -194,7 +198,7 @@ enum KPMResult KPM_ListRepositories(struct KPM* kpm, size_t* repositoryCount, st
  * 
  * @param kpm The KPM object
  * @param repositoryId The Id of the repository to get
- * @param repository A pointer to return the repository object (Values will be NULL if the repository could not be fetched)
+ * @param repository A pointer to return the repository object (Values will be NULL if the repository could not be fetched, pointer can be set to NULL)
  * @return enum KPMResult 
  */
 enum KPMResult KPM_GetRepository(struct KPM *kpm, const char *repositoryId, struct Repository* repository);
@@ -204,7 +208,7 @@ enum KPMResult KPM_GetRepository(struct KPM *kpm, const char *repositoryId, stru
  * 
  * @param kpm The KPM object
  * @param url The URL to the repository manifest file
- * @param repository A pointer to return the indexed repository object
+ * @param repository A pointer to return the indexed repository object (or NULL)
  * @return enum KPMResult 
  */
 enum KPMResult KPM_AddRepository(struct KPM *kpm, const char *url, struct Repository* repository);

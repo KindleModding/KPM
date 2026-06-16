@@ -4,7 +4,7 @@
 #include <unistd.h>
 #include <libgen.h>
 
-void statusCallback(enum Verbosity verbosity, char * format, ...)
+void statusCallback(enum Verbosity verbosity, const char* format, ...)
 {
     va_list args;
     va_start(args, format);
@@ -17,9 +17,7 @@ int main()
 {
     struct KPM kpm = {
         .pkgPath = "/tmp/",
-        .prompt = false,
-        .confirmInstall = false,
-        .maxConnections = 50
+        .maxConnections = 5,
     };
 
     KPM_Initialise(&kpm, "./repo_test.db");

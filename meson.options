@@ -1,0 +1,1 @@
+option('cli', description: 'Build the kpm CLI', type: 'feature', value: 'enabled')

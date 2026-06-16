@@ -16,3 +16,7 @@ libarchive_dep = dependency('libarchive', static: true)
 subdir('./stubs')
 subdir('./src')
 subdir('./tests')
+
+if get_option('cli').enabled()
+    subdir('./cli')
+endif

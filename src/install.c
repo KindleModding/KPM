@@ -368,7 +368,7 @@ enum KPMResult Internal_DownloadGraphItems(struct KPM* kpm, struct DependencyGra
             else
             {
                 free(target_url);
-                kpmLogging->log(KPM_VERBOSITY_ERROR, "Curl received an invalid response code: %i", response_code);
+                kpmLogging->log(KPM_VERBOSITY_ERROR, "Curl received an invalid response code: %zu", response_code);
                 return KPM_CURL_ERROR;
             }
         }
@@ -774,14 +774,14 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
         }
     }
 
-    kpmLogging->log(KPM_VERBOSITY_INFO, "Preparing to upgrade %i packages", updateCount);
+    kpmLogging->log(KPM_VERBOSITY_INFO, "Preparing to upgrade %zu packages", updateCount);
     for (size_t i=0; i < updateCount; i++)
     {
         kpmLogging->log(KPM_VERBOSITY_INFO, "- %s (%u.%u.%u)", graph.nodes[update[i]].id, graph.nodes[update[i]].min_version.major, graph.nodes[update[i]].min_version.minor, graph.nodes[update[i]].min_version.patch);
     }
 
 
-    kpmLogging->log(KPM_VERBOSITY_INFO, "Preparing to install %i packages", installCount);
+    kpmLogging->log(KPM_VERBOSITY_INFO, "Preparing to install %zu packages", installCount);
     for (size_t i=0; i < installCount; i++)
     {
         kpmLogging->log(KPM_VERBOSITY_INFO, "- %s (%u.%u.%u)", graph.nodes[install[i]].id, graph.nodes[install[i]].min_version.major, graph.nodes[install[i]].min_version.minor, graph.nodes[install[i]].min_version.patch);
@@ -789,15 +789,12 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
     free(update);
     free(install);
 
-    if (kpm->confirmInstall)
+    if (!kpmLogging->getInput("Would you like to proceed?"))
     {
-        if (!kpmLogging->getInput("Would you like to proceed?"))
-        {
-            kpmLogging->log(KPM_VERBOSITY_INFO, "Aborted.");
-            free(deduplicatedPackages);
-            FreeDependencyGraph(&graph);
-            return KPM_OK; // @TODO
-        }
+        kpmLogging->log(KPM_VERBOSITY_INFO, "Aborted.");
+        free(deduplicatedPackages);
+        FreeDependencyGraph(&graph);
+        return KPM_OK; // @TODO
     }
     
     enum KPMResult result = Internal_DownloadGraphItems(kpm, &graph, deduplicatedPackageCount, deduplicatedPackages, kpmLogging);
