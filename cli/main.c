@@ -1,5 +1,6 @@
 #include "kpm.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "cli.h"
@@ -126,6 +127,43 @@ int main(int argc, char* argv[])
             return error;
         }
         logging.log(KPM_VERBOSITY_INFO, "Updated indexed packages.");
+    }
+    else if (strcmp(argv[command_index], "search") == 0)
+    {
+        size_t query_length = 0;
+        for (int i=command_index+1; i < argc; i++)
+        {
+            query_length += strlen(argv[i]);
+            if (i != argc-1)
+                query_length += 1; // For the space
+        }
+        char* query = malloc(query_length + 1);
+        size_t cur_len = 0;
+        for (int i=command_index+1; i < argc; i++)
+        {
+            snprintf(query + cur_len, query_length-cur_len + 1, "%s", argv[i]);
+            cur_len += strlen(argv[i]);
+            if (i != argc-1)
+            {
+                snprintf(query + cur_len, query_length-cur_len, " ");
+                cur_len++;
+            }
+        }
+
+        size_t package_count;
+        struct IndexedPackage* packages;
+        if ((error = KPM_SearchPackages(&kpm, query, &package_count, &packages)) != KPM_OK)
+        {
+            logging.log(KPM_VERBOSITY_ERROR, "Could not search for '%s' (%i)", query, error);
+            return error;
+        }
+        logging.log(KPM_VERBOSITY_INFO, "%s:", query);
+        for (int i = 0; i < package_count; i++)
+        {
+            logging.log(KPM_VERBOSITY_INFO, "  - %s (%s): %s", packages[i].name, packages[i].id, packages[i].description);
+        }
+        if (package_count == 0)
+            logging.log(KPM_VERBOSITY_INFO, "Could not find any packages for '%s'", query);
     }
     else
     {
