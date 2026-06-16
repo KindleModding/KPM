@@ -207,10 +207,10 @@ int main(int argc, char* argv[])
     }
     else
     {
-        logging.log(KPM_VERBOSITY_INFO, "Unknown argv[command_index] \"%s\" specified.\n", argv[command_index]);
+        logging.log(KPM_VERBOSITY_INFO, "Unknown command \"%s\" specified.\n", argv[command_index]);
         goto help;
 err_no_command:
-        logging.log(KPM_VERBOSITY_INFO, "No argv[command_index] specified.\n");
+        logging.log(KPM_VERBOSITY_INFO, "No command specified.\n");
         goto help;
 help:
 logging.log(KPM_VERBOSITY_INFO, "usage: kpm [--help, -h] [--fbink] [--dry] [-y] {version | add-repo | remove-repo | list-repo | update | search | install | uninstall} ... \n\
