@@ -486,10 +486,20 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
     if (kpmLogging == NULL)
         kpmLogging = &dummyKPMStub;
     
-    if (target->version == NULL)
-        kpmLogging->log(KPM_VERBOSITY_INFO, "Installing package %s/%s (ANY)", target->repository, target->id);
+    if (target->repository == NULL)
+    {
+        if (target->version == NULL)
+            kpmLogging->log(KPM_VERBOSITY_INFO, "Installing package %s", target->id);
+        else
+            kpmLogging->log(KPM_VERBOSITY_INFO, "Installing package %s (%u.%u.%u)", target->id, target->version->major, target->version->minor, target->version->patch);
+    }
     else
-        kpmLogging->log(KPM_VERBOSITY_INFO, "Installing package %s/%s (%u.%u.%u)", target->repository, target->id, target->version->major, target->version->minor, target->version->patch);
+    {
+        if (target->version == NULL)
+            kpmLogging->log(KPM_VERBOSITY_INFO, "Installing package %s/%s", target->repository, target->id);
+        else
+            kpmLogging->log(KPM_VERBOSITY_INFO, "Installing package %s/%s (%u.%u.%u)", target->repository, target->id, target->version->major, target->version->minor, target->version->patch);
+    }
 
     struct IndexedArtifact artifact;
     if (strncmp(target->id, "file://", strlen("file://")) == 0)
@@ -742,7 +752,7 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
     NodeIndex_t* update = NULL;
     size_t installCount = 0;
     NodeIndex_t* install = NULL;
-    for (size_t i=1; i < deduplicatedPackageCount; i++) // 1 to skip the dummy root
+    for (size_t i=0; i < deduplicatedPackageCount; i++)
     {
         bool installed = false; // Already installed
         bool installing = true; // New package
@@ -794,7 +804,7 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
         kpmLogging->log(KPM_VERBOSITY_INFO, "Aborted.");
         free(deduplicatedPackages);
         FreeDependencyGraph(&graph);
-        return KPM_OK; // @TODO
+        return KPM_ABORTED; // @TODO
     }
     
     enum KPMResult result = Internal_DownloadGraphItems(kpm, &graph, deduplicatedPackageCount, deduplicatedPackages, kpmLogging);

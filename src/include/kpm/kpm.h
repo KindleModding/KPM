@@ -26,6 +26,7 @@
 enum KPMResult
 {
     KPM_OK,
+    KPM_ABORTED,
     KPM_GENERIC_ERROR,
     KPM_SQLITE_ERROR,
     KPM_CURL_ERROR,

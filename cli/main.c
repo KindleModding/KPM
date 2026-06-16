@@ -185,7 +185,7 @@ int main(int argc, char* argv[])
         }
         else
         {
-            logging.log(KPM_VERBOSITY_ERROR, "Installed '%s' succesfully.", argv[command_index+1]);
+            logging.log(KPM_VERBOSITY_INFO, "Installed '%s' succesfully.", argv[command_index+1]);
         }
     }
     else if (strcmp(argv[command_index], "uninstall") == 0)
@@ -202,7 +202,7 @@ int main(int argc, char* argv[])
         }
         else
         {
-            logging.log(KPM_VERBOSITY_ERROR, "Uninstalled '%s' succesfully.", argv[command_index+1]);
+            logging.log(KPM_VERBOSITY_INFO, "Uninstalled '%s' succesfully.", argv[command_index+1]);
         }
     }
     else
