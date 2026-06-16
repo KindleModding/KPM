@@ -221,7 +221,6 @@ logging.log(KPM_VERBOSITY_INFO, "usage: kpm [--help, -h] [--fbink] [--dry] [-y] 
 \n\
 version:\n\
     Returns the current version of the KPM library and CLI\n\
-\n\
 add-repo:\n\
     Add a repository from one or more URLs\n\
 remove-repo:\n\
