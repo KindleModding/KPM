@@ -165,6 +165,46 @@ int main(int argc, char* argv[])
         if (package_count == 0)
             logging.log(KPM_VERBOSITY_INFO, "Could not find any packages for '%s'", query);
     }
+    else if (strcmp(argv[command_index], "install") == 0)
+    {
+        if (argc - (command_index+1) != 1)
+        {
+            logging.log(KPM_VERBOSITY_ERROR, "Incorrect number of packages supplied (expected 1, got %i)", argc - (command_index+1));
+            goto help;
+        }
+
+        struct InstallTarget target = {
+            .repository = NULL,
+            .id = argv[command_index+1], // @TODO: Implement multi-package installing
+            .version = NULL
+        };
+
+        if ((error = KPM_InstallPackage(&kpm, &target, &logging)) != KPM_OK)
+        {
+            logging.log(KPM_VERBOSITY_ERROR, "Failed to install package (%i)", error);
+        }
+        else
+        {
+            logging.log(KPM_VERBOSITY_ERROR, "Installed '%s' succesfully.", argv[command_index+1]);
+        }
+    }
+    else if (strcmp(argv[command_index], "uninstall") == 0)
+    {
+        if (argc - (command_index+1) != 1)
+        {
+            logging.log(KPM_VERBOSITY_ERROR, "Incorrect number of packages supplied (expected 1, got %i)", argc - (command_index+1));
+            goto help;
+        }
+        
+        if ((error = KPM_UninstallPackage(&kpm, argv[command_index+1], &logging)) != KPM_OK)
+        {
+            logging.log(KPM_VERBOSITY_ERROR, "Failed to uninstall package (%i)", error);
+        }
+        else
+        {
+            logging.log(KPM_VERBOSITY_ERROR, "Uninstalled '%s' succesfully.", argv[command_index+1]);
+        }
+    }
     else
     {
         logging.log(KPM_VERBOSITY_INFO, "Unknown argv[command_index] \"%s\" specified.\n", argv[command_index]);
@@ -173,7 +213,7 @@ err_no_command:
         logging.log(KPM_VERBOSITY_INFO, "No argv[command_index] specified.\n");
         goto help;
 help:
-logging.log(KPM_VERBOSITY_INFO, "usage: kpm [--help, -h] [--fbink] [--dry] [-y] {version | add-repo | remove-repo | list-repo | update | search} ... \n\
+logging.log(KPM_VERBOSITY_INFO, "usage: kpm [--help, -h] [--fbink] [--dry] [-y] {version | add-repo | remove-repo | list-repo | update | search | install | uninstall} ... \n\
     --help, -h\tShow this help\n\
     --fbink\tLog to fbink\n\
     --dry\tDry run only\n\
@@ -192,6 +232,10 @@ update:\n\
     Update the package index\n\
 search:\n\
     Searches for a package given a query\n\
+install:\n\
+    Install a package\n\
+uninstall:\n\
+    Uninstall a package\n\
 ");
         return error;
     }
