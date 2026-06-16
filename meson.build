@@ -1,6 +1,7 @@
 project('kpm', 'c', version : '1.0.0', license : 'GPL')
 add_global_arguments('-DKPM_ARCH="' + meson.get_external_property('kpm_arch', host_machine.cpu_family()) + '"', language: 'c')
 
+subproject('fbink', default_options: ['default_library=static'])
 subproject('sqlite3', default_options: ['default_library=static']) # PW2 sqlite3 is unusable it straight up doesn't compile I need to fix this
 subproject('cjson', default_options: ['tests=false', 'default_library=static'])
 subproject('libarchive', default_options: ['default_library=static'])
