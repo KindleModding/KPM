@@ -306,7 +306,7 @@ enum KPMResult KPM_ListInstalledPackages(struct KPM* kpm, size_t* packageCount, 
 
 // Installed dependency management functions
 void KPM_FreeInstalledPackageDependency(struct InstalledDependency* dependency);
-void KPM_FreeInstalledPackageDependencyList(size_t artifactCount, struct InstalledDependency* dependency);
+void KPM_FreeInstalledPackageDependencyList(size_t dependencyCount, struct InstalledDependency* dependency);
 
 /**
  * @brief List dependencies for an installed package
@@ -317,7 +317,18 @@ void KPM_FreeInstalledPackageDependencyList(size_t artifactCount, struct Install
  * @param dependencies The dependency array
  * @return enum KPMResult 
  */
-enum KPMResult KPM_ListInstalledPackageDependencies(struct KPM* kpm, char* id, size_t* dependencyCount, struct InstalledDependency** dependencies);
+enum KPMResult KPM_ListInstalledPackageDependencies(struct KPM* kpm, const char* id, size_t* dependencyCount, struct InstalledDependency** dependencies);
+
+/**
+ * @brief Get the list of dependent packages for a given package id
+ * 
+ * @param kpm The KPM object
+ * @param id The id of the package to check
+ * @param dependentCount The number of dependent packages in the packages array
+ * @param dependents The dependent packages array
+ * @return enum KPMResult 
+ */
+enum KPMResult KPM_ListInstalledPackageDependents(struct KPM* kpm, const char* id, size_t* dependentCount, struct InstalledDependency** dependents);
 
 // Artifact management functions
 /**
@@ -374,7 +385,7 @@ void KPM_FreeArtifactDependencyList(size_t artifactCount, struct ArtifactDepende
  * @param dependencies The dependency array
  * @return enum KPMResult 
  */
-enum KPMResult KPM_ListArtifactDependencies(struct KPM* kpm, char* repository, char* id, char* url, size_t* dependencyCount, struct ArtifactDependency** dependencies);
+enum KPMResult KPM_ListArtifactDependencies(struct KPM* kpm, const char* repository, const char* id, const char* url, size_t* dependencyCount, struct ArtifactDependency** dependencies);
 
 /**
  * @brief Update the local index of package by downloading repository manifests

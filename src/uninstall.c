@@ -7,12 +7,28 @@
 enum KPMResult KPM_UninstallPackage(struct KPM* kpm, const char* packageId, struct KPMLogging* kpmLogging)
 {
     kpmLogging->log(KPM_VERBOSITY_INFO, "Uninstalling [%s]", packageId);
-    struct InstalledPackage package;
-    enum KPMResult error;
-    if ((error = KPM_GetInstalledPackage(kpm, packageId, &package)) != KPM_OK)
+
+    size_t dependentCount;
+    struct InstalledDependency* dependents;
+    KPM_ListInstalledPackageDependents(kpm, packageId, &dependentCount, &dependents);
+    if (dependentCount > 0)
     {
-        return error;
+        kpmLogging->log(KPM_VERBOSITY_ERROR, "Packages depend on [%s]", packageId);
+        for (int i=0; i < dependentCount; i++)
+        {
+            kpmLogging->log(KPM_VERBOSITY_ERROR, "- %s (%zu.%zu.%zu - %zu.%zu.%zu)", dependents[i].dependent, dependents[i].min_version.major, dependents[i].min_version.minor, dependents[i].min_version.patch, dependents[i].max_version.major, dependents[i].max_version.minor, dependents[i].max_version.patch);
+        }
+        KPM_FreeInstalledPackageDependencyList(dependentCount, dependents);
+        return KPM_GENERIC_ERROR;
     }
+
+    struct InstalledPackage package;
+    if (KPM_GetInstalledPackage(kpm, packageId, &package) != KPM_OK)
+    {
+        kpmLogging->log(KPM_VERBOSITY_ERROR, "Package [%s] is not installed", packageId);
+        return KPM_GENERIC_ERROR;
+    }
+    KPM_FreeInstalledPackage(&package);
 
     char* outPath = asprintf_hd("%s/%s/", kpm->pkgPath, packageId);
     char* uninstallScriptPath = asprintf_hd( "%suninstall.sh", outPath);
@@ -54,7 +70,7 @@ enum KPMResult KPM_UninstallPackage(struct KPM* kpm, const char* packageId, stru
     rmdir_r(outPath);
 
     // Remove installed item from the database
-    const char* zSQL = "DELETE FROM installed_package WHERE id=?";
+    const char* zSQL = "DELETE FROM installed_packages WHERE id=?";
     sqlite3_stmt* statement;
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
     sqlite3_bind_text(statement, 1, packageId, -1, SQLITE_STATIC);

@@ -124,7 +124,7 @@ void KPM_FreeInstalledPackageDependencyList(size_t dependencyCount, struct Insta
 }
 
 
-enum KPMResult KPM_ListInstalledPackageDependencies(struct KPM* kpm, char* id, size_t* dependencyCount, struct InstalledDependency** dependencies)
+enum KPMResult KPM_ListInstalledPackageDependencies(struct KPM* kpm, const char* id, size_t* dependencyCount, struct InstalledDependency** dependencies)
 {
     *dependencyCount = 0;
     if (dependencies != NULL)
@@ -161,6 +161,56 @@ enum KPMResult KPM_ListInstalledPackageDependencies(struct KPM* kpm, char* id, s
             (*dependencies)[i].max_version.major = sqlite3_column_int(statement, 6);
             (*dependencies)[i].max_version.minor = sqlite3_column_int(statement, 7);
             (*dependencies)[i].max_version.patch = sqlite3_column_int(statement,8);
+        }
+    }
+
+    if (status != SQLITE_DONE)
+    {
+        sqlite3_finalize(statement);
+        return KPM_SQLITE_ERROR;
+    }
+
+    sqlite3_finalize(statement);
+    return KPM_OK;
+}
+
+enum KPMResult KPM_ListInstalledPackageDependents(struct KPM* kpm, const char* id, size_t* dependentCount, struct InstalledDependency** dependents)
+{
+    *dependentCount = 0;
+    if (dependents != NULL)
+    {
+        *dependents = NULL;
+    }
+    
+    const char* zSQL = "SELECT (SELECT COUNT() FROM current_dependencies WHERE dependancy=?), dependent, dependency_id, min_version_major, min_version_minor, min_version_patch, max_version_major, max_version_minor, max_version_patch FROM current_dependencies WHERE dependency=?;";
+    sqlite3_stmt* statement;
+    sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
+    sqlite3_bind_text(statement, 1, id, -1, SQLITE_STATIC);
+    sqlite3_bind_text(statement, 2, id, -1, SQLITE_STATIC);
+
+    int status;
+    for (int i=0; (status = sqlite3_step(statement)) == SQLITE_ROW; i++)
+    {
+        if (i == 0)
+        {
+            *dependentCount = sqlite3_column_int64(statement, 0);
+        }
+        
+        if (dependents != NULL && *dependentCount > 0)
+        {
+            if (!*dependents)
+            {
+                *dependents = malloc(*dependentCount * sizeof(struct InstalledPackage));
+            }
+
+            (*dependents)[i].dependent = strdup((const char*) sqlite3_column_text(statement, 1));
+            (*dependents)[i].dependency_id = strdup((const char*) sqlite3_column_text(statement, 2));
+            (*dependents)[i].min_version.major = sqlite3_column_int(statement, 3);
+            (*dependents)[i].min_version.minor = sqlite3_column_int(statement, 4);
+            (*dependents)[i].min_version.patch = sqlite3_column_int(statement,5);
+            (*dependents)[i].max_version.major = sqlite3_column_int(statement, 6);
+            (*dependents)[i].max_version.minor = sqlite3_column_int(statement, 7);
+            (*dependents)[i].max_version.patch = sqlite3_column_int(statement,8);
         }
     }
 
