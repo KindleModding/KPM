@@ -1,6 +1,8 @@
 project('kpm', 'c', version : '1.0.0', license : 'GPL', default_options: ['b_ndebug=if-release'])
 add_global_arguments('-DKPM_ARCH="' + meson.get_external_property('kpm_arch', host_machine.cpu_family()) + '"', language: 'c')
 
+kmc_lib_dir = '/var/local/kmc/lib'
+
 subproject('sqlite3', default_options: ['default_library=static']) # PW2 sqlite3 is unusable it straight up doesn't compile I need to fix this
 subproject('cjson', default_options: ['tests=false', 'default_library=static'])
 subproject('libarchive', default_options: ['default_library=static', 'openssl=disabled'])
