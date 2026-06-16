@@ -426,7 +426,6 @@ bool Internal_InstallItem(struct KPM* kpm, char* repository, char* path, bool in
         int result = -1;
         char* installCommand = asprintf_hd("sh %s", installScriptPath);
         chdir(outPath);
-        free(outPath);
         free(installScriptPath);
         FILE* stream = popen(installCommand, "r");
         free(installCommand);
@@ -448,10 +447,13 @@ bool Internal_InstallItem(struct KPM* kpm, char* repository, char* path, bool in
         {
             // The install hook failed
             kpmLogging->log(KPM_VERBOSITY_ERROR, "Could not execute install hook for [%s]", id);
+            rmdir_r(outPath);
+            free(outPath);
             free(manifest);
             cJSON_Delete(json);
             return false;
         }
+        free(outPath);
     }
 
     // Add installed item to the database

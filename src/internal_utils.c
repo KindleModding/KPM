@@ -28,6 +28,7 @@ void mkdir_r(char* path, __mode_t mode)
     free(current_path);
 }
 
+
 int internal_delete(const char* fpath, const struct stat* sb, int typeflag, struct FTW *ftwbuf)
 {
     switch (typeflag)
@@ -36,6 +37,7 @@ int internal_delete(const char* fpath, const struct stat* sb, int typeflag, stru
             remove(fpath);
             break;
         case FTW_D:
+        case FTW_DP:
             rmdir(fpath);
             break;
         default:

@@ -1,3 +1,4 @@
+#include "cli.h"
 #include "kpm.h"
 #include <stdio.h>
 #include <string.h>
@@ -61,6 +62,9 @@ void kpm_log_progress(uint progress, const char* format, ...)
 
 bool kpm_get_input(const char* format, ...)
 {
+    if (!cli_state.confirm)
+        return true;
+    
     va_list args;
     va_start(args, format);
     vfprintf(stderr, format, args);

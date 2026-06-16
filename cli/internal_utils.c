@@ -36,6 +36,7 @@ int internal_delete(const char* fpath, const struct stat* sb, int typeflag, stru
             remove(fpath);
             break;
         case FTW_D:
+        case FTW_DP:
             rmdir(fpath);
             break;
         default:
