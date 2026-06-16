@@ -1,7 +1,6 @@
 #include "cli.h"
 #include "kpm.h"
 #include <stdio.h>
-#include <string.h>
 
 #include "logging.h"
 #include "internal_utils.h"
@@ -64,13 +63,16 @@ bool kpm_get_input(const char* format, ...)
 {
     if (!cli_state.confirm)
         return true;
-    
+
     va_list args;
     va_start(args, format);
     vfprintf(stderr, format, args);
-    fprintf(stderr, "\n");
+    fprintf(stderr, " [Y/n] ");
     va_end(args);
-    return false; // @TODO
+
+    char c;
+    scanf("%c", &c);
+    return c == 'y' || c == 'Y';
 }
 
 struct KPMLogging logging = {
