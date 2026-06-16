@@ -233,7 +233,7 @@ enum KPMResult KPM_ListRepositoryPackages(struct KPM* kpm, const char* repositor
 
 // Package management functions
 /**
- * @brief Free the properties of a package - WILL NOT FREE THE POINTER ITSELF
+ * @brief Free the properties of a package
  * 
  * @param package The package to free the properties of
  */
@@ -281,7 +281,19 @@ enum KPMResult KPM_GetPackages(struct KPM* kpm, const char* id, size_t* packageC
 enum KPMResult KPM_SearchPackages(struct KPM* kpm, const char* query, size_t* packageCount, struct IndexedPackage** packages);
 
 // Installed package management functions
+/**
+ * @brief Free an installed package
+ * 
+ * @param package The package to free
+ */
 void KPM_FreeInstalledPackage(struct InstalledPackage* package);
+
+/**
+ * @brief Free an allocated list of installed packages
+ * 
+ * @param packageCount The number of packages in the array
+ * @param packages The package array
+ */
 void KPM_FreeInstalledPackageList(size_t packageCount, struct InstalledPackage* packages);
 
 /**
@@ -305,7 +317,18 @@ enum KPMResult KPM_GetInstalledPackage(struct KPM* kpm, const char* packageId, s
 enum KPMResult KPM_ListInstalledPackages(struct KPM* kpm, size_t* packageCount, struct InstalledPackage** packages);
 
 // Installed dependency management functions
+/**
+ * @brief Free the properties of an installed dependency
+ * 
+ * @param dependency The installed dependency to free the properties of
+ */
 void KPM_FreeInstalledPackageDependency(struct InstalledDependency* dependency);
+/**
+ * @brief Free an allocated list of installed dependencies
+ * 
+ * @param dependencyCount The number of installed dependencies in the array
+ * @param dependency The installed dependency array
+*/
 void KPM_FreeInstalledPackageDependencyList(size_t dependencyCount, struct InstalledDependency* dependency);
 
 /**
@@ -332,17 +355,17 @@ enum KPMResult KPM_ListInstalledPackageDependents(struct KPM* kpm, const char* i
 
 // Artifact management functions
 /**
- * @brief Free the properties of a package - WILL NOT FREE THE POINTER ITSELF
+ * @brief Free the properties of an indexed artifact
  * 
- * @param package The package to free the properties of
+ * @param artifact The artifact to free the properties of
  */
 void KPM_FreeIndexedArtifact(struct IndexedArtifact* artifact);
 
 /**
- * @brief Free an allocated list of packages - such as returned by KPM_ListRepositoryPackages
+ * @brief Free an allocated list of indexed artifact
  * 
- * @param packageCount The number of packages in the array
- * @param packages The package array
+ * @param artifactCount The number of indexed artifacts in the array
+ * @param artifacts The indexed artifact array
 */
 void KPM_FreeIndexedArtifactList(size_t artifactCount, struct IndexedArtifact* artifacts);
 
@@ -371,8 +394,19 @@ enum KPMResult KPM_GetArtifact(struct KPM* kpm, const char* repositoryId, const 
 enum KPMResult KPM_ListPackageArtifacts(struct KPM* kpm, const char* repositoryId, const char* packageId, size_t* artifactCount, struct IndexedArtifact** artifacts);
 
 // Dependency management functions
+/**
+ * @brief Free the properties of an artifact dependency
+ * 
+ * @param dependency The artifact dependency to free the properties of
+ */
 void KPM_FreeArtifactDependency(struct ArtifactDependency* dependency);
-void KPM_FreeArtifactDependencyList(size_t artifactCount, struct ArtifactDependency* dependency);
+/**
+ * @brief Free an allocated list of artifact dependencies
+ * 
+ * @param dependencyCount The number of artifact dependencies in the array
+ * @param dependencies The artifact dependency array
+*/
+void KPM_FreeArtifactDependencyList(size_t dependencyCount, struct ArtifactDependency* dependencies);
 
 /**
  * @brief Get a list of dependencies for a given artifact

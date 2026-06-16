@@ -87,7 +87,7 @@ enum KPMResult KPM_GetArtifact(struct KPM* kpm, const char* repositoryId, const 
     return KPM_OK;
 }
 
-enum KPMResult KPM_ListArtifactDependencies(struct KPM* kpm, char* repository, char* id, char* url, size_t* dependencyCount, struct ArtifactDependency** dependencies)
+enum KPMResult KPM_ListArtifactDependencies(struct KPM* kpm, const char* repository, const char* id, const char* url, size_t* dependencyCount, struct ArtifactDependency** dependencies)
 {
     *dependencyCount = 0;
     if (dependencies != NULL)
