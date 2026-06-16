@@ -75,7 +75,7 @@ bool kpm_get_input(const char* format, ...)
 
     char c;
     scanf("%c", &c);
-    return c == 'y' || c == 'Y';
+    return c != 'n' && c != 'N';
 }
 
 struct KPMLogging logging = {
