@@ -137,7 +137,7 @@ void kpm_log_progress(unsigned int progress, const char* format, ...)
 
 bool kpm_get_input(const char* format, ...)
 {
-    if (!cli_state.confirm)
+    if (cli_state.fbink || !cli_state.confirm)
         return true;
 
     va_list args;
