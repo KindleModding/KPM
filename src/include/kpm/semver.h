@@ -1,6 +1,5 @@
 #pragma once
 
-#include <stdbool.h>
 #include <limits.h>
 
 #define VERSION_MAX UINT_MAX

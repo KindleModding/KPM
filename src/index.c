@@ -4,7 +4,6 @@
 #include "simpleGET.h"
 #include <limits.h>
 #include <string.h>
-#include <stdbool.h>
 #include "callback.h"
 
 bool indexDependency(struct KPM* kpm, char* artifact_repository, char* artifact_id, char* artifact_url, cJSON* dependency, struct KPMIO* kpmIO)
