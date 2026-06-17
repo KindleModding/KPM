@@ -407,6 +407,22 @@ bool Internal_InstallItem(struct KPM* kpm, char* repository, char* path, bool in
     kpmLogging->log(KPM_VERBOSITY_DEBUG, "%s", manifest);
     cJSON* json = cJSON_Parse(manifest);
 
+    if (cJSON_IsNull(cJSON_GetObjectItem(json, "manifest_version")) || cJSON_GetObjectItem(json, "manifest_version") == NULL)
+    {
+        kpmLogging->log(KPM_VERBOSITY_ERROR, "Could not get manifest version.");
+        free(manifest);
+        cJSON_Delete(json);
+        return false;
+    }
+
+    if (cJSON_GetNumberValue(cJSON_GetObjectItem(json, "manifest_version")) < KPM_MANIFEST_VERSION)
+    {
+        kpmLogging->log(KPM_VERBOSITY_ERROR, "Invalid manifest version, got %.0f, expected %i", cJSON_GetNumberValue(cJSON_GetObjectItem(json, "manifest_version")), KPM_MANIFEST_VERSION);
+        free(manifest);
+        cJSON_Delete(json);
+        return false;
+    }
+
     char* id = cJSON_GetStringValue(cJSON_GetObjectItem(json, "id"));
     kpmLogging->log(KPM_VERBOSITY_DEBUG, "Installing item with id: %s", id);
 
