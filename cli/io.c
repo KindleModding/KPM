@@ -15,12 +15,11 @@
 #endif
 
 struct IOState io_state = {
-    .current_row = 0,
     .framebuffer = 0
 };
 
 FBInkConfig fbink_config = {
-		.row = 0,
+		.row = 1,
 		.voffset = 0,
 		.is_verbose = VERBOSE,
 		.is_quiet = !VERBOSE,
@@ -39,7 +38,7 @@ void io_initialise()
 
     FBInkState fbink_initial_state = { };
 	fbink_get_state(&fbink_config, &fbink_initial_state);
-    fbink_config.fontmult = fbink_initial_state.fontsize_mult/2;
+    fbink_config.fontmult = fbink_initial_state.fontsize_mult/1.5;
     FBInkRect rect = {
 		.left = 0,
 		.top = 0,
@@ -50,33 +49,21 @@ void io_initialise()
 	fbink_refresh(io_state.framebuffer, 0, 0, fbink_initial_state.screen_width, fbink_initial_state.screen_height, &fbink_config);
 }
 
+void io_cleanup()
+{
+    printf("\x1b[0m");
+}
+
 void vkpm_fbink_printf(const char* format, va_list args)
 {
 	// Initial init to pull info
-    fbink_config.row = io_state.current_row;
 	int r = fbink_init(io_state.framebuffer, &fbink_config);
     if (r >= 0)
     {
+        int rows;
         char* string = vasprintf_hd(format, args);
-        size_t string_len = strlen(string);
-        char* buffer = malloc(string_len + 1);
-        buffer[0] = '\0';
-        size_t buffer_start_index = 0;
-        for (int i=0; i < string_len; i++)
-        {
-            if (string[i] == '\n')
-            {
-                strncpy(buffer, string+buffer_start_index, i-buffer_start_index);
-                buffer[i-buffer_start_index] = '\0';
-                fbink_config.row = io_state.current_row;
-                int rows;
-                if ((rows = fbink_print(io_state.framebuffer, buffer, &fbink_config)) > 0)
-                    io_state.current_row += rows;
-                printf("ROWS: %i\n", rows);
-                buffer_start_index = i+1;
-            }
-        }
-        free(buffer);
+        if ((rows = fbink_print(io_state.framebuffer, string, &fbink_config)) > 0)
+            fbink_config.row += rows;
     }
 }
 
@@ -95,13 +82,6 @@ void kpm_stream(char c)
 
 void vhd_log(const char* format, va_list args)
 {
-    if (cli_state.fbink)
-    {
-        va_list args2;
-        va_copy (args2, args);
-        vkpm_fbink_printf(format, args2);
-        va_end(args2);
-    }
     vfprintf(stderr, format, args);
     fprintf(stderr, "\n");
 }
@@ -117,6 +97,7 @@ void hd_log(const char* format, ...)
 void kpm_log(enum Verbosity verbosity, const char* format, ...)
 {
     char* prefixed_format;
+    char* prefixed_format_fbink = strdup(format);
     switch (verbosity)
     {
         case KPM_VERBOSITY_DEBUG:
@@ -124,12 +105,15 @@ void kpm_log(enum Verbosity verbosity, const char* format, ...)
             return;
 #endif
             prefixed_format = asprintf_hd("\x1b[0;1;36m[DEBUG] %s", format);
+            prefixed_format_fbink = asprintf_hd("[DEBUG] %s", format);
             break;
         case KPM_VERBOSITY_WARN:
             prefixed_format = asprintf_hd("\x1b[0;33m[WARN] %s", format);
+            prefixed_format_fbink = asprintf_hd("[WARN] %s", format);
             break;
         case KPM_VERBOSITY_ERROR:
             prefixed_format = asprintf_hd("\x1b[0;1;31m[ERR] %s", format);
+            prefixed_format_fbink = asprintf_hd("[ERR] %s", format);
             break;
         default:
             prefixed_format = asprintf_hd("\x1b[0m%s", format);
@@ -138,8 +122,18 @@ void kpm_log(enum Verbosity verbosity, const char* format, ...)
 
     va_list args;
     va_start(args, format);
+    if (cli_state.fbink)
+    {
+        va_list args2;
+        va_copy (args2, args);
+        vkpm_fbink_printf(prefixed_format_fbink, args2);
+        va_end(args2);
+    }
     vhd_log(prefixed_format, args);
     va_end(args);
+    
+    free(prefixed_format);
+    free(prefixed_format_fbink);
 }
 
 void kpm_log_progress(unsigned int progress, const char* format, ...)

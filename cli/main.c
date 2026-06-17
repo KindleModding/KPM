@@ -23,24 +23,27 @@ int main(int argc, char* argv[])
 {
     int error = KPM_OK;
 
-    io_initialise();
-
-    kpm_io.log(KPM_VERBOSITY_INFO, "Kindle Package Manager v%i.%i.%i", KPM_VERSION_MAJOR, KPM_VERSION_MINOR, KPM_VERSION_PATCH);
-    kpm_io.log(KPM_VERBOSITY_INFO, "Created by Hackerdude (https://hackerdude.tech)\n");
-
     int command_index = -1;
     for (int i=1; i < argc; i++)
     {
         command_index = i;
         char* arg = argv[i];
         if (strcmp(arg, "-h") == 0 || strcmp(arg, "--help") == 0)
+        {
+            io_initialise();
+            kpm_io.log(KPM_VERBOSITY_INFO, "Kindle Package Manager v%i.%i.%i", KPM_VERSION_MAJOR, KPM_VERSION_MINOR, KPM_VERSION_PATCH);
+            kpm_io.log(KPM_VERBOSITY_INFO, "Created by Hackerdude (https://hackerdude.tech)\n");
             goto help;
+        }
         else if (strcmp(arg, "--fbink") == 0)
             cli_state.fbink = true;
         else if (strcmp(arg, "-y") == 0)
             cli_state.confirm = false;
         else if (strncmp(arg, "--", 2) == 0 || strncmp(arg, "-", 1) == 0)
         {
+            io_initialise();
+            kpm_io.log(KPM_VERBOSITY_INFO, "Kindle Package Manager v%i.%i.%i", KPM_VERSION_MAJOR, KPM_VERSION_MINOR, KPM_VERSION_PATCH);
+            kpm_io.log(KPM_VERBOSITY_INFO, "Created by Hackerdude (https://hackerdude.tech)\n");
             kpm_io.log(KPM_VERBOSITY_INFO, "Could not parse argument [%s]\n\n", arg);
             goto help;
         }
@@ -48,6 +51,10 @@ int main(int argc, char* argv[])
             break;
     }
 
+    io_initialise();
+    kpm_io.log(KPM_VERBOSITY_INFO, "Kindle Package Manager v%i.%i.%i", KPM_VERSION_MAJOR, KPM_VERSION_MINOR, KPM_VERSION_PATCH);
+    kpm_io.log(KPM_VERBOSITY_INFO, "Created by Hackerdude (https://hackerdude.tech)\n");
+    
     if (command_index == -1)
         goto err_no_command;
 
@@ -131,8 +138,10 @@ int main(int argc, char* argv[])
         if ((error = KPM_UpdateIndex(&kpm, &kpm_io)) != KPM_OK)
         {
             kpm_io.log(KPM_VERBOSITY_ERROR, "Could not update indexed packages (%i)", error);
+            io_cleanup();
             return error;
         }
+        
         kpm_io.log(KPM_VERBOSITY_INFO, "Updated indexed packages.");
     }
     else if (strcmp(argv[command_index], "search") == 0)
@@ -162,8 +171,10 @@ int main(int argc, char* argv[])
         if ((error = KPM_SearchPackages(&kpm, query, &package_count, &packages)) != KPM_OK)
         {
             kpm_io.log(KPM_VERBOSITY_ERROR, "Could not search for '%s' (%i)", query, error);
+            io_cleanup();
             return error;
         }
+
         kpm_io.log(KPM_VERBOSITY_INFO, "Found %i package(s) for %s:", package_count, query);
         for (int i = 0; i < package_count; i++)
             kpm_io.log(KPM_VERBOSITY_INFO, "  - %s (%s): %s", packages[i].name, packages[i].id, packages[i].description);
@@ -218,6 +229,7 @@ int main(int argc, char* argv[])
         if (installed_package_count == 0)
         {
             kpm_io.log(KPM_VERBOSITY_INFO, "No packages to upgrade.");
+            io_cleanup();
             return KPM_OK;
         }
 
@@ -258,8 +270,11 @@ uninstall:\n\
 upgrade:\n\
     Upgrade all installed packages\n\
 ");
+
+        io_cleanup();
         return error;
     }
 
+    io_cleanup();
     return error;
 }
