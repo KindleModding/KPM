@@ -7,7 +7,7 @@
 #include <stdbool.h>
 #include "callback.h"
 
-bool indexDependency(struct KPM* kpm, char* artifact_repository, char* artifact_id, char* artifact_url, cJSON* dependency, struct KPMLogging* kpmLogging)
+bool indexDependency(struct KPM* kpm, char* artifact_repository, char* artifact_id, char* artifact_url, cJSON* dependency, struct KPMIO* kpmIO)
 {
     const char* zSQL = "INSERT INTO artifact_dependencies (artifact_repository, artifact_id, artifact_url, id, min_version_major, min_version_minor, min_version_patch, max_version_major, max_version_minor, max_version_patch) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
     sqlite3_stmt* statement;
@@ -47,7 +47,7 @@ bool indexDependency(struct KPM* kpm, char* artifact_repository, char* artifact_
     if ((status = sqlite3_step(statement)) != SQLITE_DONE)
     {
         sqlite3_finalize(statement);
-        kpmLogging->log(KPM_VERBOSITY_ERROR, "SQLite error: (%i)", status);
+        kpmIO->log(KPM_VERBOSITY_ERROR, "SQLite error: (%i)", status);
         return false;
     }
 
@@ -55,9 +55,9 @@ bool indexDependency(struct KPM* kpm, char* artifact_repository, char* artifact_
     return true;
 }
 
-bool indexArtifact(struct KPM* kpm, char* repositoryId, char* packageId, cJSON* artifact, struct KPMLogging* kpmLogging)
+bool indexArtifact(struct KPM* kpm, char* repositoryId, char* packageId, cJSON* artifact, struct KPMIO* kpmIO)
 {
-    kpmLogging->log(KPM_VERBOSITY_DEBUG, "  indexing artifact %s (%.0f.%.0f.%.0f)", packageId, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(artifact, "version"), 0)), cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(artifact, "version"), 1)), cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(artifact, "version"), 2)));
+    kpmIO->log(KPM_VERBOSITY_DEBUG, "  indexing artifact %s (%.0f.%.0f.%.0f)", packageId, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(artifact, "version"), 0)), cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(artifact, "version"), 1)), cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(artifact, "version"), 2)));
     const char* zSQL = "INSERT INTO artifacts (url, repository, id, version_major, version_minor, version_patch) VALUES (?, ?, ?, ?, ?, ?);";
     sqlite3_stmt* statement;
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
@@ -71,7 +71,7 @@ bool indexArtifact(struct KPM* kpm, char* repositoryId, char* packageId, cJSON* 
     int status;
     if ((status = sqlite3_step(statement)) != SQLITE_DONE)
     {
-        kpmLogging->log(KPM_VERBOSITY_ERROR, "SQLite3 error (%i)", status);
+        kpmIO->log(KPM_VERBOSITY_ERROR, "SQLite3 error (%i)", status);
         sqlite3_finalize(statement);
         return false;
     }
@@ -81,9 +81,9 @@ bool indexArtifact(struct KPM* kpm, char* repositoryId, char* packageId, cJSON* 
     cJSON* dependency;
     cJSON_ArrayForEach(dependency, cJSON_GetObjectItem(artifact, "dependencies"))
     {
-        if (!indexDependency(kpm, repositoryId, packageId, cJSON_GetStringValue(cJSON_GetObjectItem(artifact, "url")), dependency, kpmLogging))
+        if (!indexDependency(kpm, repositoryId, packageId, cJSON_GetStringValue(cJSON_GetObjectItem(artifact, "url")), dependency, kpmIO))
         {
-            kpmLogging->log(KPM_VERBOSITY_ERROR, "Could not index artifact dependencies for [%s] (%s)", packageId, cJSON_GetStringValue(cJSON_GetObjectItem(artifact, "url")));
+            kpmIO->log(KPM_VERBOSITY_ERROR, "Could not index artifact dependencies for [%s] (%s)", packageId, cJSON_GetStringValue(cJSON_GetObjectItem(artifact, "url")));
             return false;
         }
     }
@@ -91,7 +91,7 @@ bool indexArtifact(struct KPM* kpm, char* repositoryId, char* packageId, cJSON* 
     return true;
 }
 
-bool indexPackage(struct KPM* kpm, char* repositoryId, cJSON* package, struct KPMLogging* kpmLogging)
+bool indexPackage(struct KPM* kpm, char* repositoryId, cJSON* package, struct KPMIO* kpmIO)
 {
     // Ensure the package is well-formed
     if (cJSON_GetObjectItem(package, "name") == NULL ||
@@ -100,11 +100,11 @@ bool indexPackage(struct KPM* kpm, char* repositoryId, cJSON* package, struct KP
     cJSON_GetObjectItem(package, "artifacts") == NULL ||
     cJSON_GetArraySize(cJSON_GetObjectItem(package, "artifacts")) == 0)
     {
-        kpmLogging->log(KPM_VERBOSITY_ERROR, "Could not parse package %s", package->string);
+        kpmIO->log(KPM_VERBOSITY_ERROR, "Could not parse package %s", package->string);
         return false;
     }
 
-    kpmLogging->log(KPM_VERBOSITY_DEBUG, "indexing package [%s]", package->string);
+    kpmIO->log(KPM_VERBOSITY_DEBUG, "indexing package [%s]", package->string);
 
     // INSERT that package INTO the DATABASE (deltarune reference???)
     const char* zSQL = "INSERT INTO packages (repository, id, name, author, description) VALUES (?, ?, ?, ?, ?);";
@@ -117,7 +117,7 @@ bool indexPackage(struct KPM* kpm, char* repositoryId, cJSON* package, struct KP
     sqlite3_bind_text(statement, 5, cJSON_GetStringValue(cJSON_GetObjectItem(package, "description")), -1, SQLITE_STATIC);
     if (sqlite3_step(statement) != SQLITE_DONE)
     {
-        kpmLogging->log(KPM_VERBOSITY_ERROR, "SQLite error encountered when indexing package %s", package->string);
+        kpmIO->log(KPM_VERBOSITY_ERROR, "SQLite error encountered when indexing package %s", package->string);
         sqlite3_finalize(statement);
         return false;
     }
@@ -147,9 +147,9 @@ bool indexPackage(struct KPM* kpm, char* repositoryId, cJSON* package, struct KP
                 continue;
         }
 
-        if (!indexArtifact(kpm, repositoryId, package->string, artifact, kpmLogging)) // Dependency failed
+        if (!indexArtifact(kpm, repositoryId, package->string, artifact, kpmIO)) // Dependency failed
         {
-            kpmLogging->log(KPM_VERBOSITY_ERROR, "Could not index artifact for [%s]", package->string);
+            kpmIO->log(KPM_VERBOSITY_ERROR, "Could not index artifact for [%s]", package->string);
             return false; // Stop adding packages if one fails
         }
     }
@@ -157,28 +157,28 @@ bool indexPackage(struct KPM* kpm, char* repositoryId, cJSON* package, struct KP
     return true;
 }
 
-enum KPMResult KPM_UpdateIndex(struct KPM *kpm, struct KPMLogging* kpmLogging)
+enum KPMResult KPM_UpdateIndex(struct KPM *kpm, struct KPMIO* kpmIO)
 {
-    if (kpmLogging == NULL)
+    if (kpmIO == NULL)
     {
-        kpmLogging = &dummyKPMStub;
+        kpmIO = &dummyKPMStub;
     }
 
-    kpmLogging->log(KPM_VERBOSITY_INFO, "Getting repositories...");
+    kpmIO->log(KPM_VERBOSITY_INFO, "Getting repositories...");
 
     size_t repositoryCount;
     struct Repository* repositories;
     enum KPMResult result;
     if ((result = KPM_ListRepositories(kpm, &repositoryCount, &repositories)) != KPM_OK)
     {
-        kpmLogging->log(KPM_VERBOSITY_ERROR, "Unable to list KPM repositories");
+        kpmIO->log(KPM_VERBOSITY_ERROR, "Unable to list KPM repositories");
         return result;
     }
 
     struct SimpleGETRequest request;
     for (size_t i=0; i < repositoryCount; i++)
     {
-        kpmLogging->log(KPM_VERBOSITY_INFO, "Downloading index [%s]", repositories[i].url);
+        kpmIO->log(KPM_VERBOSITY_INFO, "Downloading index [%s]", repositories[i].url);
         SimpleGET_Initialise(&request, repositories[i].url);
         SimpleGET_Perform(&request);
 
@@ -188,7 +188,7 @@ enum KPMResult KPM_UpdateIndex(struct KPM *kpm, struct KPMLogging* kpmLogging)
 
 
         // Clear indexed packages
-        kpmLogging->log(KPM_VERBOSITY_DEBUG, "Clearing index");
+        kpmIO->log(KPM_VERBOSITY_DEBUG, "Clearing index");
         const char* zSQL = "DELETE FROM packages WHERE repository=?;";
         sqlite3_stmt* statement;
         sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
@@ -200,7 +200,7 @@ enum KPMResult KPM_UpdateIndex(struct KPM *kpm, struct KPMLogging* kpmLogging)
         if (status != SQLITE_DONE)
         {
             KPM_FreeRepositoryList(repositoryCount, repositories);
-            kpmLogging->log(KPM_VERBOSITY_ERROR, "Could not clear packages for %s (%i)", repositories[i].id, status);
+            kpmIO->log(KPM_VERBOSITY_ERROR, "Could not clear packages for %s (%i)", repositories[i].id, status);
             SimpleGET_Cleanup(&request);
             sqlite3_exec(kpm->db, "ROLLBACK", NULL, NULL, NULL);
             break; // Move onto next repo
@@ -212,14 +212,14 @@ enum KPMResult KPM_UpdateIndex(struct KPM *kpm, struct KPMLogging* kpmLogging)
         {
             KPM_FreeRepositoryList(repositoryCount, repositories);
             SimpleGET_Cleanup(&request);
-            kpmLogging->log(KPM_VERBOSITY_ERROR, "Could not parse manifest");
+            kpmIO->log(KPM_VERBOSITY_ERROR, "Could not parse manifest");
             sqlite3_exec(kpm->db, "ROLLBACK", NULL, NULL, NULL);
             continue; // Move onto next repo
         }
 
         if (cJSON_GetNumberValue(cJSON_GetObjectItem(json, "manifest_version")) > KPM_MANIFEST_VERSION)
         {
-            kpmLogging->log(KPM_VERBOSITY_ERROR, "Invalid manifest version, got %.0f, expected %i", cJSON_GetNumberValue(cJSON_GetObjectItem(json, "manifest_version")), KPM_MANIFEST_VERSION);
+            kpmIO->log(KPM_VERBOSITY_ERROR, "Invalid manifest version, got %.0f, expected %i", cJSON_GetNumberValue(cJSON_GetObjectItem(json, "manifest_version")), KPM_MANIFEST_VERSION);
         }
         else
         {
@@ -228,10 +228,10 @@ enum KPMResult KPM_UpdateIndex(struct KPM *kpm, struct KPMLogging* kpmLogging)
             cJSON* package;
             cJSON_ArrayForEach(package, cJSON_GetObjectItem(json, "packages"))
             {
-                if (!indexPackage(kpm, repositories[i].id, package, kpmLogging))
+                if (!indexPackage(kpm, repositories[i].id, package, kpmIO))
                 {
                     sqlite3_exec(kpm->db, "ROLLBACK", NULL, NULL, NULL);
-                    kpmLogging->log(KPM_VERBOSITY_ERROR, "Could not index repository [%s]", repositories[i].id);
+                    kpmIO->log(KPM_VERBOSITY_ERROR, "Could not index repository [%s]", repositories[i].id);
                     break;
                 }
             }

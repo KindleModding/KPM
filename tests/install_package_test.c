@@ -42,12 +42,12 @@ int main()
         .version = NULL
     };
     
-    struct KPMLogging logger = 
+    struct KPMIO kpmIO = 
     {
         .log = statusCallback
 
     };
-    int status = KPM_InstallPackages(&kpm, 1, &target, &logger);
+    int status = KPM_InstallPackages(&kpm, 1, &target, &kpmIO);
     fprintf(stderr, "Status: %i\n", status);
     assert(status == KPM_OK);
 

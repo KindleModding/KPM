@@ -43,4 +43,4 @@ void Internal_ArrayAddNode(size_t* traversedNodeCount, NodeIndex_t** traversedNo
 enum KPMResult Internal_GetArtifactDependencies(struct KPM* kpm, struct IndexedArtifact* target, size_t* targetDependencyCount, struct ArtifactDependency** targetDependencies);
 bool Internal_NarrowDependency(struct ArtifactDependency* currentDependency, struct ArtifactDependency* targetDependency);
 int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph* graph, struct IndexedArtifact* artifact);
-bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, NodeIndex_t root, size_t* traversedNodeCount, NodeIndex_t** traversedNodes, struct KPMLogging* statusCallback);
+bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, NodeIndex_t root, size_t* traversedNodeCount, NodeIndex_t** traversedNodes, struct KPMIO* statusCallback);

@@ -21,9 +21,8 @@ void KPM_FreeRepository(struct Repository *repository)
 void KPM_FreeRepositoryList(size_t repositoryCount, struct Repository* repositories)
 {
     for (size_t i=0; i < repositoryCount; i++)
-    {
         KPM_FreeRepository(&repositories[i]);
-    }
+
     free(repositories);
 }
 
@@ -31,9 +30,7 @@ enum KPMResult KPM_ListRepositories(struct KPM* kpm, size_t* repositoryCount, st
 {
     *repositoryCount = 0;
     if (repositories != NULL)
-    {
         *repositories = NULL;
-    }
     
     const char* zSQL = "SELECT (SELECT COUNT() FROM repositories), id, url, name, description FROM repositories;";
     sqlite3_stmt* statement;
@@ -191,9 +188,7 @@ enum KPMResult KPM_ListRepositoryPackages(struct KPM* kpm, const char* repositor
 {
     *packageCount = 0;
     if (packages != NULL)
-    {
         *packages = NULL;
-    }
     
     const char* zSQL = "SELECT (SELECT COUNT() FROM packages WHERE repository=?), repository, id, name, author, description FROM packages WHERE repository=?;";
     sqlite3_stmt* statement;

@@ -1,10 +1,25 @@
 #include "cli.h"
 #include "kpm.h"
 #include <stdio.h>
+#include "fbink.h"
 
 #include "logging.h"
 #include "internal_utils.h"
 
+void initialise()
+{
+    int framebuffer = fbink_open();
+    FBInkConfig config = {
+		.row = 0,
+		.voffset = 0,
+		.is_verbose = false,
+		.is_quiet = true,
+		.wfm_mode = WFM_AUTO,
+	};
+
+	// Initial init to pull info
+	fbink_init(framebuffer, &config);
+}
 
 void kpm_stream(char c)
 {
@@ -78,7 +93,7 @@ bool kpm_get_input(const char* format, ...)
     return c != 'n' && c != 'N';
 }
 
-struct KPMLogging logging = {
+struct KPMIO kpm_io = {
     .stream = kpm_stream,
     .log = kpm_log,
     .logProgress = kpm_log_progress,

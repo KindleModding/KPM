@@ -144,7 +144,7 @@ typedef void KPMLog(enum Verbosity, const char* format, ...) __attribute__((form
 typedef void KPMLogProgress(uint progress, const char* format, ...) __attribute__((format(printf, 2, 3)));;
 typedef bool KPMGetInput(const char* format, ...) __attribute__((format(printf, 1, 2)));;
 
-struct KPMLogging
+struct KPMIO
 {
     KPMLog* log;
     KPMStream* stream;
@@ -435,7 +435,7 @@ enum KPMResult KPM_ListArtifactDependencies(struct KPM* kpm, const char* reposit
  * @param statusCallback A callback for progress information
  * @return enum KPMResult 
  */
-enum KPMResult KPM_UpdateIndex(struct KPM *kpm, struct KPMLogging* kpmLogging);
+enum KPMResult KPM_UpdateIndex(struct KPM *kpm, struct KPMIO* kpmIO);
 
 
 /**
@@ -453,10 +453,10 @@ void KPM_FreeInstallTarget(struct InstallTarget* target);
  * @param kpm 
  * @param targetCount The number of packages to install
  * @param targets An array of packages to install
- * @param kpmLogging 
+ * @param kpmIO 
  * @return enum KPMResult 
  */
-enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct InstallTarget* targets, struct KPMLogging* kpmLogging);
+enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct InstallTarget* targets, struct KPMIO* kpmIO);
 
 /**
  * @brief Uninstalls a package
@@ -464,7 +464,7 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
  * @param kpm 
  * @param packageCount
  * @param packageIds 
- * @param kpmLogging 
+ * @param kpmIO 
  * @return enum KPMResult 
  */
-enum KPMResult KPM_UninstallPackages(struct KPM* kpm, size_t packageCount, const char* packageIds[], struct KPMLogging* kpmLogging);
+enum KPMResult KPM_UninstallPackages(struct KPM* kpm, size_t packageCount, const char* packageIds[], struct KPMIO* kpmIO);

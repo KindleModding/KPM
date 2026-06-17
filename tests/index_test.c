@@ -30,12 +30,12 @@ int main()
     assert(KPM_GetRepository(&kpm, "org.kindlemodding.examplerepo", &repository) == KPM_OK);
 
     fprintf(stderr, "Indexing packages\n");
-    struct KPMLogging logger = 
+    struct KPMIO kpmIO = 
     {
         .log = statusCallback
 
     };
-    assert(KPM_UpdateIndex(&kpm, &logger) == KPM_OK);
+    assert(KPM_UpdateIndex(&kpm, &kpmIO) == KPM_OK);
 
     fprintf(stderr, "Testing package list\n");
     size_t packageCount;

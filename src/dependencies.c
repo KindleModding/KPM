@@ -355,9 +355,7 @@ enum KPMResult Internal_GetArtifactDependencies(struct KPM* kpm, struct IndexedA
 
         // Otherwise... nah
         if ((status = KPM_ListArtifactDependencies(kpm, target->repository, target->id, target->url, targetDependencyCount, targetDependencies)) != KPM_OK)
-        {
             return status;
-        }
     }
 
     return KPM_OK;
@@ -367,9 +365,7 @@ void stringConcatenate(char* dest, char* src, size_t* length, bool dry)
 {
     *length += strlen(src);
     if (!dry)
-    {
         strcat(dest, src);
-    }
 }
 
 void getNameFromNode(struct DependencyGraph* graph, NodeIndex_t index, char** output, bool declaration)
@@ -598,7 +594,7 @@ void Internal_ArrayAddNode(size_t* traversedNodeCount, NodeIndex_t** traversedNo
     (*traversedNodes)[*traversedNodeCount - 1] = node;
 }
 
-bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, NodeIndex_t root, size_t* traversedNodeCount, NodeIndex_t** traversedNodes, struct KPMLogging* kpmLogging)
+bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, NodeIndex_t root, size_t* traversedNodeCount, NodeIndex_t** traversedNodes, struct KPMIO* kpmIO)
 {
     *traversedNodes = NULL;
     *traversedNodeCount = 0;
@@ -606,14 +602,14 @@ bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, NodeIndex_t 
     NodeIndex_t currentNode = root;
     for (;;)
     {
-        kpmLogging->log(KPM_VERBOSITY_DEBUG, "Traversing node: %zu - %s", currentNode, graph->nodes[currentNode].id);
+        kpmIO->log(KPM_VERBOSITY_DEBUG, "Traversing node: %zu - %s", currentNode, graph->nodes[currentNode].id);
         // Check if this artifact is already traversed
         bool alreadyTraversed=false;
         for (size_t i=0; i < *traversedNodeCount; i++)
         {
             if ((*traversedNodes)[i] == currentNode)
             {
-                kpmLogging->log(KPM_VERBOSITY_DEBUG, "Already traversed!");
+                kpmIO->log(KPM_VERBOSITY_DEBUG, "Already traversed!");
                 alreadyTraversed=true;
                 break;
             }
@@ -621,10 +617,10 @@ bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, NodeIndex_t 
 
         Internal_ArrayAddNode(traversedNodeCount, traversedNodes, currentNode);
 
-        kpmLogging->log(KPM_VERBOSITY_DEBUG, "Currently traversed:");
+        kpmIO->log(KPM_VERBOSITY_DEBUG, "Currently traversed:");
         for (size_t i=0; i < *traversedNodeCount; i++)
         {
-            kpmLogging->log(KPM_VERBOSITY_DEBUG, "- %i\t%s (%u.%u.%u)", (*traversedNodes)[i], graph->nodes[(*traversedNodes)[i]].id, graph->nodes[(*traversedNodes)[i]].min_version.major, graph->nodes[(*traversedNodes)[i]].min_version.minor, graph->nodes[(*traversedNodes)[i]].min_version.patch);
+            kpmIO->log(KPM_VERBOSITY_DEBUG, "- %li\t%s (%u.%u.%u)", (*traversedNodes)[i], graph->nodes[(*traversedNodes)[i]].id, graph->nodes[(*traversedNodes)[i]].min_version.major, graph->nodes[(*traversedNodes)[i]].min_version.minor, graph->nodes[(*traversedNodes)[i]].min_version.patch);
         }
 
         if (!alreadyTraversed)
@@ -644,7 +640,7 @@ bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, NodeIndex_t 
                 conflictingDependencyId = (*traversedNodes)[i-1];
                 if (currentNode != conflictingArtifactId && strcmp(graph->nodes[currentNode].id, graph->nodes[conflictingArtifactId].id) == 0)
                 {
-                    kpmLogging->log(KPM_VERBOSITY_DEBUG, "Node conflicts with: %zu - %s", conflictingArtifactId, graph->nodes[conflictingArtifactId].id);
+                    kpmIO->log(KPM_VERBOSITY_DEBUG, "Node conflicts with: %zu - %s", conflictingArtifactId, graph->nodes[conflictingArtifactId].id);
                     // Don't need to check if version conflicts because if the node wasn't already traversed
                     // It must be conflicting since it wasn't merged
                     conflicts=true;

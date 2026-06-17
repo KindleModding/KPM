@@ -26,12 +26,12 @@ int main()
     assert(repositoryCount == 0);
 
     fprintf(stderr, "Indexing packages\n");
-    struct KPMLogging logger = 
+    struct KPMIO kpmIO = 
     {
         .log = statusCallback
 
     };
-    assert(KPM_UpdateIndex(&kpm, &logger) == KPM_OK);
+    assert(KPM_UpdateIndex(&kpm, &kpmIO) == KPM_OK);
 
     KPM_Cleanup(&kpm);
 

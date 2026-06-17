@@ -23,8 +23,8 @@ int main(int argc, char* argv[])
 {
     int error = KPM_OK;
 
-    logging.log(KPM_VERBOSITY_INFO, "Kindle Package Manager v%i.%i.%i", KPM_VERSION_MAJOR, KPM_VERSION_MINOR, KPM_VERSION_PATCH);
-    logging.log(KPM_VERBOSITY_INFO, "Created by Hackerdude (https://hackerdude.tech)\n");
+    kpm_io.log(KPM_VERBOSITY_INFO, "Kindle Package Manager v%i.%i.%i", KPM_VERSION_MAJOR, KPM_VERSION_MINOR, KPM_VERSION_PATCH);
+    kpm_io.log(KPM_VERBOSITY_INFO, "Created by Hackerdude (https://hackerdude.tech)\n");
 
     if (argc <= 1)
         goto err_no_command;
@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
             cli_state.confirm = false;
         else if (strncmp(arg, "--", 2) == 0 || strncmp(arg, "-", 1) == 0)
         {
-            logging.log(KPM_VERBOSITY_INFO, "Could not parse argument [%s]\n\n", arg);
+            kpm_io.log(KPM_VERBOSITY_INFO, "Could not parse argument [%s]\n\n", arg);
             goto help;
         }
         else
@@ -57,16 +57,16 @@ int main(int argc, char* argv[])
 
     if (strcmp(argv[command_index], "version") == 0)
     {
-        logging.log(KPM_VERBOSITY_INFO, "cli v%i.%i.%i", CLI_VERSION_MAJOR, CLI_VERSION_MINOR, CLI_VERSION_PATCH);
-        logging.log(KPM_VERBOSITY_INFO, "libkpm v%i.%i.%i", KPM_VERSION_MAJOR, KPM_VERSION_MINOR, KPM_VERSION_PATCH);
-        logging.log(KPM_VERBOSITY_INFO, "built for platform: %s", KPM_PLATFORM);
+        kpm_io.log(KPM_VERBOSITY_INFO, "cli v%i.%i.%i", CLI_VERSION_MAJOR, CLI_VERSION_MINOR, CLI_VERSION_PATCH);
+        kpm_io.log(KPM_VERBOSITY_INFO, "libkpm v%i.%i.%i", KPM_VERSION_MAJOR, KPM_VERSION_MINOR, KPM_VERSION_PATCH);
+        kpm_io.log(KPM_VERBOSITY_INFO, "built for platform: %s", KPM_PLATFORM);
     }
     else if (strcmp(argv[command_index], "add-repo") == 0)
     {
         if (argc-(command_index+1) == 0)
         {
             error = 1;
-            logging.log(KPM_VERBOSITY_ERROR, "No repositories were passed to KPM to add\n");
+            kpm_io.log(KPM_VERBOSITY_ERROR, "No repositories were passed to KPM to add\n");
             goto help;
         }
 
@@ -75,22 +75,22 @@ int main(int argc, char* argv[])
         for (int i = command_index+1; i < argc; i++)
         {
             if ((error = KPM_AddRepository(&kpm, argv[i], &repository)) != KPM_OK)
-                logging.log(KPM_VERBOSITY_ERROR, "Could not add repository '%s' (%i)", argv[i], error);
+                kpm_io.log(KPM_VERBOSITY_ERROR, "Could not add repository '%s' (%i)", argv[i], error);
             else
-                logging.log(KPM_VERBOSITY_INFO, "Added repository '%s'", repository.id);
+                kpm_io.log(KPM_VERBOSITY_INFO, "Added repository '%s'", repository.id);
         }
 
         if (error == KPM_OK)
-            logging.log(KPM_VERBOSITY_INFO, "\nAdded %i repositories. Package index will not update until 'kpm update' is run.", argc-(command_index+1));
+            kpm_io.log(KPM_VERBOSITY_INFO, "\nAdded %i repositories. Package index will not update until 'kpm update' is run.", argc-(command_index+1));
         else
-            logging.log(KPM_VERBOSITY_WARN, "There were some errors. Package index will not update until 'kpm update' is run.");
+            kpm_io.log(KPM_VERBOSITY_WARN, "There were some errors. Package index will not update until 'kpm update' is run.");
     }
     else if (strcmp(argv[command_index], "remove-repo") == 0)
     {
         if (argc-(command_index+1) == 0)
         {
             error = 1;
-            logging.log(KPM_VERBOSITY_ERROR, "No repositories were passed to KPM to remove\n");
+            kpm_io.log(KPM_VERBOSITY_ERROR, "No repositories were passed to KPM to remove\n");
             goto help;
         }
 
@@ -98,15 +98,15 @@ int main(int argc, char* argv[])
         for (int i = command_index+1; i < argc; i++)
         {
             if (KPM_GetRepository(&kpm, argv[i], NULL) != KPM_OK || (error = KPM_RemoveRepository(&kpm, argv[i])) != KPM_OK)
-                logging.log(KPM_VERBOSITY_ERROR, "Could not remove repository '%s' (%i)", argv[i], error);
+                kpm_io.log(KPM_VERBOSITY_ERROR, "Could not remove repository '%s' (%i)", argv[i], error);
             else
-                logging.log(KPM_VERBOSITY_INFO, "Removed repository '%s'", argv[i]);
+                kpm_io.log(KPM_VERBOSITY_INFO, "Removed repository '%s'", argv[i]);
         }
 
         if (error == KPM_OK)
-            logging.log(KPM_VERBOSITY_INFO, "\nRemoved %i repositories. Package index will not update until 'kpm update' is run.", argc-(command_index+1));
+            kpm_io.log(KPM_VERBOSITY_INFO, "\nRemoved %i repositories. Package index will not update until 'kpm update' is run.", argc-(command_index+1));
         else
-            logging.log(KPM_VERBOSITY_WARN, "There were some errors. Package index will not update until 'kpm update' is run.");
+            kpm_io.log(KPM_VERBOSITY_WARN, "There were some errors. Package index will not update until 'kpm update' is run.");
     }
     else if (strcmp(argv[command_index], "list-repo") == 0)
     {
@@ -115,20 +115,20 @@ int main(int argc, char* argv[])
         if ((error = KPM_ListRepositories(&kpm, &repository_count, &repositories)) != KPM_OK)
             return error;
 
-        logging.log(KPM_VERBOSITY_INFO, "Repositories:");
+        kpm_io.log(KPM_VERBOSITY_INFO, "Repositories:");
         if (repository_count == 0)
-            logging.log(KPM_VERBOSITY_INFO, "There are no repositories to show");
+            kpm_io.log(KPM_VERBOSITY_INFO, "There are no repositories to show");
         for (int i=0; i < repository_count; i++)
-            logging.log(KPM_VERBOSITY_INFO, "  - %s - %s (%s)", repositories[i].id, repositories[i].name, repositories[i].url);
+            kpm_io.log(KPM_VERBOSITY_INFO, "  - %s - %s (%s)", repositories[i].id, repositories[i].name, repositories[i].url);
     }
     else if (strcmp(argv[command_index], "update") == 0)
     {
-        if ((error = KPM_UpdateIndex(&kpm, &logging)) != KPM_OK)
+        if ((error = KPM_UpdateIndex(&kpm, &kpm_io)) != KPM_OK)
         {
-            logging.log(KPM_VERBOSITY_ERROR, "Could not update indexed packages (%i)", error);
+            kpm_io.log(KPM_VERBOSITY_ERROR, "Could not update indexed packages (%i)", error);
             return error;
         }
-        logging.log(KPM_VERBOSITY_INFO, "Updated indexed packages.");
+        kpm_io.log(KPM_VERBOSITY_INFO, "Updated indexed packages.");
     }
     else if (strcmp(argv[command_index], "search") == 0)
     {
@@ -156,16 +156,15 @@ int main(int argc, char* argv[])
         struct IndexedPackage* packages;
         if ((error = KPM_SearchPackages(&kpm, query, &package_count, &packages)) != KPM_OK)
         {
-            logging.log(KPM_VERBOSITY_ERROR, "Could not search for '%s' (%i)", query, error);
+            kpm_io.log(KPM_VERBOSITY_ERROR, "Could not search for '%s' (%i)", query, error);
             return error;
         }
-        logging.log(KPM_VERBOSITY_INFO, "%s:", query);
+        kpm_io.log(KPM_VERBOSITY_INFO, "Found %li package(s) for %s:", package_count, query);
         for (int i = 0; i < package_count; i++)
-        {
-            logging.log(KPM_VERBOSITY_INFO, "  - %s (%s): %s", packages[i].name, packages[i].id, packages[i].description);
-        }
+            kpm_io.log(KPM_VERBOSITY_INFO, "  - %s (%s): %s", packages[i].name, packages[i].id, packages[i].description);
+
         if (package_count == 0)
-            logging.log(KPM_VERBOSITY_INFO, "Could not find any packages for '%s'", query);
+            kpm_io.log(KPM_VERBOSITY_INFO, "Could not find any packages for '%s'", query);
     }
     else if (strcmp(argv[command_index], "install") == 0)
     {
@@ -177,24 +176,24 @@ int main(int argc, char* argv[])
             targets[i].id = argv[command_index+1 + i];
         }
 
-        if ((error = KPM_InstallPackages(&kpm, argc - (command_index+1), targets, &logging)) != KPM_OK)
+        if ((error = KPM_InstallPackages(&kpm, argc - (command_index+1), targets, &kpm_io)) != KPM_OK)
         {
-            logging.log(KPM_VERBOSITY_ERROR, "Failed to install packages (%i)", error);
+            kpm_io.log(KPM_VERBOSITY_ERROR, "Failed to install packages (%i)", error);
         }
         else
         {
-            logging.log(KPM_VERBOSITY_INFO, "Installed %i package(s) succesfully.", argc - (command_index+1));
+            kpm_io.log(KPM_VERBOSITY_INFO, "Installed %i package(s) succesfully.", argc - (command_index+1));
         }
     }
     else if (strcmp(argv[command_index], "uninstall") == 0)
     {
-        if ((error = KPM_UninstallPackages(&kpm, argc - (command_index+1), (const char**) &argv[command_index+1], &logging)) != KPM_OK)
+        if ((error = KPM_UninstallPackages(&kpm, argc - (command_index+1), (const char**) &argv[command_index+1], &kpm_io)) != KPM_OK)
         {
-            logging.log(KPM_VERBOSITY_ERROR, "Failed to uninstall packages (%i)", error);
+            kpm_io.log(KPM_VERBOSITY_ERROR, "Failed to uninstall packages (%i)", error);
         }
         else
         {
-            logging.log(KPM_VERBOSITY_INFO, "Uninstalled %i packages succesfully.", argc - (command_index+1));
+            kpm_io.log(KPM_VERBOSITY_INFO, "Uninstalled %i packages succesfully.", argc - (command_index+1));
         }
     }
     else if (strcmp(argv[command_index], "upgrade") == 0)
@@ -213,24 +212,24 @@ int main(int argc, char* argv[])
 
         if (installed_package_count == 0)
         {
-            logging.log(KPM_VERBOSITY_INFO, "No packages to upgrade.", argc - (command_index+1));
+            kpm_io.log(KPM_VERBOSITY_INFO, "No packages to upgrade.");
             return KPM_OK;
         }
 
-        if ((error = KPM_InstallPackages(&kpm, installed_package_count, targets, &logging)) != KPM_OK)
-            logging.log(KPM_VERBOSITY_ERROR, "Failed to upgrade packages (%i)", error);
+        if ((error = KPM_InstallPackages(&kpm, installed_package_count, targets, &kpm_io)) != KPM_OK)
+            kpm_io.log(KPM_VERBOSITY_ERROR, "Failed to upgrade packages (%i)", error);
         else
-            logging.log(KPM_VERBOSITY_INFO, "Upgraded %i package(s) succesfully.", argc - (command_index+1));
+            kpm_io.log(KPM_VERBOSITY_INFO, "Upgraded %i package(s) succesfully.", argc - (command_index+1));
     }
     else
     {
-        logging.log(KPM_VERBOSITY_INFO, "Unknown command \"%s\" specified.\n", argv[command_index]);
+        kpm_io.log(KPM_VERBOSITY_INFO, "Unknown command \"%s\" specified.\n", argv[command_index]);
         goto help;
 err_no_command:
-        logging.log(KPM_VERBOSITY_INFO, "No command specified.\n");
+        kpm_io.log(KPM_VERBOSITY_INFO, "No command specified.\n");
         goto help;
 help:
-logging.log(KPM_VERBOSITY_INFO, "usage: kpm [--help, -h] [--fbink] [-y] {version | add-repo | remove-repo | list-repo | update | search | install | uninstall | upgrade} ... \n\
+kpm_io.log(KPM_VERBOSITY_INFO, "usage: kpm [--help, -h] [--fbink] [-y] {version | add-repo | remove-repo | list-repo | update | search | install | uninstall | upgrade} ... \n\
     --help, -h\tShow this help\n\
     --fbink\tLog to fbink\n\
     -y\tDo not ask for user confirmation\n\
@@ -246,7 +245,7 @@ list-repo:\n\
 update:\n\
     Update the package index\n\
 search:\n\
-    Searches for a package given a query\n\
+    Searches the index for a package given a query\n\
 install:\n\
     (Re)Install/Upgrade one or more packages\n\
 uninstall:\n\

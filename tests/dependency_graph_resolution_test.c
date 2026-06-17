@@ -49,12 +49,12 @@ int main()
     fprintf(stderr, "Resolving graph...\n");
     size_t traversedDependencyCount = 0;
     size_t* traversedDependencies = NULL;
-    struct KPMLogging logger = 
+    struct KPMIO kpmIO = 
     {
         .log = statusCallback
 
     };
-    assert(Internal_ResolveDependencyGraph(&graph, 0, &traversedDependencyCount, &traversedDependencies, &logger));
+    assert(Internal_ResolveDependencyGraph(&graph, 0, &traversedDependencyCount, &traversedDependencies, &kpmIO));
 
     fprintf(stderr, "Traversed:\n");
     for (size_t i=0; i < traversedDependencyCount; i++)

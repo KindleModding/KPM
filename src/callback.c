@@ -16,7 +16,7 @@ bool getInputStub(const char* details, ...)
     return false;
 }
 
-struct KPMLogging dummyKPMStub = 
+struct KPMIO dummyKPMStub = 
 {
     .log = logStub,
     .logProgress = logProgressStub,

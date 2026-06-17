@@ -24,9 +24,8 @@ void KPM_FreeIndexedPackage(struct IndexedPackage* package)
 void KPM_FreeIndexedPackageList(size_t packageCount, struct IndexedPackage* packages)
 {
     for (size_t i=0; i < packageCount; i++)
-    {
         KPM_FreeIndexedPackage(&packages[i]);
-    }
+        
     free(packages);
 }
 
@@ -69,10 +68,9 @@ enum KPMResult KPM_GetPackage(struct KPM* kpm, const char* repository, const cha
 
 enum KPMResult KPM_GetPackages(struct KPM* kpm, const char* id, size_t* packageCount, struct IndexedPackage** packages)
 {
+    *packageCount = 0;
     if (packages != NULL)
-    {
         *packages = NULL;
-    }
 
     const char* zSQL = "SELECT (SELECT COUNT() FROM packages WHERE id=?), repository, id, name, author, description FROM packages WHERE id=?;";
     sqlite3_stmt* statement;
@@ -115,10 +113,9 @@ enum KPMResult KPM_GetPackages(struct KPM* kpm, const char* id, size_t* packageC
 
 enum KPMResult KPM_SearchPackages(struct KPM* kpm, const char* query, size_t* packageCount, struct IndexedPackage** packages)
 {
+    *packageCount = 0;
     if (packages != NULL)
-    {
         *packages = NULL;
-    }
 
     char* paddedQuery = asprintf_hd("%%%s%%", query);    
 
@@ -169,9 +166,7 @@ enum KPMResult KPM_ListPackageArtifacts(struct KPM* kpm, const char* repositoryI
 {
     *artifactCount = 0;
     if (artifacts != NULL)
-    {
         *artifacts = NULL;
-    }
     
     const char* zSQL;
     if (repositoryId == NULL)

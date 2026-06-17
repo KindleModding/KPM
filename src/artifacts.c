@@ -18,9 +18,8 @@ void KPM_FreeIndexedArtifact(struct IndexedArtifact* artifact)
 void KPM_FreeIndexedArtifactList(size_t artifactCount, struct IndexedArtifact* artifacts)
 {
      for (size_t i=0; i < artifactCount; i++)
-     {
-         KPM_FreeIndexedArtifact(&artifacts[i]);
-     }
+        KPM_FreeIndexedArtifact(&artifacts[i]);
+
      free(artifacts);
 }
 
@@ -40,9 +39,8 @@ void KPM_FreeArtifactDependency(struct ArtifactDependency* dependency)
 void KPM_FreeArtifactDependencyList(size_t dependencyCount, struct ArtifactDependency* dependencies)
 {
     for (size_t i=0; i < dependencyCount; i++)
-    {
         KPM_FreeArtifactDependency(dependencies + i);
-    }
+    
     free(dependencies);
 }
 
@@ -91,9 +89,7 @@ enum KPMResult KPM_ListArtifactDependencies(struct KPM* kpm, const char* reposit
 {
     *dependencyCount = 0;
     if (dependencies != NULL)
-    {
         *dependencies = NULL;
-    }
     
     const char* zSQL = "SELECT (SELECT COUNT() FROM artifact_dependencies WHERE artifact_repository=? AND artifact_id=? AND artifact_url=?), artifact_repository, artifact_id, artifact_url, id, min_version_major, min_version_minor, min_version_patch, max_version_major, max_version_minor, max_version_patch FROM artifact_dependencies WHERE artifact_repository=? AND artifact_id=? AND artifact_url=?;";
     sqlite3_stmt* statement;
