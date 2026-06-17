@@ -744,56 +744,52 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
     free(traversedNodes);
     free(packageDepth);
 
-    // @TODO: Ensure downgrades are checked
-    size_t updateCount = 0;
-    NodeIndex_t* update = NULL;
+    size_t upgradeCount = 0;
+    NodeIndex_t* upgrade = NULL;
+    size_t downgradeCount = 0;
+    NodeIndex_t* downgrade = NULL;
     size_t installCount = 0;
     NodeIndex_t* install = NULL;
     for (size_t i=0; i < deduplicatedPackageCount; i++)
     {
         bool installed = false; // Already installed
-        bool installing = true; // New package
         for (size_t j=0; j < installedPackageCount; j++)
         {
             if (strcmp(graph.nodes[deduplicatedPackages[i]].id, installedPackages[j].id))
             {
                 installed = true;
-                if (SemVerCmp(graph.nodes[deduplicatedPackages[i]].min_version, installedPackages[j].version) <= 0)
-                {
-                    installing = false;
-                }
+                if (SemVerCmp(graph.nodes[deduplicatedPackages[i]].min_version, installedPackages[j].version) < 0)
+                    Internal_ArrayAddNode(&upgradeCount, &upgrade, deduplicatedPackages[i]);
+                else if (SemVerCmp(graph.nodes[deduplicatedPackages[i]].min_version, installedPackages[j].version) > 0)
+                    Internal_ArrayAddNode(&downgradeCount, &downgrade, deduplicatedPackages[i]);
                 break;
             }
         }
-
-        if (!installing)
-        {
-            continue;
-        }
-
-        if (installed)
-        {
-            Internal_ArrayAddNode(&updateCount, &update, deduplicatedPackages[i]);
-        }
-        else
-        {
+        
+        if (!installed)
             Internal_ArrayAddNode(&installCount, &install, deduplicatedPackages[i]);
-        }
     }
 
-    kpmLogging->log(KPM_VERBOSITY_INFO, "Preparing to upgrade %zu packages", updateCount);
-    for (size_t i=0; i < updateCount; i++)
+    // @TODO: Ensure downgrades are checked
+    kpmLogging->log(KPM_VERBOSITY_INFO, "Preparing to downgrade %zu packages", upgradeCount);
+    for (size_t i=0; i < downgradeCount; i++)
     {
-        kpmLogging->log(KPM_VERBOSITY_INFO, "- %s (%u.%u.%u)", graph.nodes[update[i]].id, graph.nodes[update[i]].min_version.major, graph.nodes[update[i]].min_version.minor, graph.nodes[update[i]].min_version.patch);
+        kpmLogging->log(KPM_VERBOSITY_INFO, "- %s (%u.%u.%u)", graph.nodes[downgrade[i]].id, graph.nodes[downgrade[i]].min_version.major, graph.nodes[downgrade[i]].min_version.minor, graph.nodes[downgrade[i]].min_version.patch);
     }
 
+    kpmLogging->log(KPM_VERBOSITY_INFO, "Preparing to upgrade %zu packages", upgradeCount);
+    for (size_t i=0; i < upgradeCount; i++)
+    {
+        kpmLogging->log(KPM_VERBOSITY_INFO, "- %s (%u.%u.%u)", graph.nodes[upgrade[i]].id, graph.nodes[upgrade[i]].min_version.major, graph.nodes[upgrade[i]].min_version.minor, graph.nodes[upgrade[i]].min_version.patch);
+    }
 
     kpmLogging->log(KPM_VERBOSITY_INFO, "Preparing to install %zu packages", installCount);
     for (size_t i=0; i < installCount; i++)
     {
         kpmLogging->log(KPM_VERBOSITY_INFO, "- %s (%u.%u.%u)", graph.nodes[install[i]].id, graph.nodes[install[i]].min_version.major, graph.nodes[install[i]].min_version.minor, graph.nodes[install[i]].min_version.patch);
     }
-    free(update);
+    free(downgrade);
+    free(upgrade);
     free(install);
 
     if (!kpmLogging->getInput("Would you like to proceed?"))

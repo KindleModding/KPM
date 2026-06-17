@@ -217,24 +217,24 @@ enum KPMResult KPM_UpdateIndex(struct KPM *kpm, struct KPMLogging* kpmLogging)
             continue; // Move onto next repo
         }
 
-
-        // Index packages & artifacts
-        // We COULD give progress status here... but nah - HD
-        bool success = true;
-        cJSON* package;
-        cJSON_ArrayForEach(package, cJSON_GetObjectItem(json, "packages"))
+        if (cJSON_GetNumberValue(cJSON_GetObjectItem(json, "manifest_version")) > KPM_MANIFEST_VERSION)
         {
-            if (!indexPackage(kpm, repositories[i].id, package, kpmLogging))
-            {
-                success = false;
-                break;
-            }
+            kpmLogging->log(KPM_VERBOSITY_ERROR, "Invalid manifest version, got %.0f, expected %i", cJSON_GetNumberValue(cJSON_GetObjectItem(json, "manifest_version")), KPM_MANIFEST_VERSION);
         }
-
-        if (!success) // Repository failed
+        else
         {
-            sqlite3_exec(kpm->db, "ROLLBACK", NULL, NULL, NULL);
-            kpmLogging->log(KPM_VERBOSITY_ERROR, "Could not index repository [%s]", repositories[i].id);
+            // Index packages & artifacts
+            // We COULD give progress status here... but nah - HD
+            cJSON* package;
+            cJSON_ArrayForEach(package, cJSON_GetObjectItem(json, "packages"))
+            {
+                if (!indexPackage(kpm, repositories[i].id, package, kpmLogging))
+                {
+                    sqlite3_exec(kpm->db, "ROLLBACK", NULL, NULL, NULL);
+                    kpmLogging->log(KPM_VERBOSITY_ERROR, "Could not index repository [%s]", repositories[i].id);
+                    break;
+                }
+            }
         }
 
         KPM_FreeRepositoryList(repositoryCount, repositories);
