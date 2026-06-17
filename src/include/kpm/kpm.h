@@ -462,8 +462,9 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
  * @brief Uninstalls a package
  * 
  * @param kpm 
- * @param packageId 
+ * @param packageCount
+ * @param packageIds 
  * @param kpmLogging 
  * @return enum KPMResult 
  */
-enum KPMResult KPM_UninstallPackage(struct KPM* kpm, const char* packageId, struct KPMLogging* kpmLogging);
+enum KPMResult KPM_UninstallPackages(struct KPM* kpm, size_t packageCount, const char* packageIds[], struct KPMLogging* kpmLogging);

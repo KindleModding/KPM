@@ -188,19 +188,13 @@ int main(int argc, char* argv[])
     }
     else if (strcmp(argv[command_index], "uninstall") == 0)
     {
-        if (argc - (command_index+1) != 1)
+        if ((error = KPM_UninstallPackages(&kpm, argc - (command_index+1), (const char**) &argv[command_index+1], &logging)) != KPM_OK)
         {
-            logging.log(KPM_VERBOSITY_ERROR, "Incorrect number of packages supplied (expected 1, got %i)", argc - (command_index+1));
-            goto help;
-        }
-        
-        if ((error = KPM_UninstallPackage(&kpm, argv[command_index+1], &logging)) != KPM_OK)
-        {
-            logging.log(KPM_VERBOSITY_ERROR, "Failed to uninstall package (%i)", error);
+            logging.log(KPM_VERBOSITY_ERROR, "Failed to uninstall packages (%i)", error);
         }
         else
         {
-            logging.log(KPM_VERBOSITY_INFO, "Uninstalled '%s' succesfully.", argv[command_index+1]);
+            logging.log(KPM_VERBOSITY_INFO, "Uninstalled %i packages succesfully.", argc - (command_index+1));
         }
     }
     else
@@ -231,7 +225,7 @@ search:\n\
 install:\n\
     Install one or more packages\n\
 uninstall:\n\
-    Uninstall a package\n\
+    Uninstall one or more packages\n\
 ");
         return error;
     }

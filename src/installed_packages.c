@@ -27,10 +27,13 @@ void KPM_FreeInstalledPackageList(size_t packageCount, struct InstalledPackage* 
 
 enum KPMResult KPM_GetInstalledPackage(struct KPM* kpm, const char* packageId, struct InstalledPackage* package)
 {
-    package->id = NULL;
-    package->name = NULL;
-    package->author = NULL;
-    package->description = NULL;
+    if (package != NULL)
+    {
+        package->id = NULL;
+        package->name = NULL;
+        package->author = NULL;
+        package->description = NULL;
+    }
 
     sqlite3_stmt* statement;
     const char* zSQL = "SELECT id, repository, name, author, description, version_major, version_minor, version_patch, installed_as_dependency FROM installed_packages WHERE AND id=? LIMIT 1;";
@@ -39,15 +42,18 @@ enum KPMResult KPM_GetInstalledPackage(struct KPM* kpm, const char* packageId, s
 
     if (sqlite3_step(statement) == SQLITE_ROW)
     {
-        package->id = strdup((const char*) sqlite3_column_text(statement, 0));
-        package->repository = strdup((const char*) sqlite3_column_text(statement, 1));
-        package->name = strdup((const char*) sqlite3_column_text(statement, 2));
-        package->author = strdup((const char*) sqlite3_column_text(statement, 3));
-        package->description = strdup((const char*) sqlite3_column_text(statement, 4));
-        package->version.major = sqlite3_column_int(statement, 5);
-        package->version.minor = sqlite3_column_int(statement, 6);
-        package->version.patch = sqlite3_column_int(statement, 7);
-        package->installed_as_dependency = sqlite3_column_int(statement, 8);
+        if (package != NULL)
+        {
+            package->id = strdup((const char*) sqlite3_column_text(statement, 0));
+            package->repository = strdup((const char*) sqlite3_column_text(statement, 1));
+            package->name = strdup((const char*) sqlite3_column_text(statement, 2));
+            package->author = strdup((const char*) sqlite3_column_text(statement, 3));
+            package->description = strdup((const char*) sqlite3_column_text(statement, 4));
+            package->version.major = sqlite3_column_int(statement, 5);
+            package->version.minor = sqlite3_column_int(statement, 6);
+            package->version.patch = sqlite3_column_int(statement, 7);
+            package->installed_as_dependency = sqlite3_column_int(statement, 8);
+        }
     } else {
         return KPM_SQLITE_ERROR;
     }
