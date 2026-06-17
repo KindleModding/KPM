@@ -230,7 +230,7 @@ err_no_command:
         logging.log(KPM_VERBOSITY_INFO, "No command specified.\n");
         goto help;
 help:
-logging.log(KPM_VERBOSITY_INFO, "usage: kpm [--help, -h] [--fbink] [-y] {version | add-repo | remove-repo | list-repo | update | search | install | uninstall} ... \n\
+logging.log(KPM_VERBOSITY_INFO, "usage: kpm [--help, -h] [--fbink] [-y] {version | add-repo | remove-repo | list-repo | update | search | install | uninstall | upgrade} ... \n\
     --help, -h\tShow this help\n\
     --fbink\tLog to fbink\n\
     -y\tDo not ask for user confirmation\n\
