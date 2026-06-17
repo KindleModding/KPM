@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include "fbink.h"
 
-#include "logging.h"
+#include "io.h"
 #include "internal_utils.h"
 
 void initialise()

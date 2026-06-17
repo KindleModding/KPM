@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include "cli.h"
-#include "logging.h"
+#include "io.h"
 
 #define CLI_VERSION_MAJOR 1
 #define CLI_VERSION_MINOR 0

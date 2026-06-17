@@ -1,6 +1,6 @@
 sources = files(
     'internal_utils.c',
-    'logging.c',
+    'io.c',
     'main.c'
 )
 include_dir = include_directories('./include')
