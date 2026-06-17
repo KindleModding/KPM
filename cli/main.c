@@ -62,6 +62,9 @@ int main(int argc, char* argv[])
         kpm_io.log(KPM_VERBOSITY_INFO, "cli v%i.%i.%i", CLI_VERSION_MAJOR, CLI_VERSION_MINOR, CLI_VERSION_PATCH);
         kpm_io.log(KPM_VERBOSITY_INFO, "libkpm v%i.%i.%i", KPM_VERSION_MAJOR, KPM_VERSION_MINOR, KPM_VERSION_PATCH);
         kpm_io.log(KPM_VERBOSITY_INFO, "built for platform: %s", KPM_PLATFORM);
+#ifndef NDEBUG
+        kpm_io.log(KPM_VERBOSITY_INFO, "DEBUG BUILD");
+#endif
     }
     else if (strcmp(argv[command_index], "add-repo") == 0)
     {
@@ -161,7 +164,7 @@ int main(int argc, char* argv[])
             kpm_io.log(KPM_VERBOSITY_ERROR, "Could not search for '%s' (%i)", query, error);
             return error;
         }
-        kpm_io.log(KPM_VERBOSITY_INFO, "Found %li package(s) for %s:", package_count, query);
+        kpm_io.log(KPM_VERBOSITY_INFO, "Found %i package(s) for %s:", package_count, query);
         for (int i = 0; i < package_count; i++)
             kpm_io.log(KPM_VERBOSITY_INFO, "  - %s (%s): %s", packages[i].name, packages[i].id, packages[i].description);
 
