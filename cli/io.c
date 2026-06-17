@@ -19,15 +19,15 @@ struct IOState io_state = {
 };
 
 FBInkConfig fbink_config = {
-		.row = 1,
-		.voffset = 0,
-		.is_verbose = VERBOSE,
-		.is_quiet = !VERBOSE,
-		.wfm_mode = WFM_AUTO,
-        .no_refresh = false,
-        .is_cleared = false,
-        .fontmult = 0
-	};
+    .row = 1,
+    .voffset = 0,
+    .is_verbose = VERBOSE,
+    .is_quiet = !VERBOSE,
+    .wfm_mode = WFM_AUTO,
+    .no_refresh = false,
+    .is_cleared = false,
+    .fontmult = 0
+};
 
 void io_initialise()
 {
@@ -53,6 +53,10 @@ void io_initialise()
 void io_cleanup()
 {
     printf("\x1b[0m");
+    if (cli_state.fbink)
+    {
+        fbink_close(io_state.framebuffer);
+    }
 }
 
 void vkpm_fbink_printf(const char* format, va_list args)
@@ -95,10 +99,10 @@ void hd_log(const char* format, ...)
     va_end(args);
 }
 
-void kpm_log(enum Verbosity verbosity, const char* format, ...)
+void kpm_log(enum KPMVerbosity verbosity, const char* format, ...)
 {
     char* prefixed_format;
-    char* prefixed_format_fbink = strdup(format);
+    char* prefixed_format_fbink;
     switch (verbosity)
     {
         case KPM_VERBOSITY_DEBUG:
@@ -118,6 +122,7 @@ void kpm_log(enum Verbosity verbosity, const char* format, ...)
             break;
         default:
             prefixed_format = asprintf_hd("\x1b[0m%s", format);
+            prefixed_format_fbink = strdup(format);
             break;
     }
 
@@ -161,6 +166,7 @@ bool kpm_get_input(const char* format, ...)
     scanf("%c", &c);
     return c != 'n' && c != 'N';
 }
+
 
 struct KPMIO kpm_io = {
     .stream = kpm_stream,

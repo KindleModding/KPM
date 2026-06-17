@@ -4,7 +4,7 @@
 #include <unistd.h>
 #include <libgen.h>
 
-void statusCallback(enum Verbosity verbosity, const char* format, ...)
+void statusCallback(enum KPMVerbosity verbosity, const char* format, ...)
 {
     va_list args;
     va_start(args, format);

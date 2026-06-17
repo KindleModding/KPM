@@ -602,11 +602,13 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
             int status;
             if ((status = Internal_GetManifest(target.id + strlen("file://"), &outBuffer, kpmIO)) != KPM_OK)
             {
+                FreeDependencyGraph(&graph);
                 free(outBuffer);
                 return status;
             }
 
             //cJSON* json = cJSON_Parse(outBuffer);
+            FreeDependencyGraph(&graph);
             return KPM_GENERIC_ERROR; // @TODO: Come back to this later - install local package files
         }
         else
@@ -616,6 +618,7 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
                 if (KPM_GetArtifact(kpm, target.repository, target.id, *target.version, &artifact) != KPM_OK)
                 {
                     kpmIO->log(KPM_VERBOSITY_ERROR, "Could not find artifact for given target.");
+                    FreeDependencyGraph(&graph);
                     return KPM_GENERIC_ERROR;
                 }
             }
@@ -626,6 +629,7 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
                 if (KPM_ListPackageArtifacts(kpm, target.repository, target.id, &artifactCount, &artifacts) != KPM_OK || artifactCount == 0)
                 {
                     kpmIO->log(KPM_VERBOSITY_ERROR, "Could not find artifact for given target.");
+                    FreeDependencyGraph(&graph);
                     return KPM_GENERIC_ERROR;
                 }
 
@@ -862,6 +866,7 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
         {
             kpmIO->log(KPM_VERBOSITY_ERROR, "Could not install %s", artifact.id);
             KPM_FreeIndexedArtifact(&artifact);
+            FreeDependencyGraph(&graph);
             free(path);
             return KPM_GENERIC_ERROR; // @TODO: Implement atomic installation old package if upgrading
         }
@@ -889,6 +894,7 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
             if (sqlite3_step(statement) != SQLITE_DONE)
             {
                 sqlite3_finalize(statement);
+                FreeDependencyGraph(&graph);
                 return KPM_SQLITE_ERROR; // Failure with adding it to the database - @TODO: This could be bad, we may need better error handling
             }
         }

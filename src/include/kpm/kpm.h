@@ -131,7 +131,7 @@ struct KPM
     int maxConnections; /**< Maximum number of parallel connections to hold when downloading stuff */
 };
 
-enum Verbosity
+enum KPMVerbosity
 {
     KPM_VERBOSITY_DEBUG,
     KPM_VERBOSITY_INFO,
@@ -140,7 +140,7 @@ enum Verbosity
 };
 
 typedef void KPMStream(char c);
-typedef void KPMLog(enum Verbosity, const char* format, ...) __attribute__((format(printf, 2, 3)));
+typedef void KPMLog(enum KPMVerbosity, const char* format, ...) __attribute__((format(printf, 2, 3)));
 typedef void KPMLogProgress(unsigned int progress, const char* format, ...) __attribute__((format(printf, 2, 3)));
 typedef bool KPMGetInput(const char* format, ...) __attribute__((format(printf, 1, 2)));
 

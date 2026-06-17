@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdio.h>
+#include "kpm.h"
 
 void io_initialise();
 void io_cleanup();

@@ -30,6 +30,12 @@ int main(int argc, char* argv[])
 {
     int error = KPM_OK;
 
+    struct KPM kpm = {
+        .maxConnections = 5, // @TODO
+        .pkgPath = "/tmp/packages/"
+    };
+    KPM_Initialise(&kpm, "./repo_test.db");
+
     int command_index = -1;
     for (int i=1; i < argc; i++)
     {
@@ -61,12 +67,6 @@ int main(int argc, char* argv[])
     if (command_index == -1)
         goto err_no_command;
 
-    struct KPM kpm = {
-        .maxConnections = 5, // @TODO
-        .pkgPath = "/tmp/packages/"
-    };
-    KPM_Initialise(&kpm, "./repo_test.db");
-
     if (strcmp(argv[command_index], "version") == 0)
     {
         kpm_io.log(KPM_VERBOSITY_INFO, "cli v%i.%i.%i", CLI_VERSION_MAJOR, CLI_VERSION_MINOR, CLI_VERSION_PATCH);
@@ -93,6 +93,7 @@ int main(int argc, char* argv[])
                 kpm_io.log(KPM_VERBOSITY_ERROR, "Could not add repository '%s' (%i)", argv[i], error);
             else
                 kpm_io.log(KPM_VERBOSITY_INFO, "Added repository '%s'", repository.id);
+            KPM_FreeRepository(&repository);
         }
 
         if (error == KPM_OK)
@@ -112,8 +113,12 @@ int main(int argc, char* argv[])
         error = KPM_OK;
         for (int i = command_index+1; i < argc; i++)
         {
-            if (KPM_GetRepository(&kpm, argv[i], NULL) != KPM_OK || (error = KPM_RemoveRepository(&kpm, argv[i])) != KPM_OK)
-                kpm_io.log(KPM_VERBOSITY_ERROR, "Could not remove repository '%s' (%i)", argv[i], error);
+            int tmp_error = 0;
+            if ((tmp_error = KPM_GetRepository(&kpm, argv[i], NULL)) != KPM_OK || (tmp_error = KPM_RemoveRepository(&kpm, argv[i])) != KPM_OK)
+            {
+                kpm_io.log(KPM_VERBOSITY_ERROR, "Could not remove repository '%s' (%i)", argv[i], tmp_error);
+                error = tmp_error;
+            }
             else
                 kpm_io.log(KPM_VERBOSITY_INFO, "Removed repository '%s'", argv[i]);
         }
@@ -128,21 +133,21 @@ int main(int argc, char* argv[])
         size_t repository_count;
         struct Repository* repositories;
         if ((error = KPM_ListRepositories(&kpm, &repository_count, &repositories)) != KPM_OK)
-            return error;
+            goto cleanup;
 
         kpm_io.log(KPM_VERBOSITY_INFO, "Repositories:");
         if (repository_count == 0)
             kpm_io.log(KPM_VERBOSITY_INFO, "There are no repositories to show");
         for (int i=0; i < repository_count; i++)
             kpm_io.log(KPM_VERBOSITY_INFO, "  - %s - %s (%s)", repositories[i].id, repositories[i].name, repositories[i].url);
+        KPM_FreeRepositoryList(repository_count, repositories);
     }
     else if (strcmp(argv[command_index], "update") == 0)
     {
         if ((error = KPM_UpdateIndex(&kpm, &kpm_io)) != KPM_OK)
         {
             kpm_io.log(KPM_VERBOSITY_ERROR, "Could not update indexed packages (%i)", error);
-            io_cleanup();
-            return error;
+            goto cleanup;
         }
 
         kpm_io.log(KPM_VERBOSITY_INFO, "Updated indexed packages.");
@@ -160,11 +165,11 @@ int main(int argc, char* argv[])
         size_t cur_len = 0;
         for (int i=command_index+1; i < argc; i++)
         {
-            snprintf(query + cur_len, query_length-cur_len + 1, "%s", argv[i]);
+            sprintf(query + cur_len, "%s", argv[i]);
             cur_len += strlen(argv[i]);
             if (i != argc-1)
             {
-                snprintf(query + cur_len, query_length-cur_len, " ");
+                sprintf(query + cur_len, " ");
                 cur_len++;
             }
         }
@@ -173,26 +178,36 @@ int main(int argc, char* argv[])
         struct IndexedPackage* packages;
         if ((error = KPM_SearchPackages(&kpm, query, &package_count, &packages)) != KPM_OK)
         {
+            free(query);
             kpm_io.log(KPM_VERBOSITY_ERROR, "Could not search for '%s' (%i)", query, error);
-            io_cleanup();
-            return error;
+            goto cleanup;
         }
 
         kpm_io.log(KPM_VERBOSITY_INFO, "Found %li package(s) for %s:", package_count, query);
         for (int i = 0; i < package_count; i++)
             kpm_io.log(KPM_VERBOSITY_INFO, "  - %s (%s): %s", packages[i].name, packages[i].id, packages[i].description);
 
+        KPM_FreeIndexedPackageList(package_count, packages);
         if (package_count == 0)
             kpm_io.log(KPM_VERBOSITY_INFO, "Could not find any packages for '%s'", query);
+        free(query);
     }
     else if (strcmp(argv[command_index], "install") == 0)
     {
         struct InstallTarget* targets = malloc((argc - (command_index+1)) * sizeof(struct InstallTarget));
-        for (int i=0; i < (argc - command_index+1); i++)
+        for (int i=0; i < argc - (command_index+1); i++)
         {
             targets[i].repository = NULL;
             targets[i].version = NULL;
             targets[i].id = argv[command_index+1 + i];
+        }
+
+        if (argc - (command_index+1) == 0)
+        {
+            free(targets);
+            kpm_io.log(KPM_VERBOSITY_ERROR, "No packages were passed to install");
+            error = KPM_GENERIC_ERROR;
+            goto cleanup;
         }
 
         if ((error = KPM_InstallPackages(&kpm, argc - (command_index+1), targets, &kpm_io)) != KPM_OK)
@@ -203,6 +218,7 @@ int main(int argc, char* argv[])
         {
             kpm_io.log(KPM_VERBOSITY_INFO, "Installed %i package(s) succesfully.", argc - (command_index+1));
         }
+        free(targets);
     }
     else if (strcmp(argv[command_index], "uninstall") == 0)
     {
@@ -232,8 +248,7 @@ int main(int argc, char* argv[])
         if (installed_package_count == 0)
         {
             kpm_io.log(KPM_VERBOSITY_INFO, "No packages to upgrade.");
-            io_cleanup();
-            return KPM_OK;
+            goto cleanup;
         }
 
         if ((error = KPM_InstallPackages(&kpm, installed_package_count, targets, &kpm_io)) != KPM_OK)
@@ -274,10 +289,11 @@ upgrade:\n\
     Upgrade all installed packages\n\
 ");
 
-        io_cleanup();
-        return error;
+        goto cleanup;
     }
 
+cleanup:
     io_cleanup();
+    KPM_Cleanup(&kpm);
     return error;
 }

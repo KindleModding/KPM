@@ -185,21 +185,22 @@ enum KPMResult KPM_UpdateIndex(struct KPM *kpm, struct KPMIO* kpmIO)
         if (request.response_code != 200 && strncmp(repositories[i].url, "file://", strlen("file://")) != 0)
         {
             kpmIO->log(KPM_VERBOSITY_ERROR, "Could not fetch url [%s]", repositories[i].url);
+            SimpleGET_Cleanup(&request);
             continue;
         }
 
         cJSON* json = cJSON_Parse(request.buffer);
         if (json == NULL)
         {
-            SimpleGET_Cleanup(&request);
             kpmIO->log(KPM_VERBOSITY_ERROR, "Could not parse manifest");
+            SimpleGET_Cleanup(&request);
             continue; // Move onto next repo
         }
 
         if (cJSON_GetNumberValue(cJSON_GetObjectItem(json, "manifest_version")) > KPM_MANIFEST_VERSION)
         {
-            SimpleGET_Cleanup(&request);
             kpmIO->log(KPM_VERBOSITY_ERROR, "Invalid manifest version, got %.0f, expected %i", cJSON_GetNumberValue(cJSON_GetObjectItem(json, "manifest_version")), KPM_MANIFEST_VERSION);
+            SimpleGET_Cleanup(&request);
             continue;
         }
 

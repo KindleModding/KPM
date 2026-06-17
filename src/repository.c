@@ -94,6 +94,7 @@ enum KPMResult KPM_GetRepository(struct KPM *kpm, const char *repositoryId, stru
             repository->description = strdup((const char*) sqlite3_column_text(statement, 3));
         }
     } else {
+        sqlite3_finalize(statement);
         return KPM_SQLITE_ERROR;
     }
 
