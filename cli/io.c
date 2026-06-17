@@ -9,9 +9,9 @@
 #include "internal_utils.h"
 
 #ifdef NDEBUG
-constexpr bool verbose=false;
+#define VERBOSE false
 #else
-constexpr bool verbose=true;
+#define VERBOSE true
 #endif
 
 struct IOState io_state = {
@@ -29,8 +29,8 @@ void vkpm_fbink_printf(const char* format, va_list args)
     const FBInkConfig config = {
 		.row = io_state.current_row,
 		.voffset = 0,
-		.is_verbose = verbose,
-		.is_quiet = !verbose,
+		.is_verbose = VERBOSE,
+		.is_quiet = !VERBOSE,
 		.wfm_mode = WFM_AUTO,
 	};
 	// Initial init to pull info
@@ -51,8 +51,8 @@ void vkpm_fbink_printf(const char* format, va_list args)
                 const FBInkConfig config = {
                     .row = io_state.current_row,
                     .voffset = 0,
-                    .is_verbose = verbose,
-                    .is_quiet = !verbose,
+                    .is_verbose = VERBOSE,
+                    .is_quiet = !VERBOSE,
                     .wfm_mode = WFM_AUTO,
                 };
                 fbink_print(fbfd, buffer, &config);
