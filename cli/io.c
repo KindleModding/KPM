@@ -8,6 +8,12 @@
 #include "io.h"
 #include "internal_utils.h"
 
+#ifdef NDEBUG
+constexpr bool verbose=false;
+#else
+constexpr bool verbose=true;
+#endif
+
 struct IOState io_state = {
     .current_row = 0,
     .framebuffer = 0
@@ -23,8 +29,8 @@ void vkpm_fbink_printf(const char* format, va_list args)
     const FBInkConfig config = {
 		.row = io_state.current_row,
 		.voffset = 0,
-		.is_verbose = false,
-		.is_quiet = true,
+		.is_verbose = verbose,
+		.is_quiet = !verbose,
 		.wfm_mode = WFM_AUTO,
 	};
 	// Initial init to pull info
@@ -45,8 +51,8 @@ void vkpm_fbink_printf(const char* format, va_list args)
                 const FBInkConfig config = {
                     .row = io_state.current_row,
                     .voffset = 0,
-                    .is_verbose = false,
-                    .is_quiet = true,
+                    .is_verbose = verbose,
+                    .is_quiet = !verbose,
                     .wfm_mode = WFM_AUTO,
                 };
                 fbink_print(fbfd, buffer, &config);
@@ -120,7 +126,7 @@ void kpm_log(enum Verbosity verbosity, const char* format, ...)
     va_end(args);
 }
 
-void kpm_log_progress(uint progress, const char* format, ...)
+void kpm_log_progress(unsigned int progress, const char* format, ...)
 {
     va_list args;
     va_start(args, format);

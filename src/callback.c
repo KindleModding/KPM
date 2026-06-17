@@ -6,7 +6,7 @@ void logStub(enum Verbosity verbosity, const char* details, ...)
     return;
 }
 
-void logProgressStub(uint progress, const char* details, ...)
+void logProgressStub(unsigned int progress, const char* details, ...)
 {
     return;
 }

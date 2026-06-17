@@ -140,9 +140,9 @@ enum Verbosity
 };
 
 typedef void KPMStream(char c);
-typedef void KPMLog(enum Verbosity, const char* format, ...) __attribute__((format(printf, 2, 3)));;
-typedef void KPMLogProgress(uint progress, const char* format, ...) __attribute__((format(printf, 2, 3)));;
-typedef bool KPMGetInput(const char* format, ...) __attribute__((format(printf, 1, 2)));;
+typedef void KPMLog(enum Verbosity, const char* format, ...) __attribute__((format(printf, 2, 3)));
+typedef void KPMLogProgress(unsigned int progress, const char* format, ...) __attribute__((format(printf, 2, 3)));
+typedef bool KPMGetInput(const char* format, ...) __attribute__((format(printf, 1, 2)));
 
 struct KPMIO
 {

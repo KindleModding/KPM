@@ -1,4 +1,4 @@
-project('kpm', 'c', version : '1.0.0', license : 'GPL', default_options: ['b_ndebug=if-release'])
+project('kpm', 'c', version : '1.0.0', license : 'GPL', default_options: ['b_ndebug=if-release', 'c_std=gnu23'])
 
 KPM_PLATFORM = meson.get_external_property('kindle_platform', get_option('kindle_platform'))
 if KPM_PLATFORM == ''
