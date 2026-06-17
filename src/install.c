@@ -483,67 +483,10 @@ bool Internal_InstallItem(struct KPM* kpm, char* repository, char* path, bool in
     return true;
 }
 
-enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target, struct KPMLogging* kpmLogging)
+enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct InstallTarget* targets, struct KPMLogging* kpmLogging)
 {
     if (kpmLogging == NULL)
         kpmLogging = &dummyKPMStub;
-    
-    if (target->repository == NULL)
-    {
-        if (target->version == NULL)
-            kpmLogging->log(KPM_VERBOSITY_INFO, "Installing package %s", target->id);
-        else
-            kpmLogging->log(KPM_VERBOSITY_INFO, "Installing package %s (%u.%u.%u)", target->id, target->version->major, target->version->minor, target->version->patch);
-    }
-    else
-    {
-        if (target->version == NULL)
-            kpmLogging->log(KPM_VERBOSITY_INFO, "Installing package %s/%s", target->repository, target->id);
-        else
-            kpmLogging->log(KPM_VERBOSITY_INFO, "Installing package %s/%s (%u.%u.%u)", target->repository, target->id, target->version->major, target->version->minor, target->version->patch);
-    }
-
-    struct IndexedArtifact artifact;
-    if (strncmp(target->id, "file://", strlen("file://")) == 0)
-    {
-        char* outBuffer = NULL;
-        int status;
-        if ((status = Internal_GetManifest(target->id + strlen("file://"), &outBuffer, kpmLogging)) != KPM_OK)
-        {
-            free(outBuffer);
-            return status;
-        }
-
-        //cJSON* json = cJSON_Parse(outBuffer);
-        return KPM_GENERIC_ERROR; // @TODO: Come back to this later - install local package files
-    }
-    else
-    {
-        if (target->version != NULL)
-        {
-            if (KPM_GetArtifact(kpm, target->repository, target->id, *target->version, &artifact) != KPM_OK)
-            {
-                kpmLogging->log(KPM_VERBOSITY_ERROR, "Could not find artifact for given target.");
-                return KPM_GENERIC_ERROR;
-            }
-        }
-        else
-        {
-            size_t artifactCount;
-            struct IndexedArtifact* artifacts;
-            if (KPM_ListPackageArtifacts(kpm, target->repository, target->id, &artifactCount, &artifacts) != KPM_OK || artifactCount == 0)
-            {
-                kpmLogging->log(KPM_VERBOSITY_ERROR, "Could not find artifact for given target.");
-                return KPM_GENERIC_ERROR;
-            }
-
-            artifact.id = strdup(artifacts[0].id);
-            artifact.repository = strdup(artifacts[0].repository);
-            artifact.url = strdup(artifacts[0].url);
-            artifact.version = artifacts[0].version;
-            KPM_FreeIndexedArtifactList(artifactCount, artifacts);
-        }
-    }
 
     // Construct a graph
     kpmLogging->log(KPM_VERBOSITY_DEBUG, "Constructing dependency graph...");
@@ -581,7 +524,7 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
             .min_version = installedPackages[i].version,
             .max_version = installedPackages[i].version
         };
-        depNode.max_version.patch += 1; // @TODO: Allow listing alternative package to upgrade
+        depNode.max_version.patch += 1; // @TODO: Allow listing alternative package to upgrade locally installed packages as a resolution strategy
 
         kpmLogging->log(KPM_VERBOSITY_DEBUG, "\t- %s/%s (%u.%u.%u)", installedPackages[i].repository, installedPackages[i].id, installedPackages[i].version.major, installedPackages[i].version.minor, installedPackages[i].version.patch);
 
@@ -603,31 +546,93 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
         // Add nodes to traversal
         Internal_TraverseInstalledNode(&graph, constructedId, &traversedNodeCount, &traversedNodes, installedPackageCount, installedPackages);
     }
-
-    kpmLogging->log(KPM_VERBOSITY_DEBUG, "Adding target to graph");
-    // Add the target to the graph
-    struct DependencyNode depNode = {
-        .type = NODE_DEPENDENCY,
-        .connected = NULL,
-        .connectedCount = 0,
-        .id = strdup(target->id),
-        .repository = NULL,
-        .min_version = {
-            .major = 0,
-            .minor = 0,
-            .patch = 0
-        },
-        .max_version = {
-            .major = 0,
-            .minor = 0,
-            .patch = 0
+    
+    for (int i=0; i < targetCount; i++)
+    {
+        struct InstallTarget target = targets[i];
+        if (target.repository == NULL)
+        {
+            if (target.version == NULL)
+                kpmLogging->log(KPM_VERBOSITY_INFO, "Preparing to install %s", target.id);
+            else
+                kpmLogging->log(KPM_VERBOSITY_INFO, "Preparing to install %s (%u.%u.%u)", target.id, target.version->major, target.version->minor, target.version->patch);
         }
-    };
-    int depId = AddNode(&graph, depNode);
-    AddEdge(&graph, rootId, depId);
+        else
+        {
+            if (target.version == NULL)
+                kpmLogging->log(KPM_VERBOSITY_INFO, "Preparing to install %s/%s", target.repository, target.id);
+            else
+                kpmLogging->log(KPM_VERBOSITY_INFO, "Preparing to install %s/%s (%u.%u.%u)", target.repository, target.id, target.version->major, target.version->minor, target.version->patch);
+        }
 
-    NodeIndex_t constructedId = Internal_ConstructGraphFromArtifact(kpm, &graph, &artifact);
-    AddEdge(&graph, depId, constructedId);
+        struct IndexedArtifact artifact;
+        if (strncmp(target.id, "file://", strlen("file://")) == 0)
+        {
+            char* outBuffer = NULL;
+            int status;
+            if ((status = Internal_GetManifest(target.id + strlen("file://"), &outBuffer, kpmLogging)) != KPM_OK)
+            {
+                free(outBuffer);
+                return status;
+            }
+
+            //cJSON* json = cJSON_Parse(outBuffer);
+            return KPM_GENERIC_ERROR; // @TODO: Come back to this later - install local package files
+        }
+        else
+        {
+            if (target.version != NULL)
+            {
+                if (KPM_GetArtifact(kpm, target.repository, target.id, *target.version, &artifact) != KPM_OK)
+                {
+                    kpmLogging->log(KPM_VERBOSITY_ERROR, "Could not find artifact for given target.");
+                    return KPM_GENERIC_ERROR;
+                }
+            }
+            else
+            {
+                size_t artifactCount;
+                struct IndexedArtifact* artifacts;
+                if (KPM_ListPackageArtifacts(kpm, target.repository, target.id, &artifactCount, &artifacts) != KPM_OK || artifactCount == 0)
+                {
+                    kpmLogging->log(KPM_VERBOSITY_ERROR, "Could not find artifact for given target.");
+                    return KPM_GENERIC_ERROR;
+                }
+
+                artifact.id = strdup(artifacts[0].id);
+                artifact.repository = strdup(artifacts[0].repository);
+                artifact.url = strdup(artifacts[0].url);
+                artifact.version = artifacts[0].version;
+                KPM_FreeIndexedArtifactList(artifactCount, artifacts);
+            }
+        }
+
+        kpmLogging->log(KPM_VERBOSITY_DEBUG, "Adding target to graph");
+        // Add the target to the graph
+        struct DependencyNode depNode = {
+            .type = NODE_DEPENDENCY,
+            .connected = NULL,
+            .connectedCount = 0,
+            .id = strdup(target.id),
+            .repository = NULL,
+            .min_version = {
+                .major = 0,
+                .minor = 0,
+                .patch = 0
+            },
+            .max_version = {
+                .major = 0,
+                .minor = 0,
+                .patch = 0
+            }
+        };
+        int depId = AddNode(&graph, depNode);
+        AddEdge(&graph, rootId, depId);
+
+        NodeIndex_t constructedId = Internal_ConstructGraphFromArtifact(kpm, &graph, &artifact);
+        AddEdge(&graph, depId, constructedId);
+        KPM_FreeIndexedArtifact(&artifact);
+    }
 
     // Render out the graph and log the data for debugging
     char* rendered;
@@ -638,17 +643,7 @@ enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target,
      * Write out a state file for debugging purposes
      */
     FILE* file = fopen("/tmp/kpm_state.md", "w");
-    if (target->version == NULL)
-    {
-        struct SemVer version = {
-            .major = 0,
-            .minor = 0,
-            .patch = 0
-        };
-        target->version = &version;
-    }
-    char* string = asprintf_hd("Current State:\nInstalling Target: (%s/)%s (%u.%u.%u)\nArtifact Found: (%s/)%s (%u.%u.%u) [%s]\n\nGenerated Graph:\n\n```", target->repository, target->id, target->version->major, target->version->minor, target->version->patch, artifact.repository, artifact.id, artifact.version.major, artifact.version.minor, artifact.version.patch, artifact.url);
-    KPM_FreeIndexedArtifact(&artifact);
+    char* string = asprintf_hd("Generated Graph:\n\n```");
     fwrite(string, strlen(string), 1, file);
     free(string);
 

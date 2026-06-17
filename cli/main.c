@@ -169,25 +169,21 @@ int main(int argc, char* argv[])
     }
     else if (strcmp(argv[command_index], "install") == 0)
     {
-        if (argc - (command_index+1) != 1)
+        struct InstallTarget* targets = malloc((argc - (command_index+1)) * sizeof(struct InstallTarget));
+        for (int i=0; i < (argc - command_index+1); i++)
         {
-            logging.log(KPM_VERBOSITY_ERROR, "Incorrect number of packages supplied (expected 1, got %i)", argc - (command_index+1));
-            goto help;
+            targets[i].repository = NULL;
+            targets[i].version = NULL;
+            targets[i].id = argv[command_index+1 + i];
         }
 
-        struct InstallTarget target = {
-            .repository = NULL,
-            .id = argv[command_index+1], // @TODO: Implement multi-package installing
-            .version = NULL
-        };
-
-        if ((error = KPM_InstallPackage(&kpm, &target, &logging)) != KPM_OK)
+        if ((error = KPM_InstallPackages(&kpm, argc - (command_index+1), targets, &logging)) != KPM_OK)
         {
-            logging.log(KPM_VERBOSITY_ERROR, "Failed to install package (%i)", error);
+            logging.log(KPM_VERBOSITY_ERROR, "Failed to install packages (%i)", error);
         }
         else
         {
-            logging.log(KPM_VERBOSITY_INFO, "Installed '%s' succesfully.", argv[command_index+1]);
+            logging.log(KPM_VERBOSITY_INFO, "Installed %i package(s) succesfully.", argc - (command_index+1));
         }
     }
     else if (strcmp(argv[command_index], "uninstall") == 0)
@@ -233,7 +229,7 @@ update:\n\
 search:\n\
     Searches for a package given a query\n\
 install:\n\
-    Install a package\n\
+    Install one or more a packages\n\
 uninstall:\n\
     Uninstall a package\n\
 ");

@@ -451,11 +451,12 @@ void KPM_FreeInstallTarget(struct InstallTarget* target);
  * @brief Installs/upgrades a target package and its dependencies
  * 
  * @param kpm 
- * @param target 
+ * @param targetCount The number of packages to install
+ * @param targets An array of packages to install
  * @param kpmLogging 
  * @return enum KPMResult 
  */
-enum KPMResult KPM_InstallPackage(struct KPM* kpm, struct InstallTarget* target, struct KPMLogging* kpmLogging);
+enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct InstallTarget* targets, struct KPMLogging* kpmLogging);
 
 /**
  * @brief Uninstalls a package

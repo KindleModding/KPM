@@ -47,7 +47,7 @@ int main()
         .log = statusCallback
 
     };
-    int status = KPM_InstallPackage(&kpm, &target, &logger);
+    int status = KPM_InstallPackages(&kpm, 1, &target, &logger);
     fprintf(stderr, "Status: %i\n", status);
     assert(status == KPM_OK);
 
