@@ -182,10 +182,29 @@ enum KPMResult KPM_UpdateIndex(struct KPM *kpm, struct KPMIO* kpmIO)
         SimpleGET_Initialise(&request, repositories[i].url);
         SimpleGET_Perform(&request);
 
+        if (request.response_code != 200 && strncmp(repositories[i].url, "file://", strlen("file://")) != 0)
+        {
+            kpmIO->log(KPM_VERBOSITY_ERROR, "Could not fetch url [%s]", repositories[i].url);
+            continue;
+        }
+
+        cJSON* json = cJSON_Parse(request.buffer);
+        if (json == NULL)
+        {
+            SimpleGET_Cleanup(&request);
+            kpmIO->log(KPM_VERBOSITY_ERROR, "Could not parse manifest");
+            continue; // Move onto next repo
+        }
+
+        if (cJSON_GetNumberValue(cJSON_GetObjectItem(json, "manifest_version")) > KPM_MANIFEST_VERSION)
+        {
+            SimpleGET_Cleanup(&request);
+            kpmIO->log(KPM_VERBOSITY_ERROR, "Invalid manifest version, got %.0f, expected %i", cJSON_GetNumberValue(cJSON_GetObjectItem(json, "manifest_version")), KPM_MANIFEST_VERSION);
+            continue;
+        }
+
         // Start a transaction for every repository
         sqlite3_exec(kpm->db, "BEGIN", NULL, NULL, NULL); // "But Chudda what if?" IT WONT FAIL
-
-
 
         // Clear indexed packages
         kpmIO->log(KPM_VERBOSITY_DEBUG, "Clearing index");
@@ -206,42 +225,25 @@ enum KPMResult KPM_UpdateIndex(struct KPM *kpm, struct KPMIO* kpmIO)
             break; // Move onto next repo
         }
 
-
-        cJSON* json = cJSON_Parse(request.buffer);
-        if (json == NULL)
+        // Index packages & artifacts
+        // We COULD give progress status here... but nah - HD
+        cJSON* package;
+        cJSON_ArrayForEach(package, cJSON_GetObjectItem(json, "packages"))
         {
-            KPM_FreeRepositoryList(repositoryCount, repositories);
-            SimpleGET_Cleanup(&request);
-            kpmIO->log(KPM_VERBOSITY_ERROR, "Could not parse manifest");
-            sqlite3_exec(kpm->db, "ROLLBACK", NULL, NULL, NULL);
-            continue; // Move onto next repo
-        }
-
-        if (cJSON_GetNumberValue(cJSON_GetObjectItem(json, "manifest_version")) > KPM_MANIFEST_VERSION)
-        {
-            kpmIO->log(KPM_VERBOSITY_ERROR, "Invalid manifest version, got %.0f, expected %i", cJSON_GetNumberValue(cJSON_GetObjectItem(json, "manifest_version")), KPM_MANIFEST_VERSION);
-        }
-        else
-        {
-            // Index packages & artifacts
-            // We COULD give progress status here... but nah - HD
-            cJSON* package;
-            cJSON_ArrayForEach(package, cJSON_GetObjectItem(json, "packages"))
+            if (!indexPackage(kpm, repositories[i].id, package, kpmIO))
             {
-                if (!indexPackage(kpm, repositories[i].id, package, kpmIO))
-                {
-                    sqlite3_exec(kpm->db, "ROLLBACK", NULL, NULL, NULL);
-                    kpmIO->log(KPM_VERBOSITY_ERROR, "Could not index repository [%s]", repositories[i].id);
-                    break;
-                }
+                sqlite3_exec(kpm->db, "ROLLBACK", NULL, NULL, NULL);
+                kpmIO->log(KPM_VERBOSITY_ERROR, "Could not index repository [%s]", repositories[i].id);
+                break;
             }
         }
 
-        KPM_FreeRepositoryList(repositoryCount, repositories);
         sqlite3_exec(kpm->db, "COMMIT", NULL, NULL, NULL);
         cJSON_Delete(json);
         SimpleGET_Cleanup(&request);
     }
+
+    KPM_FreeRepositoryList(repositoryCount, repositories);
 
     return KPM_OK;
 }
