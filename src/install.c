@@ -531,6 +531,19 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
     NodeIndex_t* traversedNodes = NULL;
     for (size_t i=0; i < installedPackageCount; i++)
     {
+        bool installing = false;
+        for (size_t j=0; j < targetCount; j++)
+        {
+            if (strcmp(installedPackages[i].id, targets[j].id) == 0)
+            {
+                installing = true;
+                break;
+            }
+        }
+
+        if (installing)
+            continue;
+
         struct DependencyNode depNode = {
             .type = NODE_DEPENDENCY,
             .connected = NULL,
@@ -538,9 +551,8 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
             .id = strdup(installedPackages[i].id),
             .repository = strdup(installedPackages[i].repository),
             .min_version = installedPackages[i].version,
-            .max_version = installedPackages[i].version
+            .max_version = SEMVER_MAX
         };
-        depNode.max_version.patch += 1; // @TODO: Allow listing alternative package to upgrade locally installed packages as a resolution strategy
 
         kpmLogging->log(KPM_VERBOSITY_DEBUG, "\t- %s/%s (%u.%u.%u)", installedPackages[i].repository, installedPackages[i].id, installedPackages[i].version.major, installedPackages[i].version.minor, installedPackages[i].version.patch);
 
@@ -559,8 +571,10 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
         AddEdge(&graph, depId, constructedId);
         Internal_ArrayAddNode(&traversedNodeCount, &traversedNodes, constructedId);
 
-        // Add nodes to traversal
+        // Add node to traversal
         Internal_TraverseInstalledNode(&graph, constructedId, &traversedNodeCount, &traversedNodes, installedPackageCount, installedPackages);
+
+        // @TODO: Add valid upgradable package versions
     }
     
     for (int i=0; i < targetCount; i++)

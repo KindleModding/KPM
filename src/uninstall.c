@@ -7,7 +7,7 @@
 
 enum KPMResult KPM_UninstallPackages(struct KPM* kpm, size_t packageCount, const char* packageIds[], struct KPMLogging* kpmLogging)
 {
-    kpmLogging->log(KPM_VERBOSITY_INFO, "Uninstalling %i packages.", packageCount);
+    kpmLogging->log(KPM_VERBOSITY_INFO, "Uninstalling %zu packages.", packageCount);
 
     for (int i=0; i < packageCount; i++)
     {
@@ -39,7 +39,7 @@ enum KPMResult KPM_UninstallPackages(struct KPM* kpm, size_t packageCount, const
                     if (strcmp(packageIds[j], dependents[i].dependent) == 0)
                         continue;
 
-                kpmLogging->log(KPM_VERBOSITY_ERROR, "- %s (%zu.%zu.%zu - %zu.%zu.%zu)", dependents[i].dependent, dependents[i].min_version.major, dependents[i].min_version.minor, dependents[i].min_version.patch, dependents[i].max_version.major, dependents[i].max_version.minor, dependents[i].max_version.patch);
+                kpmLogging->log(KPM_VERBOSITY_ERROR, "- %s (%u.%u.%u - %u.%u.%u)", dependents[i].dependent, dependents[i].min_version.major, dependents[i].min_version.minor, dependents[i].min_version.patch, dependents[i].max_version.major, dependents[i].max_version.minor, dependents[i].max_version.patch);
             }
             KPM_FreeInstalledPackageDependencyList(dependentCount, dependents);
             return KPM_GENERIC_ERROR;

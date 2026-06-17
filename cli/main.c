@@ -197,6 +197,31 @@ int main(int argc, char* argv[])
             logging.log(KPM_VERBOSITY_INFO, "Uninstalled %i packages succesfully.", argc - (command_index+1));
         }
     }
+    else if (strcmp(argv[command_index], "upgrade") == 0)
+    {
+        size_t installed_package_count;
+        struct InstalledPackage* installed_packages;
+        KPM_ListInstalledPackages(&kpm, &installed_package_count, &installed_packages);
+
+        struct InstallTarget* targets = malloc(installed_package_count * sizeof(struct InstallTarget));
+        for (int i=0; i < installed_package_count; i++)
+        {
+            targets[i].repository = installed_packages[i].repository;
+            targets[i].version = NULL;
+            targets[i].id = installed_packages[i].id;
+        }
+
+        if (installed_package_count == 0)
+        {
+            logging.log(KPM_VERBOSITY_INFO, "No packages to upgrade.", argc - (command_index+1));
+            return KPM_OK;
+        }
+
+        if ((error = KPM_InstallPackages(&kpm, installed_package_count, targets, &logging)) != KPM_OK)
+            logging.log(KPM_VERBOSITY_ERROR, "Failed to upgrade packages (%i)", error);
+        else
+            logging.log(KPM_VERBOSITY_INFO, "Upgraded %i package(s) succesfully.", argc - (command_index+1));
+    }
     else
     {
         logging.log(KPM_VERBOSITY_INFO, "Unknown command \"%s\" specified.\n", argv[command_index]);
@@ -223,9 +248,11 @@ update:\n\
 search:\n\
     Searches for a package given a query\n\
 install:\n\
-    Install one or more packages\n\
+    (Re)Install/Upgrade one or more packages\n\
 uninstall:\n\
     Uninstall one or more packages\n\
+upgrade:\n\
+    Upgrade all installed packages\n\
 ");
         return error;
     }

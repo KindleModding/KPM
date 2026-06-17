@@ -4,6 +4,8 @@
 #include <limits.h>
 
 #define VERSION_MAX UINT_MAX
+#define SEMVER_MAX { .major = UINT_MAX, .minor = UINT_MAX, .patch = UINT_MAX }
+
 struct SemVer
 {
     unsigned int major;
