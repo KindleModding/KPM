@@ -34,8 +34,8 @@ void vkpm_fbink_printf(const char* format, va_list args)
 		.wfm_mode = WFM_AUTO,
 	};
 	// Initial init to pull info
-	int fbfd = fbink_init(io_state.framebuffer, &config);
-    if (fbfd >= 0)
+	int r = fbink_init(io_state.framebuffer, &config);
+    if (r >= 0)
     {
         char* string = vasprintf_hd(format, args);
         size_t string_len = strlen(string);
@@ -55,7 +55,7 @@ void vkpm_fbink_printf(const char* format, va_list args)
                     .is_quiet = !VERBOSE,
                     .wfm_mode = WFM_AUTO,
                 };
-                fbink_print(fbfd, buffer, &config);
+                fbink_print(io_state.framebuffer, buffer, &config);
                 buffer_start_index = i+1;
                 io_state.current_row++;
             }
