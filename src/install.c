@@ -673,15 +673,20 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
      * Write out a state file for debugging purposes
      */
     FILE* file = fopen("/tmp/kpm_state.md", "w");
-    char* string = asprintf_hd("Generated Graph:\n\n```");
-    fwrite(string, strlen(string), 1, file);
-    free(string);
+    if (file == NULL)
+        kpmIO->log(KPM_VERBOSITY_WARN, "Could not open file '/tmp/kpm_state.md'");
+    else
+    {
+        char* string = asprintf_hd("Generated Graph:\n\n```");
+        fwrite(string, strlen(string), 1, file);
+        free(string);
 
-    fwrite(rendered, strlen(rendered), 1, file);
-    free(rendered);
+        fwrite(rendered, strlen(rendered), 1, file);
+        free(rendered);
 
-    fwrite("```", strlen("```"), 1, file);
-    fclose(file);
+        fwrite("```", strlen("```"), 1, file);
+        fclose(file);
+    }
 
     // @TODO: Validate that it's starting from the right point when handling already-installed artifacts
     if (!Internal_ResolveDependencyGraph(&graph, rootId, &traversedNodeCount, &traversedNodes, kpmIO))

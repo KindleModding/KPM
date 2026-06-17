@@ -23,13 +23,12 @@ int main(int argc, char* argv[])
 {
     int error = KPM_OK;
 
+    io_initialise();
+
     kpm_io.log(KPM_VERBOSITY_INFO, "Kindle Package Manager v%i.%i.%i", KPM_VERSION_MAJOR, KPM_VERSION_MINOR, KPM_VERSION_PATCH);
     kpm_io.log(KPM_VERBOSITY_INFO, "Created by Hackerdude (https://hackerdude.tech)\n");
 
-    if (argc <= 1)
-        goto err_no_command;
-
-    int command_index = 1;
+    int command_index = -1;
     for (int i=1; i < argc; i++)
     {
         command_index = i;
@@ -48,6 +47,9 @@ int main(int argc, char* argv[])
         else
             break;
     }
+
+    if (command_index == -1)
+        goto err_no_command;
 
     struct KPM kpm = {
         .maxConnections = 5, // @TODO

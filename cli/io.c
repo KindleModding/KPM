@@ -1,24 +1,69 @@
 #include "cli.h"
 #include "kpm.h"
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include "fbink.h"
 
 #include "io.h"
 #include "internal_utils.h"
 
-void initialise()
+struct IOState io_state = {
+    .current_row = 0,
+    .framebuffer = 0
+};
+
+void io_initialise()
 {
-    int framebuffer = fbink_open();
-    FBInkConfig config = {
-		.row = 0,
+    io_state.framebuffer = fbink_open();
+}
+
+void vkpm_fbink_printf(const char* format, va_list args)
+{
+    const FBInkConfig config = {
+		.row = io_state.current_row,
 		.voffset = 0,
 		.is_verbose = false,
 		.is_quiet = true,
 		.wfm_mode = WFM_AUTO,
 	};
-
 	// Initial init to pull info
-	fbink_init(framebuffer, &config);
+	int fbfd = fbink_init(io_state.framebuffer, &config);
+    if (fbfd >= 0)
+    {
+        char* string = vasprintf_hd(format, args);
+        size_t string_len = strlen(string);
+        char* buffer = malloc(string_len + 1);
+        buffer[0] = '\0';
+        size_t buffer_start_index = 0;
+        for (int i=0; i < string_len; i++)
+        {
+            if (string[i] == '\n')
+            {
+                strncpy(buffer, string+buffer_start_index, i-buffer_start_index);
+                buffer[(i-buffer_start_index) + 1] = '\0';
+                const FBInkConfig config = {
+                    .row = io_state.current_row,
+                    .voffset = 0,
+                    .is_verbose = false,
+                    .is_quiet = true,
+                    .wfm_mode = WFM_AUTO,
+                };
+                fbink_print(fbfd, buffer, &config);
+                buffer_start_index = i+1;
+                io_state.current_row++;
+            }
+        }
+        free(buffer);
+    }
+}
+
+__attribute__((format(printf, 1, 2))) void kpm_fbink_printf(const char* format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    vkpm_fbink_printf(format, args);
+    va_end(args);
 }
 
 void kpm_stream(char c)
@@ -28,6 +73,13 @@ void kpm_stream(char c)
 
 void vhd_log(const char* format, va_list args)
 {
+    if (cli_state.fbink)
+    {
+        va_list args2;
+        va_copy (args2, args);
+        vkpm_fbink_printf(format, args2);
+        va_end(args2);
+    }
     vfprintf(stderr, format, args);
     fprintf(stderr, "\n");
 }
