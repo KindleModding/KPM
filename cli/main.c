@@ -26,7 +26,6 @@ int main(int argc, char* argv[])
     int command_index = -1;
     for (int i=1; i < argc; i++)
     {
-        command_index = i;
         char* arg = argv[i];
         if (strcmp(arg, "-h") == 0 || strcmp(arg, "--help") == 0)
         {
@@ -48,7 +47,10 @@ int main(int argc, char* argv[])
             goto help;
         }
         else
+        {
+            command_index = i;
             break;
+        }
     }
 
     io_initialise();
@@ -141,7 +143,7 @@ int main(int argc, char* argv[])
             io_cleanup();
             return error;
         }
-        
+
         kpm_io.log(KPM_VERBOSITY_INFO, "Updated indexed packages.");
     }
     else if (strcmp(argv[command_index], "search") == 0)
@@ -175,7 +177,7 @@ int main(int argc, char* argv[])
             return error;
         }
 
-        kpm_io.log(KPM_VERBOSITY_INFO, "Found %i package(s) for %s:", package_count, query);
+        kpm_io.log(KPM_VERBOSITY_INFO, "Found %li package(s) for %s:", package_count, query);
         for (int i = 0; i < package_count; i++)
             kpm_io.log(KPM_VERBOSITY_INFO, "  - %s (%s): %s", packages[i].name, packages[i].id, packages[i].description);
 
