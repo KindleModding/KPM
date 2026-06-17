@@ -7,8 +7,12 @@
 
 int main()
 {
-    struct KPM kpm;
-    KPM_Initialise(&kpm, "./repo_test.db");
+    struct KPM kpm = {
+        .dbPath = "./repo_test.db",
+        .pkgPath = "/tmp/packages",
+        .maxConnections = 5
+    };
+    KPM_Initialise(&kpm);
     KPM_Cleanup(&kpm);
 
     // Check this db

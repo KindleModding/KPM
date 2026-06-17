@@ -127,6 +127,7 @@ struct InstallTarget
 struct KPM
 {
     sqlite3* db; /**< The sqlite db object */
+    char* dbPath; /**< The path to KPM's database */
     char* pkgPath; /**< The path to KPM packages */
     int maxConnections; /**< Maximum number of parallel connections to hold when downloading stuff */
 };
@@ -156,10 +157,9 @@ struct KPMIO
  * @brief Initialise the KPM object
  * 
  * @param kpm A pointer to an uninitialised KPM struct
- * @param dbPath The path to the KPM database file
  * @return enum KPMResult 
  */
-enum KPMResult KPM_Initialise(struct KPM *kpm, const char* dbPath);
+enum KPMResult KPM_Initialise(struct KPM *kpm);
 
 /**
  * @brief Cleanup a KPM object and free its resources

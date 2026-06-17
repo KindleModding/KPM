@@ -10,8 +10,13 @@
 #define CLI_VERSION_MINOR 0
 #define CLI_VERSION_PATCH 0
 
-#ifndef KPM_PLATFORM
+#ifndef KPM_PLATFORM // We assume an unknown platform is a PC testing build of the CLI
 #define KPM_PLATFORM "unknown"
+#define KPM_PKG_PATH "/tmp/packages/"
+#define KPM_DB_PATH "./repo_test.db"
+#else
+#define KPM_PKG_PATH "/mnt/us/kmc/kpm/packages"
+#define KPM_DB_PATH "/mnt/us/kmc/kpm/kpm.db"
 #endif
 
 struct CLIState cli_state = {
@@ -32,9 +37,10 @@ int main(int argc, char* argv[])
 
     struct KPM kpm = {
         .maxConnections = 5, // @TODO
-        .pkgPath = "/tmp/packages/"
+        .pkgPath = KPM_PKG_PATH,
+        .dbPath = KPM_DB_PATH
     };
-    KPM_Initialise(&kpm, "./repo_test.db");
+    KPM_Initialise(&kpm);
 
     int command_index = -1;
     for (int i=1; i < argc; i++)
@@ -178,8 +184,8 @@ int main(int argc, char* argv[])
         struct IndexedPackage* packages;
         if ((error = KPM_SearchPackages(&kpm, query, &package_count, &packages)) != KPM_OK)
         {
-            free(query);
             kpm_io.log(KPM_VERBOSITY_ERROR, "Could not search for '%s' (%i)", query, error);
+            free(query);
             goto cleanup;
         }
 

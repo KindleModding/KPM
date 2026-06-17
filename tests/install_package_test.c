@@ -16,11 +16,12 @@ void statusCallback(enum KPMVerbosity verbosity, const char* format, ...)
 int main()
 {
     struct KPM kpm = {
+        .dbPath = "./repo_test.db",
         .pkgPath = "/tmp/",
         .maxConnections = 5,
     };
 
-    KPM_Initialise(&kpm, "./repo_test.db");
+    KPM_Initialise(&kpm);
 
     //char curDir[2048];
     //getcwd(curDir, 2048);

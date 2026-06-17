@@ -3,9 +3,9 @@
 
 #include "kpm/kpm.h"
 
-enum KPMResult KPM_Initialise(struct KPM *kpm, const char* dbPath)
+enum KPMResult KPM_Initialise(struct KPM *kpm)
 {
-    sqlite3_open(dbPath, &kpm->db);
+    sqlite3_open(kpm->dbPath, &kpm->db);
     sqlite3_exec(kpm->db, "PRAGMA foreign_keys=ON;", NULL, NULL, NULL); // @TODO: Ensure this succeeds
 
     sqlite3_exec(kpm->db, R"(
