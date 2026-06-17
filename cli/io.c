@@ -31,22 +31,23 @@ FBInkConfig fbink_config = {
 
 void io_initialise()
 {
-    printf("Opening fbink\n");
-    io_state.framebuffer = fbink_open();
-    printf("initting fbink with %i\n", io_state.framebuffer);
-    fbink_init(io_state.framebuffer, &fbink_config);
+    if (cli_state.fbink)
+    {
+        io_state.framebuffer = fbink_open();
+        fbink_init(io_state.framebuffer, &fbink_config);
 
-    FBInkState fbink_initial_state = { };
-	fbink_get_state(&fbink_config, &fbink_initial_state);
-    fbink_config.fontmult = fbink_initial_state.fontsize_mult/1.5;
-    FBInkRect rect = {
-		.left = 0,
-		.top = 0,
-		.width = fbink_initial_state.screen_width,
-		.height = fbink_initial_state.screen_height
-	};
-    fbink_cls(io_state.framebuffer, &fbink_config, &rect, false);
-	fbink_refresh(io_state.framebuffer, 0, 0, fbink_initial_state.screen_width, fbink_initial_state.screen_height, &fbink_config);
+        FBInkState fbink_initial_state = { };
+        fbink_get_state(&fbink_config, &fbink_initial_state);
+        fbink_config.fontmult = fbink_initial_state.fontsize_mult/1.5;
+        FBInkRect rect = {
+            .left = 0,
+            .top = 0,
+            .width = fbink_initial_state.screen_width,
+            .height = fbink_initial_state.screen_height
+        };
+        fbink_cls(io_state.framebuffer, &fbink_config, &rect, false);
+        fbink_refresh(io_state.framebuffer, 0, 0, fbink_initial_state.screen_width, fbink_initial_state.screen_height, &fbink_config);
+    }
 }
 
 void io_cleanup()

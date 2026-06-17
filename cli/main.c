@@ -19,6 +19,13 @@ struct CLIState cli_state = {
     .confirm = true
 };
 
+void init_header()
+{
+    io_initialise();
+    kpm_io.log(KPM_VERBOSITY_INFO, "Kindle Package Manager v%i.%i.%i", KPM_VERSION_MAJOR, KPM_VERSION_MINOR, KPM_VERSION_PATCH);
+    kpm_io.log(KPM_VERBOSITY_INFO, "Created by Hackerdude (https://hackerdude.tech)\n");
+}
+
 int main(int argc, char* argv[])
 {
     int error = KPM_OK;
@@ -29,9 +36,7 @@ int main(int argc, char* argv[])
         char* arg = argv[i];
         if (strcmp(arg, "-h") == 0 || strcmp(arg, "--help") == 0)
         {
-            io_initialise();
-            kpm_io.log(KPM_VERBOSITY_INFO, "Kindle Package Manager v%i.%i.%i", KPM_VERSION_MAJOR, KPM_VERSION_MINOR, KPM_VERSION_PATCH);
-            kpm_io.log(KPM_VERBOSITY_INFO, "Created by Hackerdude (https://hackerdude.tech)\n");
+            init_header();
             goto help;
         }
         else if (strcmp(arg, "--fbink") == 0)
@@ -40,9 +45,7 @@ int main(int argc, char* argv[])
             cli_state.confirm = false;
         else if (strncmp(arg, "--", 2) == 0 || strncmp(arg, "-", 1) == 0)
         {
-            io_initialise();
-            kpm_io.log(KPM_VERBOSITY_INFO, "Kindle Package Manager v%i.%i.%i", KPM_VERSION_MAJOR, KPM_VERSION_MINOR, KPM_VERSION_PATCH);
-            kpm_io.log(KPM_VERBOSITY_INFO, "Created by Hackerdude (https://hackerdude.tech)\n");
+            init_header();
             kpm_io.log(KPM_VERBOSITY_INFO, "Could not parse argument [%s]\n\n", arg);
             goto help;
         }
@@ -53,9 +56,7 @@ int main(int argc, char* argv[])
         }
     }
 
-    io_initialise();
-    kpm_io.log(KPM_VERBOSITY_INFO, "Kindle Package Manager v%i.%i.%i", KPM_VERSION_MAJOR, KPM_VERSION_MINOR, KPM_VERSION_PATCH);
-    kpm_io.log(KPM_VERBOSITY_INFO, "Created by Hackerdude (https://hackerdude.tech)\n");
+    init_header();
     
     if (command_index == -1)
         goto err_no_command;
