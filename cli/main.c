@@ -229,7 +229,7 @@ update:\n\
 search:\n\
     Searches for a package given a query\n\
 install:\n\
-    Install one or more a packages\n\
+    Install one or more packages\n\
 uninstall:\n\
     Uninstall a package\n\
 ");
