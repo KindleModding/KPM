@@ -83,14 +83,20 @@ int main(int argc, char* argv[])
     if (command_index == -1)
         goto err_no_command;
 
-    if (strcmp(argv[command_index], "version") == 0)
+    if (strcmp(argv[command_index], "version") == 0 || strcmp(argv[command_index], "debug") == 0)
     {
         kpm_io.log(KPM_VERBOSITY_INFO, "cli v%i.%i.%i", CLI_VERSION_MAJOR, CLI_VERSION_MINOR, CLI_VERSION_PATCH);
         kpm_io.log(KPM_VERBOSITY_INFO, "libkpm v%i.%i.%i", KPM_VERSION_MAJOR, KPM_VERSION_MINOR, KPM_VERSION_PATCH);
         kpm_io.log(KPM_VERBOSITY_INFO, "built for platform: %s", KPM_PLATFORM);
 #ifndef NDEBUG
-        kpm_io.log(KPM_VERBOSITY_INFO, "DEBUG BUILD");
+        kpm_io.log(KPM_VERBOSITY_INFO, "built without NDEBUG");
 #endif
+
+        if (strcmp(argv[command_index], "debug") == 0) // Undocumented? Should we document this
+        {
+            kpm_io.log(KPM_VERBOSITY_INFO, "package path: %s", KPM_PKG_PATH);
+            kpm_io.log(KPM_VERBOSITY_INFO, "db path: %s", KPM_DB_PATH);
+        }
     }
     else if (strcmp(argv[command_index], "add-repo") == 0)
     {
@@ -309,9 +315,18 @@ upgrade:\n\
     }
 
 cleanup:
-    io_cleanup();
-    KPM_Cleanup(&kpm);
     if (cli_state.search_command)
+    {
+        kpm_io.log(KPM_VERBOSITY_INFO, "\nDone.");
+        io_cleanup();
         usleep(2000000);
+        system("xrefresh"); // Lets the Kindle UI return to the fb device
+    }
+    else
+    {
+        io_cleanup();
+    }
+    
+    KPM_Cleanup(&kpm);        
     return error;
 }
