@@ -36,7 +36,7 @@ enum KPMResult KPM_GetInstalledPackage(struct KPM* kpm, const char* packageId, s
     }
 
     sqlite3_stmt* statement;
-    const char* zSQL = "SELECT id, repository, name, author, description, version_major, version_minor, version_patch, installed_as_dependency FROM installed_packages WHERE AND id=? LIMIT 1;";
+    const char* zSQL = "SELECT id, repository, name, author, description, version_major, version_minor, version_patch, installed_as_dependency FROM installed_packages WHERE id=? LIMIT 1;";
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
     sqlite3_bind_text(statement, 1, packageId, -1, SQLITE_STATIC);
 
