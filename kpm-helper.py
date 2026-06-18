@@ -94,7 +94,7 @@ class Package:
         print("Packing...")
 
         packageFilename = f"./{manifest['id']}_{'.'.join(str(x) for x in manifest['version'])}_{'-'.join(manifest.get('supported_platforms', ['kindleany']))}.kpkg"
-        with tarfile.open(packageFilename, "w|xz") as file:
+        with tarfile.open(packageFilename, "w|xz", compresslevel=3) as file:
             for source_item_name in os.listdir(args.path):
                 print(f"- {source_item_name}")
                 file.add(os.path.join(args.path, source_item_name), arcname=source_item_name)
