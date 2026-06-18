@@ -97,9 +97,12 @@ enum KPMResult KPM_UninstallPackages(struct KPM* kpm, size_t packageCount, const
         if (sqlite3_step(statement) != SQLITE_DONE)
         {
             sqlite3_finalize(statement);
+            system("lipc-set-prop com.lab126.scanner doFullScan 1");
             return KPM_SQLITE_ERROR; // Failure with adding it to the database - @TODO: This could be bad, we may need better error handling
         }
         sqlite3_finalize(statement);
     }
+
+    system("lipc-set-prop com.lab126.scanner doFullScan 1");
     return KPM_OK;
 }

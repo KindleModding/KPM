@@ -474,7 +474,7 @@ bool Internal_InstallItem(struct KPM* kpm, char* repository, char* path, bool in
     }
 
     // Add installed item to the database
-    const char* zSQL = "INSERT INTO installed_packages (id, repository, name, author, description, version_major, version_minor, version_patch, installed_as_dependency) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);";
+    const char* zSQL = "INSERT OR REPLACE INTO installed_packages (id, repository, name, author, description, version_major, version_minor, version_patch, installed_as_dependency) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);";
     sqlite3_stmt* statement;
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
     sqlite3_bind_text(statement, 1, id, -1, SQLITE_STATIC);
@@ -883,7 +883,7 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
             struct DependencyNode dependency = graph.nodes[graph.nodes[deduplicatedPackages[i]].connected[j]];
             assert(dependency.type == NODE_DEPENDENCY);
 
-            const char* zSQL = "INSERT INTO current_dependencies (dependent, dependency_id, min_version_major, min_version_minor, min_version_patch, max_version_major, max_version_minor, max_version_patch) VALUES (?, ?, ?, ?, ?, ?, ?, ?);";
+            const char* zSQL = "INSERT OR REPLACE INTO current_dependencies (dependent, dependency_id, min_version_major, min_version_minor, min_version_patch, max_version_major, max_version_minor, max_version_patch) VALUES (?, ?, ?, ?, ?, ?, ?, ?);";
             sqlite3_stmt* statement;
             sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
             sqlite3_bind_text(statement, 1, graph.nodes[deduplicatedPackages[i]].id, -1, SQLITE_STATIC);
@@ -896,8 +896,10 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
             sqlite3_bind_int(statement, 8, dependency.max_version.patch);
             if (sqlite3_step(statement) != SQLITE_DONE)
             {
+                free(deduplicatedPackages);
                 sqlite3_finalize(statement);
                 FreeDependencyGraph(&graph);
+                system("lipc-set-prop com.lab126.scanner doFullScan 1");
                 return KPM_SQLITE_ERROR; // Failure with adding it to the database - @TODO: This could be bad, we may need better error handling
             }
         }
@@ -905,6 +907,6 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
 
     free(deduplicatedPackages);
     FreeDependencyGraph(&graph);
-
+    system("lipc-set-prop com.lab126.scanner doFullScan 1");
     return retval;
 }
