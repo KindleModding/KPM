@@ -293,6 +293,7 @@ int main(int argc, char* argv[])
         }
 
         char* launch_path = asprintf_hd("%s/%s/launch.sh", KPM_PKG_PATH, id);
+        kpm_io.log(KPM_VERBOSITY_DEBUG, "Checking for script at %s", launch_path);
         if (access(launch_path, R_OK) != 0)
         {
             kpm_io.log(KPM_VERBOSITY_ERROR, "Could not find package or launch script (checked %s)", launch_path);
@@ -302,7 +303,7 @@ int main(int argc, char* argv[])
         }
         free(launch_path);
 
-        char* launch_command = asprintf_hd("sh \"%s/%s/launch.sh\"", KPM_PKG_PATH, id);
+        char* launch_command = asprintf_hd("sh \"%s/%s/launch.sh\" \"%s/%s\"", KPM_PKG_PATH, id, KPM_PKG_PATH, id);
         system(launch_command);
         free(launch_command);
     }
