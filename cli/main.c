@@ -264,13 +264,15 @@ int main(int argc, char* argv[])
         if (installed_package_count == 0)
         {
             kpm_io.log(KPM_VERBOSITY_INFO, "No packages to upgrade.");
+            KPM_FreeInstalledPackageList(installed_package_count, installed_packages);
             goto cleanup;
         }
 
         if ((error = KPM_InstallPackages(&kpm, installed_package_count, targets, &kpm_io)) != KPM_OK)
             kpm_io.log(KPM_VERBOSITY_ERROR, "Failed to upgrade packages (%i)", error);
         else
-            kpm_io.log(KPM_VERBOSITY_INFO, "Upgraded %i package(s) succesfully.", argc - (command_index+1));
+            kpm_io.log(KPM_VERBOSITY_INFO, "Upgraded %i package(s) succesfully.", installed_package_count);
+        KPM_FreeInstalledPackageList(installed_package_count, installed_packages);
     }
     else if (strcmp(argv[command_index], "launch") == 0)
     {
