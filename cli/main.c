@@ -55,8 +55,11 @@ int main(int argc, char* argv[])
         }
         else if (strcmp(arg, "--fbink") == 0)
             cli_state.fbink = true;
-        else if (strcmp(arg, "--sc") == 0) // Undocumented, for internal use only
+        else if (strcmp(arg, "--sc") == 0) // Undocumented "search command", for internal use only
+        {
             cli_state.search_command = true;
+            cli_state.fbink = true;
+        }
         else if (strcmp(arg, "-y") == 0)
             cli_state.confirm = false;
         else if (strncmp(arg, "--", 2) == 0 || strncmp(arg, "-", 1) == 0)
