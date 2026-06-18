@@ -7,6 +7,7 @@
 
 #include "cli.h"
 #include "io.h"
+#include "internal_utils.h"
 
 #define CLI_VERSION_MAJOR 1
 #define CLI_VERSION_MINOR 0
@@ -36,6 +37,9 @@ void init_header()
 int main(int argc, char* argv[])
 {
     int error = KPM_OK;
+
+    if (access(KPM_PKG_PATH, R_OK) != 0)
+        mkdir_r(KPM_PKG_PATH, 0775);
 
     struct KPM kpm = {
         .maxConnections = 5, // @TODO
@@ -69,7 +73,7 @@ int main(int argc, char* argv[])
             break;
         }
     }
-    
+
     init_header();
     
     if (command_index == -1)
