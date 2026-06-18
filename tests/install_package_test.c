@@ -23,19 +23,7 @@ int main()
 
     KPM_Initialise(&kpm);
 
-    //char curDir[2048];
-    //getcwd(curDir, 2048);
-    //char* dir = dirname(curDir);
-
-    /*char* uri = malloc(strlen("file://") + strlen(dir) + strlen("/examples/examplerepo/packages/com.kindlemodding.examplepackage/artifacts/com.kindlemodding.examplepackage_1.2.3_kindlehf-kindlepw2.kpkg") + 1);
-    strcpy(uri, "file://");
-    strcpy(uri + strlen("file://"), dir);
-    strcpy(uri + strlen("file://") + strlen(dir), "/examples/examplerepo/packages/com.kindlemodding.examplepackage/artifacts/com.kindlemodding.examplepackage_1.2.3_kindlehf-kindlepw2.kpkg");
-    uri[strlen("file://") + strlen(dir) + strlen("/examples/examplerepo/packages/com.kindlemodding.examplepackage/artifacts/com.kindlemodding.examplepackage_1.2.3_kindlehf-kindlepw2.kpkg")] = '\0';
-
-    fprintf(stderr, "%s\n", uri);*/
-
-    char* id = "com.kindlemodding.examplepackage";
+    char* id = "examplepackage";
 
     struct InstallTarget target = {
         .id = id,

@@ -11,30 +11,23 @@ Note: You should not be managing a repository manually, instead use the `krm.py`
 ```
 - manifest.json
 - packages
-    - com.kindlemodding.example
+    - example
         - icon.png
         - artifacts
-            - com.kindlemodding.example_1.2.3_kindlepw2.kpkg
-            - com.kindlemodding.example_1.2.3_kindlehf.kpkg
-- screenshots
-    - com.kindlemodding.example
-        - screenshots.json
-        - 1.png
-        - 2.png
-        - 3.png
-        - 4.png
+            - example_1.2.3_kindlepw2.kpkg
+            - example_1.2.3_kindlehf.kpkg
 ```
 
 ### Repository `manifest.json`:  
 ```json
 {
     "manifest_version": 1,
-    "id": "com.kindlemodding.repo",
+    "id": "kindlemodding-official-repo",
     "name": "KindleModding Repository",
     "description": "The official KindleModding repository",
     "packages":
     {
-        "com.kindlemodding.example":
+        "example":
         {
             "name": "Example Package",
             "description": "KMC's example app is an example of all time",
@@ -42,13 +35,13 @@ Note: You should not be managing a repository manually, instead use the `krm.py`
             "artifacts":
             [
                 {
-                    "url": "packages/com.kindlemodding.example/kindlehf/package_v1.0.0.kpkg",
+                    "url": "packages/example/kindlehf/package_v1.0.0.kpkg",
                     "depencencies": [],
                     "version": [ 1, 0, 0 ],
                     "supported_platforms": [ "kindlehf" ],
                 },
                 {
-                    "url": "packages/com.kindlemodding.example/kindlepw2/package_v1.0.0.kpkg",
+                    "url": "packages/example/kindlepw2/package_v1.0.0.kpkg",
                     "depencencies": [],
                     "version": [ 1, 0, 0 ],
                     "supported_platforms": [ "kindlepw2" ]

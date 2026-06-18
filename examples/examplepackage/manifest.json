@@ -1,6 +1,6 @@
 {
     "manifest_version": 1,
-    "id": "com.kindlemodding.examplepackage",
+    "id": "examplepackage",
     "name": "Example Package",
     "author": "Hackerdude",
     "description": "This is a test package",

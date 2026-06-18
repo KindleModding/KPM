@@ -4,13 +4,13 @@
   "name": "Kindlemodding Example Repository",
   "description": "An example repository to demonstrate the manifest format",
   "packages": {
-    "com.kindlemodding.examplepackage": {
+    "examplepackage": {
       "name": "Example Package",
       "author": "Hackerdude",
       "description": "This is a test package",
       "artifacts": [
         {
-          "url": "packages/com.kindlemodding.examplepackage/artifacts/com.kindlemodding.examplepackage_1.2.3_kindlehf-kindlepw2.kpkg",
+          "url": "packages/examplepackage/artifacts/examplepackage_1.2.3_kindlehf-kindlepw2.kpkg",
           "version": [ 1, 2, 3 ],
           "dependencies": [
             {

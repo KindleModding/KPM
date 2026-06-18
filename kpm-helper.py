@@ -32,23 +32,13 @@ class Package:
 
         while True:
             manifest["id"] = input("Enter package id: ")
-            if (' ' in manifest["id"]):
-                print("Manifest id must not contain spaces")
-                continue
-            if (not '.' in manifest["id"]):
-                print("Manifest id must be in reverse-domain format")
-                print("ie: com.example.repository")
-                continue
-            if ("kindlemodding" in manifest["id"]):
-                print("[WARN] Do not use this namespace for your own repositories")
-
-            bad = False
+            invalid = False
             for c in manifest['id']:
-                if (c.isupper()):
-                    print("Manifest id must be lower-case")
-                    bad = True
+                if (c.isupper() or (c != '_' and c != '-' and not c.isalpha())):
+                    print("Package id must only contain lower-case alphanumeric characters or '_'")
+                    invalid = True
                     break
-            if (bad):
+            if (invalid):
                 continue
             break
 
@@ -111,24 +101,17 @@ class Repo:
         }
 
         while True:
-            manifest["id"] = input("Enter repo id: ")
-            if (' ' in manifest["id"]):
-                print("Manifest id must not contain spaces")
-                exit(1)
-            if (not '.' in manifest["id"]):
-                print("Manifest id must be in reverse-domain format")
-                print("ie: com.example.repository")
-                exit(1)
+            manifest["id"] = input("Enter repository id: ")
             if ("kindlemodding" in manifest["id"]):
-                print("[WARN] Do not use this namespace for your own repositories")
+                print("[WARN] Do not use the term 'kindlemodding' for your own repositories")
 
-            bad = False
+            invalid = False
             for c in manifest['id']:
-                if (c.isupper()):
-                    print("Manifest id must be lower-case")
-                    bad = True
+                if (c.isupper() or (c != '_' and c != '-' and not c.isalpha())):
+                    print("Repository id must only contain lower-case alphanumeric characters or '_'")
+                    invalid = True
                     break
-            if (bad):
+            if (invalid):
                 continue
             break
 
