@@ -55,11 +55,6 @@ int main(int argc, char* argv[])
         }
         else if (strcmp(arg, "--fbink") == 0)
             cli_state.fbink = true;
-        else if (strcmp(arg, "--sc") == 0) // Undocumented "search command", for internal use only
-        {
-            cli_state.search_command = true;
-            cli_state.fbink = true;
-        }
         else if (strcmp(arg, "-y") == 0)
             cli_state.confirm = false;
         else if (strncmp(arg, "--", 2) == 0 || strncmp(arg, "-", 1) == 0)
@@ -74,10 +69,7 @@ int main(int argc, char* argv[])
             break;
         }
     }
-
-    if (cli_state.search_command)
-        usleep(500000);
-
+    
     init_header();
     
     if (command_index == -1)
@@ -315,18 +307,8 @@ upgrade:\n\
     }
 
 cleanup:
-    if (cli_state.search_command)
-    {
-        kpm_io.log(KPM_VERBOSITY_INFO, "\nDone.");
-        io_cleanup();
-        usleep(2000000);
-        system("xrefresh"); // Lets the Kindle UI return to the fb device
-    }
-    else
-    {
-        io_cleanup();
-    }
-    
+    io_cleanup();
+
     KPM_Cleanup(&kpm);        
     return error;
 }
