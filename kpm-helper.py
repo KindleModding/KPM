@@ -34,7 +34,7 @@ class Package:
             manifest["id"] = input("Enter package id: ")
             invalid = False
             for c in manifest['id']:
-                if (c.isupper() or (c != '_' and c != '-' and not c.isalpha())):
+                if (c.isupper() or (c != '_' and c != '-' and not c.isalnum())):
                     print("Package id must only contain lower-case alphanumeric characters or '_'")
                     invalid = True
                     break
@@ -107,7 +107,7 @@ class Repo:
 
             invalid = False
             for c in manifest['id']:
-                if (c.isupper() or (c != '_' and c != '-' and not c.isalpha())):
+                if (c.isupper() or (c != '_' and c != '-' and not c.isalnum())):
                     print("Repository id must only contain lower-case alphanumeric characters or '_'")
                     invalid = True
                     break
