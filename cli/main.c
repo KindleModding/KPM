@@ -201,7 +201,7 @@ int main(int argc, char* argv[])
 
         kpm_io.log(KPM_VERBOSITY_INFO, "Found %li package(s) for %s:", package_count, query);
         for (int i = 0; i < package_count; i++)
-            kpm_io.log(KPM_VERBOSITY_INFO, "  - %s (%s): %s", packages[i].name, packages[i].id, packages[i].description);
+            kpm_io.log(KPM_VERBOSITY_INFO, "  - %s (%s): %s", packages[i].id, packages[i].name, packages[i].description);
 
         KPM_FreeIndexedPackageList(package_count, packages);
         if (package_count == 0)
