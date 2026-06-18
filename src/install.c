@@ -312,7 +312,7 @@ enum KPMResult Internal_DownloadGraphItems(struct KPM* kpm, struct DependencyGra
         mkdir_r(path, 0775);
         sprintf(path, "%s/tmp/%s", kpm->pkgPath, filename);
         kpmIO->log(KPM_VERBOSITY_DEBUG, "Downloading to %s", path);
-        int fd = open(path, O_CREAT|O_SYNC|O_TRUNC|O_WRONLY);
+        int fd = open(path, O_CREAT|O_SYNC|O_TRUNC|O_WRONLY, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
         free(path);
         if (fd == -1)
         {
@@ -428,6 +428,7 @@ bool Internal_InstallItem(struct KPM* kpm, char* repository, char* path, bool in
     char* outPath = asprintf_hd("%s/%s/", kpm->pkgPath, id);
 
     // First unpack the .kpkg file
+    kpmIO->log(KPM_VERBOSITY_INFO, "Extracting archive");
     Internal_ExtractArchive(path, outPath, kpmIO);
 
     char* installScriptPath = asprintf_hd( "%sinstall.sh", outPath);
@@ -439,9 +440,10 @@ bool Internal_InstallItem(struct KPM* kpm, char* repository, char* path, bool in
         kpmIO->log(KPM_VERBOSITY_DEBUG, "Running install script for [%s]", id);
         // Run install script
         int result = -1;
-        char* installCommand = asprintf_hd("sh %s", installScriptPath);
+        char* installCommand = asprintf_hd("sh %s 2>&1", installScriptPath);
         chdir(outPath);
         free(installScriptPath);
+        kpmIO->log(KPM_VERBOSITY_INFO, "Running install hooks for %s", id);
         FILE* stream = popen(installCommand, "r");
         free(installCommand);
         if (stream != NULL)
@@ -449,7 +451,7 @@ bool Internal_InstallItem(struct KPM* kpm, char* repository, char* path, bool in
             int c;
             while ((c = fgetc(stream)) != EOF)
             {
-                kpmIO->stream(fgetc(stream));
+                kpmIO->stream((char) c);
             }
             result = pclose(stream);
         }
@@ -847,6 +849,7 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
         return result;
     }
 
+    bool retval = KPM_OK;
     for (size_t i=0; i < deduplicatedPackageCount; i++) // 1 to skip the dummy root
     {
         struct IndexedArtifact artifact;
@@ -861,13 +864,14 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
 
         char* path = asprintf_hd("%s/tmp/%s", kpm->pkgPath, filename);
 
+        kpmIO->log(KPM_VERBOSITY_INFO, "Installing %s (%u.%u.%u)", artifact.id, artifact.version.major, artifact.version.minor, artifact.version.patch);
         if (!Internal_InstallItem(kpm, graph.nodes[deduplicatedPackages[i]].repository, path, i != deduplicatedPackageCount-1, kpmIO)) // The last package installed is our target hence the value of installed_as_dependency
         {
             kpmIO->log(KPM_VERBOSITY_ERROR, "Could not install %s", artifact.id);
             KPM_FreeIndexedArtifact(&artifact);
-            FreeDependencyGraph(&graph);
             free(path);
-            return KPM_GENERIC_ERROR; // @TODO: Implement atomic installation old package if upgrading
+            retval = KPM_GENERIC_ERROR;
+            continue;
         }
 
         KPM_FreeIndexedArtifact(&artifact);
@@ -902,5 +906,5 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
     free(deduplicatedPackages);
     FreeDependencyGraph(&graph);
 
-    return KPM_OK;
+    return retval;
 }

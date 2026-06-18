@@ -57,10 +57,11 @@ enum KPMResult KPM_UninstallPackages(struct KPM* kpm, size_t packageCount, const
             kpmIO->log(KPM_VERBOSITY_DEBUG, "Running uninstall script for [%s]", packageIds[i]);
             // Run uninstall script
             int result = -1;
-            char* uninstallCommand = asprintf_hd("sh %s", uninstallScriptPath);
+            char* uninstallCommand = asprintf_hd("sh %s 2>&1", uninstallScriptPath);
             chdir(outPath);
             free(outPath);
             free(uninstallScriptPath);
+            kpmIO->log(KPM_VERBOSITY_INFO, "Running uninstall hooks for %s", packageIds[i]);
             FILE* stream = popen(uninstallCommand, "r");
             free(uninstallCommand);
             if (stream != NULL)
@@ -68,7 +69,7 @@ enum KPMResult KPM_UninstallPackages(struct KPM* kpm, size_t packageCount, const
                 int c;
                 while ((c = fgetc(stream)) != EOF)
                 {
-                    kpmIO->stream(fgetc(stream));
+                    kpmIO->stream((char) c);
                 }
                 result = pclose(stream);
             }
