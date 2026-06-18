@@ -212,9 +212,10 @@ enum KPMResult KPM_GetRepository(struct KPM *kpm, const char *repositoryId, stru
  * @param kpm The KPM object
  * @param url The URL to the repository manifest file
  * @param repository A pointer to return the indexed repository object (or NULL)
+ * @param kpm_io A KPM IO object
  * @return enum KPMResult 
  */
-enum KPMResult KPM_AddRepository(struct KPM *kpm, const char *url, struct Repository* repository);
+enum KPMResult KPM_AddRepository(struct KPM *kpm, const char *url, struct Repository* repository, struct KPMIO* kpm_io);
 
 /**
  * @brief Remove an indexed repository by its Id

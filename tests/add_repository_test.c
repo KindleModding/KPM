@@ -6,6 +6,15 @@
 #include <unistd.h>
 #include <libgen.h>
 
+void statusCallback(enum KPMVerbosity verbosity, const char* format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    vfprintf(stderr, format, args);
+    fprintf(stderr, "\n");
+    va_end(args);
+}
+
 int main()
 {
     struct KPM kpm = {
@@ -35,7 +44,13 @@ int main()
     
     fprintf(stderr, "URI: %s\n", uri);
     struct Repository repo;
-    assert(KPM_AddRepository(&kpm, uri, &repo) == KPM_OK);
+
+    struct KPMIO kpmIO = 
+    {
+        .log = statusCallback
+
+    };
+    assert(KPM_AddRepository(&kpm, uri, &repo, &kpmIO) == KPM_OK);
 
     fprintf(stderr, "Testing repository list is not empty\n");
     KPM_ListRepositories(&kpm, &repositoryCount, NULL);

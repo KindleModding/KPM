@@ -102,7 +102,7 @@ enum KPMResult KPM_GetRepository(struct KPM *kpm, const char *repositoryId, stru
     return KPM_OK;
 }
 
-enum KPMResult KPM_AddRepository(struct KPM *kpm, const char *url, struct Repository* repository)
+enum KPMResult KPM_AddRepository(struct KPM *kpm, const char *url, struct Repository* repository, struct KPMIO* kpm_io)
 {
     struct SimpleGETRequest request;
     SimpleGET_Initialise(&request, url);
@@ -117,8 +117,8 @@ enum KPMResult KPM_AddRepository(struct KPM *kpm, const char *url, struct Reposi
     }
 
 
+    kpm_io->log(KPM_VERBOSITY_DEBUG, "Got JSON:\n%s", request.buffer);
     cJSON* json = cJSON_Parse(request.buffer);
-    
 
     if (
         !cJSON_IsString(cJSON_GetObjectItem(json, "id")) ||
@@ -132,6 +132,11 @@ enum KPMResult KPM_AddRepository(struct KPM *kpm, const char *url, struct Reposi
         return KPM_INVALID_RESPONSE_CONTENT;
     }
 
+    kpm_io->log(KPM_VERBOSITY_DEBUG, "ID: %s", cJSON_GetStringValue(cJSON_GetObjectItem(json, "id")));
+    kpm_io->log(KPM_VERBOSITY_DEBUG, "URL: %s", url);
+    kpm_io->log(KPM_VERBOSITY_DEBUG, "NAME: %s", cJSON_GetStringValue(cJSON_GetObjectItem(json, "name")));
+    kpm_io->log(KPM_VERBOSITY_DEBUG, "DESC: %s", cJSON_GetStringValue(cJSON_GetObjectItem(json, "description")));
+
     sqlite3_exec(kpm->db, "BEGIN", NULL, NULL, NULL);
     const char* zSQL = "INSERT INTO repositories (id, url, name, description) VALUES (?, ?, ?, ?);";
     sqlite3_stmt* statement;
@@ -141,8 +146,10 @@ enum KPMResult KPM_AddRepository(struct KPM *kpm, const char *url, struct Reposi
     sqlite3_bind_text(statement, 3, cJSON_GetStringValue(cJSON_GetObjectItem(json, "name")), -1, SQLITE_STATIC);
     sqlite3_bind_text(statement, 4, cJSON_GetStringValue(cJSON_GetObjectItem(json, "description")), -1, SQLITE_STATIC);
 
-    if (sqlite3_step(statement) != SQLITE_DONE)
+    int e = 0;
+    if ((e = sqlite3_step(statement)) != SQLITE_DONE)
     {
+        kpm_io->log(KPM_VERBOSITY_ERROR, "SQLite error: %i", e);
         sqlite3_finalize(statement);
         cJSON_Delete(json);
         SimpleGET_Cleanup(&request);

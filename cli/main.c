@@ -15,11 +15,6 @@
 
 #ifndef KPM_PLATFORM // We assume an unknown platform is a PC testing build of the CLI
 #define KPM_PLATFORM "unknown"
-#define KPM_PKG_PATH "/tmp/packages/"
-#define KPM_DB_PATH "./repo_test.db"
-#else
-#define KPM_PKG_PATH "/mnt/us/kmc/kpm/packages"
-#define KPM_DB_PATH "/mnt/us/kmc/kpm/kpm.db"
 #endif
 
 struct CLIState cli_state = {
@@ -107,11 +102,14 @@ int main(int argc, char* argv[])
         struct Repository repository;
         for (int i = command_index+1; i < argc; i++)
         {
-            if ((error = KPM_AddRepository(&kpm, argv[i], &repository)) != KPM_OK)
+            if ((error = KPM_AddRepository(&kpm, argv[i], &repository, &kpm_io)) != KPM_OK)
                 kpm_io.log(KPM_VERBOSITY_ERROR, "Could not add repository '%s' (%i)", argv[i], error);
             else
+            {
                 kpm_io.log(KPM_VERBOSITY_INFO, "Added repository '%s'", repository.id);
-            KPM_FreeRepository(&repository);
+                KPM_FreeRepository(&repository);
+            }
+            
         }
 
         if (error == KPM_OK)
@@ -230,7 +228,7 @@ int main(int argc, char* argv[])
 
         if ((error = KPM_InstallPackages(&kpm, argc - (command_index+1), targets, &kpm_io)) != KPM_OK)
         {
-            kpm_io.log(KPM_VERBOSITY_ERROR, "Failed to install packages (%i)", error);
+            kpm_io.log(KPM_VERBOSITY_ERROR, "Failed to install all packages (%i)", error);
         }
         else
         {
@@ -348,7 +346,6 @@ launch:\n\
 
 cleanup:
     io_cleanup();
-
-    KPM_Cleanup(&kpm);        
+    KPM_Cleanup(&kpm);
     return error;
 }

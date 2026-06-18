@@ -1,2 +1,4 @@
 option('cli', description: 'Build the kpm CLI', type: 'feature', value: 'enabled')
 option('kindle_platform', description: 'Override the Kindle platform', type: 'string', value: '')
+option('db_path', description: 'Override the db path', type: 'string', value: '/mnt/us/kmc/kpm/kpm.db')
+option('pkg_path', description: 'Override package path', type: 'string', value: '/mnt/us/kmc/kpm/packages')
