@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
+#include <unistd.h>
 
 #include "cli.h"
 #include "io.h"
@@ -53,6 +55,8 @@ int main(int argc, char* argv[])
         }
         else if (strcmp(arg, "--fbink") == 0)
             cli_state.fbink = true;
+        else if (strcmp(arg, "--sc") == 0) // Undocumented, for internal use only
+            cli_state.search_command = true;
         else if (strcmp(arg, "-y") == 0)
             cli_state.confirm = false;
         else if (strncmp(arg, "--", 2) == 0 || strncmp(arg, "-", 1) == 0)
@@ -67,6 +71,9 @@ int main(int argc, char* argv[])
             break;
         }
     }
+
+    if (cli_state.search_command)
+        usleep(500000);
 
     init_header();
     
@@ -301,5 +308,7 @@ upgrade:\n\
 cleanup:
     io_cleanup();
     KPM_Cleanup(&kpm);
+    if (cli_state.search_command)
+        usleep(2000000);
     return error;
 }
