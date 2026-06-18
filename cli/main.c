@@ -280,7 +280,7 @@ int main(int argc, char* argv[])
         {
             kpm_io.log(KPM_VERBOSITY_ERROR, "Expected 1 argument, received %i", argc - (command_index+1));
             error = KPM_GENERIC_ERROR;
-            goto cleanup;
+            goto help;
         }
 
         char* id = argv[command_index+1];
