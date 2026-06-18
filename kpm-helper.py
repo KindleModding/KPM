@@ -94,7 +94,7 @@ class Package:
         print("Packing...")
 
         packageFilename = f"./{manifest['id']}_{'.'.join(str(x) for x in manifest['version'])}_{'-'.join(manifest.get('supported_platforms', ['kindleany']))}.kpkg"
-        with tarfile.open(packageFilename, "w|xz", compresslevel=3) as file:
+        with tarfile.open(packageFilename, "w|xz", preset=args.compression) as file:
             for source_item_name in os.listdir(args.path):
                 print(f"- {source_item_name}")
                 file.add(os.path.join(args.path, source_item_name), arcname=source_item_name)
@@ -257,6 +257,7 @@ package_init_parser.set_defaults(func=Package.init)
 # pack
 package_pack_parser = pack_subparsers.add_parser("pack", help="Pack a package folder into a kpkg file")
 package_pack_parser.add_argument("path", help="The path to the package folder", type=pathlib.Path)
+package_pack_parser.add_argument("--compression", help="The compression level (0-9)", type=int, default=3)
 package_pack_parser.set_defaults(func=Package.pack)
 
 ###
