@@ -274,6 +274,40 @@ int main(int argc, char* argv[])
         else
             kpm_io.log(KPM_VERBOSITY_INFO, "Upgraded %i package(s) succesfully.", argc - (command_index+1));
     }
+    else if (strcmp(argv[command_index], "launch") == 0)
+    {
+        if (argc - (command_index+1) != 1)
+        {
+            kpm_io.log(KPM_VERBOSITY_ERROR, "Expected 1 argument, received %i", argc - (command_index+1));
+            error = KPM_GENERIC_ERROR;
+            goto cleanup;
+        }
+
+        char* id = argv[command_index+1];
+        for (int i=0; i < strlen(id); i++)
+        {
+            if (id[i] == '"' || id[i] == '\'')
+            {
+                kpm_io.log(KPM_VERBOSITY_ERROR, "Invalid package ID: [%s]", id);
+                error = KPM_GENERIC_ERROR;
+                goto cleanup;
+            }
+        }
+
+        char* launch_path = asprintf_hd("%s/%s/launch.sh", KPM_PKG_PATH, id);
+        if (access(launch_path, R_OK) != 0)
+        {
+            kpm_io.log(KPM_VERBOSITY_ERROR, "Could not find package or launch script (checked %s)", launch_path);
+            free(launch_path);
+            error = KPM_GENERIC_ERROR;
+            goto cleanup;
+        }
+        free(launch_path);
+
+        char* launch_command = asprintf_hd("sh \"%s/%s/launch.sh\"", KPM_PKG_PATH, id);
+        system(launch_command);
+        free(launch_command);
+    }
     else
     {
         kpm_io.log(KPM_VERBOSITY_INFO, "Unknown command \"%s\" specified.\n", argv[command_index]);
@@ -282,7 +316,7 @@ err_no_command:
         kpm_io.log(KPM_VERBOSITY_INFO, "No command specified.\n");
         goto help;
 help:
-kpm_io.log(KPM_VERBOSITY_INFO, "usage: kpm [--help, -h] [--fbink] [-y] {version | add-repo | remove-repo | list-repo | update | search | install | uninstall | upgrade} ... \n\
+kpm_io.log(KPM_VERBOSITY_INFO, "usage: kpm [--help, -h] [--fbink] [-y] {version | add-repo | remove-repo | list-repo | update | search | install | uninstall | upgrade | launch} ... \n\
     --help, -h\tShow this help\n\
     --fbink\tLog to fbink\n\
     -y\tDo not ask for user confirmation\n\
@@ -305,6 +339,8 @@ uninstall:\n\
     Uninstall one or more packages\n\
 upgrade:\n\
     Upgrade all installed packages\n\
+launch:\n\
+    Launch a package given its id by running its launch.sh\n\
 ");
 
         goto cleanup;
