@@ -34,20 +34,30 @@ class Package:
             manifest["id"] = input("Enter package id: ")
             if (' ' in manifest["id"]):
                 print("Manifest id must not contain spaces")
-                exit(1)
+                continue
             if (not '.' in manifest["id"]):
                 print("Manifest id must be in reverse-domain format")
                 print("ie: com.example.repository")
-                exit(1)
+                continue
             if ("kindlemodding" in manifest["id"]):
                 print("[WARN] Do not use this namespace for your own repositories")
+
+            bad = False
+            for c in manifest['id']:
+                if (c.isupper()):
+                    print("Manifest id must be lower-case")
+                    bad = True
+                    break
+            if (bad):
+                continue
             break
 
         manifest["name"] = input("Enter package display name: ")
+        manifest["author"] = input("Enter package author: ")
         manifest["description"] = input("Enter package description: ")
         
         while True:
-            version_str = input("Enter package version")
+            version_str = input("Enter package version: ")
             manifest["version"] = []
             for version_component in version_str.split('.'):
                 try:
@@ -101,7 +111,7 @@ class Repo:
         }
 
         while True:
-            manifest["id"] = input("Enter package id: ")
+            manifest["id"] = input("Enter repo id: ")
             if (' ' in manifest["id"]):
                 print("Manifest id must not contain spaces")
                 exit(1)
@@ -111,6 +121,15 @@ class Repo:
                 exit(1)
             if ("kindlemodding" in manifest["id"]):
                 print("[WARN] Do not use this namespace for your own repositories")
+
+            bad = False
+            for c in manifest['id']:
+                if (c.isupper()):
+                    print("Manifest id must be lower-case")
+                    bad = True
+                    break
+            if (bad):
+                continue
             break
 
         manifest["name"] = input("Enter repository display name: ")
@@ -129,8 +148,12 @@ class Repo:
         args.package_path: str
 
         repositoryManifest = None
-        with open(args.repo_path, 'r') as file:
-            repositoryManifest = json.loads(file.read())
+        try:
+            with open(args.repo_path, 'r') as file:
+                repositoryManifest = json.loads(file.read())
+        except:
+            with open(os.path.join(args.repo_path, "manifest.json"), 'r') as file:
+                repositoryManifest = json.loads(file.read())
 
         print(f"Adding package {args.package_path} to the repository...")
         print("Reading manifest")
@@ -245,13 +268,13 @@ repo_subparsers = repo_parser.add_subparsers(title="subcommand", required=True)
 # init
 repo_init_parser = repo_subparsers.add_parser("init", help="Initialise a repository folder by creating a manifest file (interactive)")
 repo_init_parser.add_argument("path", help="The path to the repository folder", type=pathlib.Path)
-package_pack_parser.set_defaults(func=Repo.init)
+repo_init_parser.set_defaults(func=Repo.init)
 
 # add
 repo_add_parser = repo_subparsers.add_parser("add", help="Add an artifact to the repository")
 repo_add_parser.add_argument("repo_path", help="The path to the repository folder", type=pathlib.Path)
 repo_add_parser.add_argument("package_path", help="The path to the package file", type=pathlib.Path)
-package_pack_parser.set_defaults(func=Repo.add)
+repo_add_parser.set_defaults(func=Repo.add)
 
 args = parser.parse_args()
 args.func(args)
