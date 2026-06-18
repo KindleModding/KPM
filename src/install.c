@@ -262,8 +262,8 @@ void Internal_TraverseInstalledNode(struct DependencyGraph* graph, NodeIndex_t n
             // Check if this node is installed
             for (size_t k=0; k < installedCount; k++)
             {
-                if (strcmp(candidateArtifact.id, installed[k].id) &&
-                    ((strlen(installed[k].repository) == 0 && strlen(candidateArtifact.repository) == 0) || strcmp(candidateArtifact.repository, installed[k].repository)) &&
+                if (strcmp(candidateArtifact.id, installed[k].id) == 0 &&
+                    ((strlen(installed[k].repository) == 0 && strlen(candidateArtifact.repository) == 0) || strcmp(candidateArtifact.repository, installed[k].repository) == 0) &&
                     SemVerCmp(candidateArtifact.min_version, installed[k].version) == 0)
                     {
                         // Found the node to traverse next
@@ -795,10 +795,10 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
         bool installed = false; // Already installed
         for (size_t j=0; j < installedPackageCount; j++)
         {
-            if (strcmp(graph.nodes[deduplicatedPackages[i]].id, installedPackages[j].id))
+            if (strcmp(graph.nodes[deduplicatedPackages[i]].id, installedPackages[j].id) == 0)
             {
                 installed = true;
-                if (SemVerCmp(graph.nodes[deduplicatedPackages[i]].min_version, installedPackages[j].version) < 0)
+                if (SemVerCmp(graph.nodes[deduplicatedPackages[i]].min_version, installedPackages[j].version) <= 0)
                     Internal_ArrayAddNode(&upgradeCount, &upgrade, deduplicatedPackages[i]);
                 else if (SemVerCmp(graph.nodes[deduplicatedPackages[i]].min_version, installedPackages[j].version) > 0)
                     Internal_ArrayAddNode(&downgradeCount, &downgrade, deduplicatedPackages[i]);
@@ -811,7 +811,7 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
     }
 
     // @TODO: Ensure downgrades are checked
-    kpmIO->log(KPM_VERBOSITY_INFO, "Preparing to downgrade %zu packages", upgradeCount);
+    kpmIO->log(KPM_VERBOSITY_INFO, "Preparing to downgrade %zu packages", downgradeCount);
     for (size_t i=0; i < downgradeCount; i++)
     {
         kpmIO->log(KPM_VERBOSITY_INFO, "- %s (%u.%u.%u)", graph.nodes[downgrade[i]].id, graph.nodes[downgrade[i]].min_version.major, graph.nodes[downgrade[i]].min_version.minor, graph.nodes[downgrade[i]].min_version.patch);
