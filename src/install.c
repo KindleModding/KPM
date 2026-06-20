@@ -291,7 +291,9 @@ size_t Internal_DownloadWriteCallback(char* ptr, size_t size, size_t nmemb, void
     if (downloadData->total_size != 0)
     {
         int calculated_progress = 100 * (float) (downloadData->downloaded)/((float) downloadData->total_size);
-        if (calculated_progress >= downloadData->reported_progress+10  || downloadData->downloaded == downloadData->total_size)
+        if ((downloadData->downloaded + size * nmemb) == downloadData->total_size)
+            calculated_progress = 100;
+        if (calculated_progress >= downloadData->reported_progress+10  || (downloadData->downloaded + size * nmemb) == downloadData->total_size)
         {
             downloadData->reported_progress = (calculated_progress/10)*10;
             downloadData->kpm_io->log(KPM_VERBOSITY_INFO, "%i%% (%iMB/%iMB)", calculated_progress, (downloadData->downloaded + size*nmemb)/1000000, downloadData->total_size/1000000);
