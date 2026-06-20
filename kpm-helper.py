@@ -60,6 +60,9 @@ class Package:
                 continue
             break
 
+        if (hasattr(args, 'supported_platform')):
+            manifest["supported_platforms"] = args.supported_platform
+
         manifest_path = os.path.join(args.path, "manifest.json")
         with open(manifest_path, 'w') as file:
             file.write(json.dumps(manifest, indent=2))
@@ -68,14 +71,15 @@ class Package:
         print(json.dumps(manifest, indent=2))
 
     def pack(args):
-        args.path: str
+        args.output_path: str
+        args.pkg_path: str
 
-        if (not os.path.exists(os.path.join(args.path, "manifest.json"))):
+        if (not os.path.exists(os.path.join(args.pkg_path, "manifest.json"))):
             print("[ERR] manifest.json file not found")
             exit(1)
 
         manifest = None
-        with open(os.path.join(args.path, "manifest.json"), 'r') as file:
+        with open(os.path.join(args.pkg_path, "manifest.json"), 'r') as file:
             manifest = json.loads(file.read())
 
         print(f"ID: {manifest['id']}")
@@ -83,11 +87,20 @@ class Package:
         print(f"Author: {manifest['author']}")
         print("Packing...")
 
-        packageFilename = f"./{manifest['id']}_{'.'.join(str(x) for x in manifest['version'])}_{'-'.join(manifest.get('supported_platforms', ['kindleany']))}.kpkg"
+        og_manifest = manifest.copy()
+        if (hasattr(args, 'supported_platform')):
+            manifest["supported_platforms"] = args.supported_platform
+        with open(os.path.join(args.pkg_path, "manifest.json"), 'w') as file:
+            manifest.write(json.dumps(manifest))
+
+        packageFilename = os.path.join(args.output_path, f"{manifest['id']}_{'.'.join(str(x) for x in manifest['version'])}_{'-'.join(manifest.get('supported_platforms', ['kindleany']))}.kpkg")
         with tarfile.open(packageFilename, "w|xz", preset=args.compression) as file:
-            for source_item_name in os.listdir(args.path):
+            for source_item_name in os.listdir(args.pkg_path):
                 print(f"- {source_item_name}")
-                file.add(os.path.join(args.path, source_item_name), arcname=source_item_name)
+                file.add(os.path.join(args.pkg_path, source_item_name), arcname=source_item_name)
+
+        with open(os.path.join(args.pkg_path, "manifest.json"), 'w') as file:
+            manifest.write(json.dumps(og_manifest))
 
         print("Done!")
         print(f"Saved as {packageFilename}")
@@ -235,12 +248,15 @@ pack_subparsers = package_parser.add_subparsers(title="subcommand", required=Tru
 # init
 package_init_parser = pack_subparsers.add_parser("init", help="Initialise a package folder by creating a manifest file (interactive)")
 package_init_parser.add_argument("path", help="The path to the package folder", type=pathlib.Path)
+package_init_parser.add_argument("--supported_platform", help="Add a supported platform to the manifest", action='append', default=[], choices=valid_supported_platforms)
 package_init_parser.set_defaults(func=Package.init)
 
 # pack
 package_pack_parser = pack_subparsers.add_parser("pack", help="Pack a package folder into a kpkg file")
-package_pack_parser.add_argument("path", help="The path to the package folder", type=pathlib.Path)
-package_pack_parser.add_argument("--compression", help="The compression level (0-9)", type=int, default=3)
+package_pack_parser.add_argument("pkg_path", help="The path to the package folder", type=pathlib.Path)
+package_pack_parser.add_argument("output_path", help="The folder to put the kpkg file in", type=pathlib.Path)
+package_pack_parser.add_argument("--compression", help="The compression level (0-9) (defaults to 3)", type=int, default=3)
+package_pack_parser.add_argument("--supported_platform", help="Add a supported platform to the manifest", action='append', default=[], choices=valid_supported_platforms)
 package_pack_parser.set_defaults(func=Package.pack)
 
 ###
