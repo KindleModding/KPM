@@ -81,22 +81,24 @@ class Package:
 
         manifest = None
         with open(os.path.join(args.pkg_path, "manifest.json"), 'r') as file:
+            og_manifest = file.read()
+            file.seek(0)
             manifest = json.loads(file.read())
 
         if (manifest["manifest_version"] != KPM_MANIFEST_VERSION):
             print(f"[ERR] Expected manifest version {KPM_MANIFEST_VERSION}, got {manifest['manifest_version']}")
             exit(1)
 
+        if (hasattr(args, 'supported_platform') and len(args.supported_platform) > 0):
+            manifest["supported_platforms"] = args.supported_platform
+            with open(os.path.join(args.pkg_path, "manifest.json"), 'w') as file:
+                file.write(json.dumps(manifest))
+
         print(f"ID: {manifest['id']}")
         print(f"Name: {manifest['name']}")
         print(f"Author: {manifest['author']}")
+        print(f"Supported Platforms: {', '.join(manifest['supported_platforms'])}")
         print("Packing...")
-
-        og_manifest = manifest.copy()
-        if (hasattr(args, 'supported_platform')):
-            manifest["supported_platforms"] = args.supported_platform
-            with open(os.path.join(args.pkg_path, "manifest.json"), 'w') as file:
-                manifest.write(json.dumps(manifest))
 
         packageFilename = os.path.join(args.output_path, f"{manifest['id']}_{'.'.join(str(x) for x in manifest['version'])}_{'-'.join(manifest.get('supported_platforms', ['kindleany']))}.kpkg")
         with tarfile.open(packageFilename, "w|xz", preset=args.compression) as file:
@@ -104,7 +106,7 @@ class Package:
                 if (source_item_name in ['rootfs', 'startup.sh']):
                     print(f"[ERR] A file or folder with the name '{source_item_name}' was detected in the package - This is currently reserved for future use")
                     with open(os.path.join(args.pkg_path, "manifest.json"), 'w') as file:
-                        manifest.write(json.dumps(og_manifest))
+                        file.write(og_manifest)
                     file.close()
                     try: os.remove(packageFilename)
                     except: pass
@@ -114,7 +116,7 @@ class Package:
                 file.add(os.path.join(args.pkg_path, source_item_name), arcname=source_item_name)
 
         with open(os.path.join(args.pkg_path, "manifest.json"), 'w') as file:
-            manifest.write(json.dumps(og_manifest))
+            file.write(og_manifest)
 
         print("Done!")
         print(f"Saved as {packageFilename}")
@@ -162,7 +164,8 @@ class Repo:
             with open(args.repo_path, 'r') as file:
                 repositoryManifest = json.loads(file.read())
         except:
-            with open(os.path.join(args.repo_path, "manifest.json"), 'r') as file:
+            args.repo_path = os.path.join(args.repo_path, "manifest.json")
+            with open(args.repo_path, 'r') as file:
                 repositoryManifest = json.loads(file.read())
 
         if (repositoryManifest["manifest_version"] != KPM_MANIFEST_VERSION):
