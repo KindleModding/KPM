@@ -1,4 +1,5 @@
 #include "cjson/cJSON.h"
+#include "curl/curl.h"
 #include "kpm/kpm.h"
 #include "kpm/semver.h"
 #include "simpleGET.h"
@@ -179,7 +180,13 @@ enum KPMResult KPM_UpdateIndex(struct KPM *kpm, struct KPMIO* kpmIO)
     {
         kpmIO->log(KPM_VERBOSITY_INFO, "Downloading index [%s]", repositories[i].url);
         SimpleGET_Initialise(&request, repositories[i].url);
-        SimpleGET_Perform(&request);
+        CURLcode curl_code = SimpleGET_Perform(&request);
+        if (curl_code != CURLE_OK)
+        {
+            kpmIO->log(KPM_VERBOSITY_ERROR, "Could not fetch url [%s] - CURL Error: %i - %s", curl_code, curl_easy_strerror(curl_code));
+            SimpleGET_Cleanup(&request);
+            continue;
+        }
 
         kpmIO->log(KPM_VERBOSITY_DEBUG, "Got response code: %i", request.response_code);
         if (request.response_code >= 400 && strncmp(repositories[i].url, "file://", strlen("file://")) != 0)
