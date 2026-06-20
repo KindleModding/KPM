@@ -90,12 +90,21 @@ class Package:
         og_manifest = manifest.copy()
         if (hasattr(args, 'supported_platform')):
             manifest["supported_platforms"] = args.supported_platform
-        with open(os.path.join(args.pkg_path, "manifest.json"), 'w') as file:
-            manifest.write(json.dumps(manifest))
+            with open(os.path.join(args.pkg_path, "manifest.json"), 'w') as file:
+                manifest.write(json.dumps(manifest))
 
         packageFilename = os.path.join(args.output_path, f"{manifest['id']}_{'.'.join(str(x) for x in manifest['version'])}_{'-'.join(manifest.get('supported_platforms', ['kindleany']))}.kpkg")
         with tarfile.open(packageFilename, "w|xz", preset=args.compression) as file:
             for source_item_name in os.listdir(args.pkg_path):
+                if (source_item_name == "rootfs"):
+                    print("[ERR] A file or folder with the name 'rootfs' was detected in the package - This is currently reserved for future use")
+                    with open(os.path.join(args.pkg_path, "manifest.json"), 'w') as file:
+                        manifest.write(json.dumps(og_manifest))
+                    file.close()
+                    try: os.remove(packageFilename)
+                    except: pass
+                    exit(1)
+
                 print(f"- {source_item_name}")
                 file.add(os.path.join(args.pkg_path, source_item_name), arcname=source_item_name)
 
