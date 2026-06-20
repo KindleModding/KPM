@@ -45,7 +45,7 @@ enum KPMResult KPM_UninstallPackages(struct KPM* kpm, size_t packageCount, const
             return KPM_GENERIC_ERROR;
         }
     }
-    // @TODO: Sort uninstall list by dependencies first
+    // @TODO: Sort uninstall list by dependents first
 
     for (int i=0; i < packageCount; i++)
     {
