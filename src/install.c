@@ -357,7 +357,7 @@ enum KPMResult Internal_DownloadGraphItems(struct KPM* kpm, struct DependencyGra
         KPM_FreeIndexedArtifact(&artifact);
         KPM_FreeRepository(&repository);
 
-        if (response_code != 200)
+        if (response_code >= 400)
         {
             if (strncmp("file://", target_url, 7) == 0)
             {

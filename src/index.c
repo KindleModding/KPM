@@ -181,7 +181,8 @@ enum KPMResult KPM_UpdateIndex(struct KPM *kpm, struct KPMIO* kpmIO)
         SimpleGET_Initialise(&request, repositories[i].url);
         SimpleGET_Perform(&request);
 
-        if (request.response_code != 200 && strncmp(repositories[i].url, "file://", strlen("file://")) != 0)
+        kpmIO->log(KPM_VERBOSITY_DEBUG, "Got response code: %l", request.response_code);
+        if (request.response_code >= 400 && strncmp(repositories[i].url, "file://", strlen("file://")) != 0)
         {
             kpmIO->log(KPM_VERBOSITY_ERROR, "Could not fetch url [%s]", repositories[i].url);
             SimpleGET_Cleanup(&request);
