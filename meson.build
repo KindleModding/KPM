@@ -14,7 +14,9 @@ kmc_lib_dir = '/var/local/kmc/lib'
 subproject('sqlite3', default_options: ['default_library=static']) # PW2 sqlite3 is unusable it straight up doesn't compile I need to fix this
 subproject('cjson', default_options: ['tests=false', 'default_library=static'])
 subproject('libarchive', default_options: ['default_library=static', 'openssl=disabled'])
-subproject('google-brotli', default_options: ['default_library=static'])
+subproject('google-brotli', default_options: ['default_library=static']) # Needed for cURL brotli support
+subproject('openssl', default_options: ['default_library=static']) # Needed for cURL HTTPS support
+subproject('nghttp2', default_options: ['default_library=static']) # Needed for cURL HTTP/2 support
 curl = subproject('curl', default_options: ['tool=disabled', 'tests=disabled', 'unittests=disabled', 'default_library=static'])
 
 # I know it seems ugly but we statically link EVERYTHING (trust)
