@@ -276,9 +276,58 @@ void Internal_TraverseInstalledNode(struct DependencyGraph* graph, NodeIndex_t n
     Internal_ArrayAddNode(traversedNodeCount, traversedNodes, node);
 }
 
-size_t Internal_DownloadCallback(char* ptr, size_t size, size_t nmemb, void* userdata)
+struct DownloadData
 {
-    return write(*((int*) userdata), ptr, size * nmemb);
+    struct KPMIO* kpm_io;
+    long int total_size;
+    long int downloaded;
+    int reported_progress;
+    int fd;
+};
+
+size_t Internal_DownloadWriteCallback(char* ptr, size_t size, size_t nmemb, void* userdata)
+{
+    struct DownloadData* downloadData = (struct DownloadData*) userdata;
+    if (downloadData->total_size != 0)
+    {
+        int calculated_progress = 100 * (float) (downloadData->downloaded)/((float) downloadData->total_size);
+        if (calculated_progress >= downloadData->reported_progress+10)
+        {
+            downloadData->reported_progress = (calculated_progress/10)*10;
+            downloadData->kpm_io->log(KPM_VERBOSITY_INFO, "%i%% (%i/%i)", calculated_progress, downloadData->downloaded + size*nmemb, downloadData->total_size);
+        }
+    }
+
+    downloadData->downloaded += size * nmemb;
+    return write(downloadData->fd, ptr, size * nmemb);
+}
+
+size_t Internal_DownloadHeaderCallback(char* ptr, size_t size, size_t nitems, void* userdata)
+{
+    char* key = malloc(size*nitems + 1);
+    char* value = malloc(size*nitems + 1);
+    key[0] = 0;
+    value[0] = 0;
+    for (size_t i=0; i < size*nitems; i++)
+    {
+        if (ptr[i] == ':')
+        {
+            memcpy(key, ptr, i);
+            key[i] = 0;
+            memcpy(value, ptr+i+2, size*nitems - (i+2) - 1); // -1 to strip the newline
+            value[size*nitems - (i+2) - 1] = 0;
+        }
+    }
+    ((struct DownloadData*) userdata)->kpm_io->log(KPM_VERBOSITY_DEBUG, "H: %s:%s", key, value);
+
+    if (strcmp(key, "content-length") == 0)
+    {
+        ((struct DownloadData*) userdata)->total_size = atol(value);
+    }
+    
+    free(key);
+    free(value);
+    return size*nitems;
 }
 
 /**
@@ -341,9 +390,19 @@ enum KPMResult Internal_DownloadGraphItems(struct KPM* kpm, struct DependencyGra
             }
         }
         kpmIO->log(KPM_VERBOSITY_DEBUG, "Downloading url %s", target_url);
+        struct DownloadData download_data = {
+            .kpm_io = kpmIO,
+            .total_size = 0,
+            .downloaded = 0,
+            .reported_progress = 0,
+            .fd = fd
+        };
+        
         curl_easy_setopt(curl, CURLOPT_URL, target_url);
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, Internal_DownloadCallback);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &fd); // This _should_ work
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, Internal_DownloadWriteCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &download_data); // This _should_ work
+        curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, Internal_DownloadHeaderCallback);
+        curl_easy_setopt(curl, CURLOPT_HEADERDATA, &download_data);
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L); //@FIXME @TODO: Wth?
         curl_easy_setopt(curl, CURLOPT_USERAGENT, "kpm/1.0.0");
         curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2TLS);
