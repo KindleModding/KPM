@@ -85,7 +85,7 @@ enum KPMResult KPM_Initialise(struct KPM *kpm)
         ) STRICT;
     )", NULL, NULL, NULL);
 
-    sqlite3_exec(kpm->db, "INSERT OR REPLACE INTO repositories (id, url, name, description) VALUES ('kindlemodding', 'https://repo.kindlemodding.org/manifest.json', 'Official KMC Repo', 'The official KMC repo')", NULL, NULL, NULL);
+    sqlite3_exec(kpm->db, "INSERT INTO repositories (id, url, name, description) VALUES ('kindlemodding', 'https://repo.kindlemodding.org/manifest.json', 'Official KMC Repo', 'The official KMC repo')", NULL, NULL, NULL);
 
     return KPM_OK;
 }
