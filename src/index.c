@@ -183,7 +183,7 @@ enum KPMResult KPM_UpdateIndex(struct KPM *kpm, struct KPMIO* kpmIO)
         CURLcode curl_code = SimpleGET_Perform(&request);
         if (curl_code != CURLE_OK)
         {
-            kpmIO->log(KPM_VERBOSITY_ERROR, "Could not fetch url [%s] - CURL Error: %i", curl_code);
+            kpmIO->log(KPM_VERBOSITY_ERROR, "Could not fetch url [%s] - CURL Error: %i - %s", repositories[i].url, curl_code, curl_easy_strerror(curl_code));
             SimpleGET_Cleanup(&request);
             continue;
         }
