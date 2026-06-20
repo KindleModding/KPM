@@ -19,7 +19,12 @@
 
 struct CLIState cli_state = {
     .fbink = false,
-    .confirm = true
+    .confirm = true,
+#ifdef NDEBUG
+    .debug = false
+#else
+    .debug = true
+#endif
 };
 
 void init_header()
@@ -54,6 +59,8 @@ int main(int argc, char* argv[])
         }
         else if (strcmp(arg, "--fbink") == 0)
             cli_state.fbink = true;
+        else if (strcmp(arg, "-d") == 0 || strcmp(arg, "--debug") == 0)
+            cli_state.debug = true;
         else if (strcmp(arg, "-y") == 0)
             cli_state.confirm = false;
         else if (strncmp(arg, "--", 2) == 0 || strncmp(arg, "-", 1) == 0)

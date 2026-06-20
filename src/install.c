@@ -473,23 +473,10 @@ bool Internal_InstallItem(struct KPM* kpm, char* repository, char* path, bool in
         free(outPath);
     }
 
-    // Remove installed item from the database if it exists
-    const char* zSQL = "DELETE FROM installed_packages WHERE id=?";
-    sqlite3_stmt* statement;
-    sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
-    sqlite3_bind_text(statement, 1, id, -1, SQLITE_STATIC);
-    if (sqlite3_step(statement) != SQLITE_DONE)
-    {
-        sqlite3_finalize(statement);
-        free(manifest);
-        cJSON_Delete(json);
-        return false; // Failure with adding it to the database - @TODO: This could be bad, we may need better error handling
-    }
-    sqlite3_finalize(statement);
-
     // Add installed item to the database
-    const char* zSQL2 = "INSERT INTO installed_packages (id, repository, name, author, description, version_major, version_minor, version_patch, installed_as_dependency) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);";
-    sqlite3_prepare_v2(kpm->db, zSQL2, -1, &statement, NULL);
+    sqlite3_stmt* statement;
+    const char* zSQL = "INSERT OR REPLACE INTO installed_packages (id, repository, name, author, description, version_major, version_minor, version_patch, installed_as_dependency) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);";
+    sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
     sqlite3_bind_text(statement, 1, id, -1, SQLITE_STATIC);
     sqlite3_bind_text(statement, 2, repository, -1, SQLITE_STATIC);
     sqlite3_bind_text(statement, 3, cJSON_GetStringValue(cJSON_GetObjectItem(json, "name")), -1, SQLITE_STATIC);

@@ -106,9 +106,8 @@ void kpm_log(enum KPMVerbosity verbosity, const char* format, ...)
     switch (verbosity)
     {
         case KPM_VERBOSITY_DEBUG:
-#ifdef NDEBUG
-            return;
-#endif
+            if (!cli_state.debug)
+                return;
             prefixed_format = asprintf_hd("\x1b[0;1;36m[DEBUG] %s", format);
             prefixed_format_fbink = asprintf_hd("[DEBUG] %s", format);
             break;
