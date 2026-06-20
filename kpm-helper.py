@@ -9,6 +9,7 @@ import tarfile
 import json
 import os
 
+KPM_MANIFEST_VERSION=1
 valid_supported_platforms = [
     "kindle",
     "kindle5",
@@ -21,7 +22,7 @@ class Package:
         args.path: pathlib.Path
 
         manifest = {
-            "manifest_version": 1,
+            "manifest_version": KPM_MANIFEST_VERSION,
             "id": "",
             "name": "",
             "author": "",
@@ -82,6 +83,10 @@ class Package:
         with open(os.path.join(args.pkg_path, "manifest.json"), 'r') as file:
             manifest = json.loads(file.read())
 
+        if (manifest["manifest_version"] != KPM_MANIFEST_VERSION):
+            print(f"[ERR] Expected manifest version {KPM_MANIFEST_VERSION}, got {manifest['manifest_version']}")
+            exit(1)
+
         print(f"ID: {manifest['id']}")
         print(f"Name: {manifest['name']}")
         print(f"Author: {manifest['author']}")
@@ -96,8 +101,8 @@ class Package:
         packageFilename = os.path.join(args.output_path, f"{manifest['id']}_{'.'.join(str(x) for x in manifest['version'])}_{'-'.join(manifest.get('supported_platforms', ['kindleany']))}.kpkg")
         with tarfile.open(packageFilename, "w|xz", preset=args.compression) as file:
             for source_item_name in os.listdir(args.pkg_path):
-                if (source_item_name == "rootfs"):
-                    print("[ERR] A file or folder with the name 'rootfs' was detected in the package - This is currently reserved for future use")
+                if (source_item_name in ['rootfs', 'startup.sh']):
+                    print(f"[ERR] A file or folder with the name '{source_item_name}' was detected in the package - This is currently reserved for future use")
                     with open(os.path.join(args.pkg_path, "manifest.json"), 'w') as file:
                         manifest.write(json.dumps(og_manifest))
                     file.close()
@@ -119,7 +124,7 @@ class Repo:
         args.path: pathlib.Path
 
         manifest = {
-            "manifest_version": 1
+            "manifest_version": KPM_MANIFEST_VERSION
         }
 
         while True:
@@ -159,6 +164,10 @@ class Repo:
         except:
             with open(os.path.join(args.repo_path, "manifest.json"), 'r') as file:
                 repositoryManifest = json.loads(file.read())
+
+        if (repositoryManifest["manifest_version"] != KPM_MANIFEST_VERSION):
+            print(f"[ERR] Expected manifest version {KPM_MANIFEST_VERSION}, got {repositoryManifest['manifest_version']}")
+            exit(1)
 
         print(f"Adding package {args.package_path} to the repository...")
         print("Reading manifest")
