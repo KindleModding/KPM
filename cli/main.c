@@ -313,7 +313,9 @@ int main(int argc, char* argv[])
         free(launch_path);
 
         char* launch_command = asprintf_hd("sh \"%s/%s/launch.sh\"", KPM_PKG_PATH, id);
-        chdir(KPM_PKG_PATH);
+        char* launch_folder = asprintf_hd("%s/%s", KPM_PKG_PATH, id);
+        chdir(launch_folder);
+        free(launch_folder);
         system(launch_command);
         free(launch_command);
     }
