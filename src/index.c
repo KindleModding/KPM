@@ -181,7 +181,7 @@ enum KPMResult KPM_UpdateIndex(struct KPM *kpm, struct KPMIO* kpmIO)
         SimpleGET_Initialise(&request, repositories[i].url);
         SimpleGET_Perform(&request);
 
-        kpmIO->log(KPM_VERBOSITY_DEBUG, "Got response code: %l", request.response_code);
+        kpmIO->log(KPM_VERBOSITY_DEBUG, "Got response code: %i", request.response_code);
         if (request.response_code >= 400 && strncmp(repositories[i].url, "file://", strlen("file://")) != 0)
         {
             kpmIO->log(KPM_VERBOSITY_ERROR, "Could not fetch url [%s]", repositories[i].url);
@@ -189,6 +189,7 @@ enum KPMResult KPM_UpdateIndex(struct KPM *kpm, struct KPMIO* kpmIO)
             continue;
         }
 
+        kpmIO->log(KPM_VERBOSITY_DEBUG, "Got manifest: %s", request.buffer);
         cJSON* json = cJSON_Parse(request.buffer);
         if (json == NULL)
         {
