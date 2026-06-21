@@ -346,9 +346,17 @@ enum KPMResult Internal_DownloadGraphItems(struct KPM* kpm, struct DependencyGra
     for (size_t i=0; i < deduplicatedPackageCount; i++)
     {
         struct IndexedArtifact artifact;
-        KPM_GetArtifact(kpm, graph->nodes[deduplicatedPackages[i]].repository, graph->nodes[deduplicatedPackages[i]].id, graph->nodes[deduplicatedPackages[i]].min_version, &artifact);
+        if (KPM_GetArtifact(kpm, graph->nodes[deduplicatedPackages[i]].repository, graph->nodes[deduplicatedPackages[i]].id, graph->nodes[deduplicatedPackages[i]].min_version, &artifact) != KPM_OK)
+        {
+            kpmIO->log(KPM_VERBOSITY_WARN, "Could not find artifact for %s", graph->nodes[deduplicatedPackages[i]].id);
+            continue;
+        }
         struct Repository repository;
-        KPM_GetRepository(kpm, artifact.repository, &repository);
+        if (KPM_GetRepository(kpm, artifact.repository, &repository) != KPM_OK)
+        {
+            kpmIO->log(KPM_VERBOSITY_WARN, "Could not find repository for %s", artifact.repository);
+            continue;
+        }
 
         char* filename = artifact.url + strlen(artifact.url)-1;
         while (*filename != '/' && filename >= artifact.url)
