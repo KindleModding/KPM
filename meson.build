@@ -28,7 +28,7 @@ subproject('libarchive', default_options: [
   'xml2=disabled',
   'expat=disabled',
   'regex=disabled',
-  'xattr=enabled', # @TODO DO WE NEED THIS?
+  'xattr=disabled',
   'acl=disabled',
 
 ])
