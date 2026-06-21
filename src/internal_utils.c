@@ -53,6 +53,8 @@ int internal_delete(const char* fpath, const struct stat* sb, int typeflag, stru
  */
 void rmdir_r(char* path)
 {
+    if (!access(path, R_OK))
+        return;
     nftw(path, &internal_delete, 256, FTW_DEPTH);
     rmdir(path);
 }

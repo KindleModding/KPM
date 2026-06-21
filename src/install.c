@@ -20,6 +20,7 @@
 #include "sqlite3.h"
 #include "install.h"
 #include "internal_utils.h"
+#include "uninstall.h"
 
 /**
  * @brief Copy data between two libarchive archives
@@ -495,6 +496,7 @@ bool Internal_InstallItem(struct KPM* kpm, char* repository, char* path, bool in
     kpmIO->log(KPM_VERBOSITY_DEBUG, "Installing item with id: %s", id);
 
     char* outPath = asprintf_hd("%s/%s/", kpm->pkgPath, id);
+    rmdir_r(outPath); // Just in case it exists
 
     // First unpack the .kpkg file
     kpmIO->log(KPM_VERBOSITY_INFO, "Extracting archive");
@@ -932,7 +934,6 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
         kpmIO->log(KPM_VERBOSITY_INFO, "- %s (%u.%u.%u)", graph.nodes[install[i]].id, graph.nodes[install[i]].min_version.major, graph.nodes[install[i]].min_version.minor, graph.nodes[install[i]].min_version.patch);
     }
     free(downgrade);
-    free(upgrade);
     free(install);
 
     if (!kpmIO->getInput("Would you like to proceed?"))
@@ -940,6 +941,7 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
         kpmIO->log(KPM_VERBOSITY_INFO, "Aborted.");
         free(deduplicatedPackages);
         FreeDependencyGraph(&graph);
+        free(upgrade);
         return KPM_ABORTED; // @TODO
     }
     
@@ -949,6 +951,7 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
         kpmIO->log(KPM_VERBOSITY_ERROR, "Error: Could not download dependency graph (%i)", result);
         free(deduplicatedPackages);
         FreeDependencyGraph(&graph);
+        free(upgrade);
         return result;
     }
 
@@ -964,6 +967,24 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
             filename--;
         }
         filename++;
+
+        // Check if this package is already installed
+        bool upgrading=false;
+        for (size_t j=0; j < upgradeCount; j++)
+        {
+            if (strcmp(graph.nodes[upgrade[j]].id, artifact.id) == 0)
+            {
+                upgrading = true;
+                break;
+            }
+        }
+
+        if (upgrading)
+        {
+            int result = KPM_OK;
+            if ((result = Internal_UninstallPackage(kpm, artifact.id, true, kpmIO)) != KPM_OK)
+                kpmIO->log(KPM_VERBOSITY_WARN, "Failed to uninstall %s (%i) - continuing anyway.", artifact.id, result); // I mean it'll probably be fine lol
+        }
 
         char* path = asprintf_hd("%s/tmp/%s", kpm->pkgPath, filename);
 
@@ -1003,11 +1024,13 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
                 sqlite3_finalize(statement);
                 FreeDependencyGraph(&graph);
                 system("lipc-set-prop com.lab126.scanner doFullScan 1");
+                free(upgrade);
                 return KPM_SQLITE_ERROR; // Failure with adding it to the database - @TODO: This could be bad, we may need better error handling
             }
         }
     }
 
+    free(upgrade);
     free(deduplicatedPackages);
     FreeDependencyGraph(&graph);
     system("lipc-set-prop com.lab126.scanner doFullScan 1");
