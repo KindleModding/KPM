@@ -38,10 +38,7 @@ jobs:
           bash ./kindle-sdk/gen-sdk.sh kindlehf
     - name: Build
       shell: bash
-      env:
-          WORKING_DIR: ${{ inputs.working-directory }}
       run: |
-            cd $WORKING_DIR
             meson setup --cross-file ~/x-tools/arm-kindlehf-linux-gnueabihf/meson-crosscompile.txt builddir_kindlehf --reconfigure --buildtype=release
             meson setup --cross-file ~/x-tools/arm-kindlepw2-linux-gnueabi/meson-crosscompile.txt builddir_kindlepw2 --reconfigure --buildtype=release
             meson compile -C builddir_kindlehf
