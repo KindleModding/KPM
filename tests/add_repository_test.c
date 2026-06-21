@@ -32,8 +32,7 @@ int main()
 
     fprintf(stderr, "Adding test repository\n");
 
-    char curDir[2048];
-    getcwd(curDir, 2048);
+    char* curDir = getcwd(NULL, 0);
     char* dir = dirname(curDir);
 
     char* uri = malloc(strlen("file://") + strlen(dir) + strlen("/examples/examplerepo/manifest.json") + 1);
@@ -41,6 +40,7 @@ int main()
     strcpy(uri + strlen("file://"), dir);
     strcpy(uri + strlen("file://") + strlen(dir), "/examples/examplerepo/manifest.json");
     uri[strlen("file://") + strlen(dir) + strlen("/examples/examplerepo/manifest.json")] = '\0';
+    free(curDir);
     
     fprintf(stderr, "URI: %s\n", uri);
     struct Repository repo;

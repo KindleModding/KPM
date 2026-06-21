@@ -510,6 +510,7 @@ bool Internal_InstallItem(struct KPM* kpm, char* repository, char* path, bool in
         // Run install script
         int result = -1;
         char* installCommand = asprintf_hd("sh %s 2>&1", installScriptPath);
+        char* oldDir = getcwd(NULL, 0);
         chdir(outPath);
         free(installScriptPath);
         kpmIO->log(KPM_VERBOSITY_INFO, "Running install hooks for %s", id);
@@ -529,6 +530,7 @@ bool Internal_InstallItem(struct KPM* kpm, char* repository, char* path, bool in
             kpmIO->log(KPM_VERBOSITY_ERROR, "Could not run script - POPEN FAILURE");
         }
 
+        chdir(oldDir);
         if (result != 0)
         {
             // The install hook failed
