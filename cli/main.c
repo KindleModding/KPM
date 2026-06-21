@@ -276,7 +276,7 @@ int main(int argc, char* argv[])
 
             if (SemVerCmp(artifacts[0].version, installed_packages[i].version) <= 0)
             {
-                kpm_io.log(KPM_VERBOSITY_WARN, "Could not find an upgrade artifact for %s", installed_packages[i].id);
+                kpm_io.log(KPM_VERBOSITY_DEBUG, "Could not find an upgrade artifact for %s", installed_packages[i].id);
                 KPM_FreeIndexedArtifactList(artifact_count, artifacts);
                 continue;
             }
