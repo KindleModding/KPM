@@ -781,9 +781,7 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
     for (size_t i=0; i < traversedNodeCount; i++)
     {
         if (graph.nodes[traversedNodes[i]].type == NODE_DEPENDENCY)
-        {
-            continue; // Skip dependencies
-        }
+            continue; // Skip dependencies (not to be confused with actual dependencies :p)
  
         if (traversedNodes[i] == rootId)
         {
@@ -791,6 +789,38 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
             continue;
         }
         currentDepth++;
+
+        // We should only add this to the list if it is either an explicit target or NOT already installed
+        bool explicit_target = false;
+        for (int j=0; j < targetCount; j++)
+        {
+            if (
+                strcmp(graph.nodes[traversedNodes[i]].id, targets[j].id) == 0 &&
+                (targets[j].repository == NULL || strcmp(graph.nodes[traversedNodes[i]].repository, targets[j].repository) == 0) &&
+                (targets[j].version == NULL || SemVerCmp(graph.nodes[traversedNodes[i]].min_version, *targets[j].version) == 0)
+            )
+            {
+                explicit_target = true;
+                break;
+            }
+        }
+
+        bool installed = false;
+        for (int j=0; j < installedPackageCount; j++)
+        {
+            if (
+                strcmp(graph.nodes[traversedNodes[i]].id, installedPackages[j].id) == 0 &&
+                (installedPackages[j].repository == NULL || strcmp(graph.nodes[traversedNodes[i]].repository, installedPackages[j].repository) == 0) &&
+                (SemVerCmp(graph.nodes[traversedNodes[i]].min_version, installedPackages[j].version) == 0)
+            )
+            {
+                installed = true;
+                break;
+            }
+        }
+        
+        if (!explicit_target && installed)
+            continue;
 
         bool found = false;
         for (size_t j=0; j < deduplicatedPackageCount; j++)
@@ -878,6 +908,8 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
         if (!installed)
             Internal_ArrayAddNode(&installCount, &install, deduplicatedPackages[i]);
     }
+
+    KPM_FreeInstalledPackageList(installedPackageCount, installedPackages);
 
     // @TODO: Ensure downgrades are checked
     kpmIO->log(KPM_VERBOSITY_INFO, "Preparing to downgrade %zu packages", downgradeCount);
