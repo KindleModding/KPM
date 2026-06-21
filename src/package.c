@@ -171,11 +171,11 @@ enum KPMResult KPM_ListPackageArtifacts(struct KPM* kpm, const char* repositoryI
     const char* zSQL;
     if (repositoryId == NULL)
     {
-        zSQL = "SELECT (SELECT COUNT() FROM artifacts WHERE id=?), url, repository, id, version_major, version_minor, version_patch FROM artifacts WHERE id=? ORDER BY version_major DESC, version_minor DESC;";
+        zSQL = "SELECT (SELECT COUNT() FROM artifacts WHERE id=?), url, repository, id, version_major, version_minor, version_patch FROM artifacts WHERE id=? ORDER BY version_major DESC, version_minor DESC, version_patch DESC;";
     }
     else
     {
-        zSQL = "SELECT (SELECT COUNT() FROM artifacts WHERE repository=? AND id=?), url, repository, id, version_major, version_minor, version_patch FROM artifacts WHERE repository=? AND id=? ORDER BY version_major DESC, version_minor DESC;";
+        zSQL = "SELECT (SELECT COUNT() FROM artifacts WHERE repository=? AND id=?), url, repository, id, version_major, version_minor, version_patch FROM artifacts WHERE repository=? AND id=? ORDER BY version_major DESC, version_minor DESC, version_patch DESC;";
     }
     
     sqlite3_stmt* statement;
