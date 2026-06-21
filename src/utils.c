@@ -11,3 +11,12 @@ void KPM_FreeInstallTarget(struct InstallTarget* target)
     target->id = NULL;
     target->repository = NULL;
 }
+
+void KPM_FreeInstallTargetList(size_t targetCount, struct InstallTarget* targets)
+{
+    for (size_t i=0; i < targetCount; i++)
+    {
+        KPM_FreeInstallTarget(&targets[i]);
+    }
+    free(targets);
+}

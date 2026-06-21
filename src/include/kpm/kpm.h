@@ -446,6 +446,13 @@ enum KPMResult KPM_UpdateIndex(struct KPM *kpm, struct KPMIO* kpmIO);
  */
 void KPM_FreeInstallTarget(struct InstallTarget* target);
 
+/**
+ * @brief Frees a list of InstallTarget objects
+ * 
+ * @param targetCount The number of InstallTarget objects
+ * @param targets The list of InstallTarget objects
+ */
+void KPM_FreeInstallTargetList(size_t targetCount, struct InstallTarget* targets);
 
 
 /**

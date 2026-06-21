@@ -8,6 +8,7 @@
 #include "cli.h"
 #include "io.h"
 #include "internal_utils.h"
+#include "semver.h"
 
 #define CLI_VERSION_MAJOR 1
 #define CLI_VERSION_MINOR 0
@@ -260,26 +261,50 @@ int main(int argc, char* argv[])
         struct InstalledPackage* installed_packages;
         KPM_ListInstalledPackages(&kpm, &installed_package_count, &installed_packages);
 
+        size_t target_count = 0;
         struct InstallTarget* targets = malloc(installed_package_count * sizeof(struct InstallTarget));
         for (int i=0; i < installed_package_count; i++)
         {
-            targets[i].repository = installed_packages[i].repository;
-            targets[i].version = NULL;
-            targets[i].id = installed_packages[i].id;
+            size_t artifact_count;
+            struct IndexedArtifact* artifacts;
+            if (KPM_ListPackageArtifacts(&kpm, installed_packages[i].repository, installed_packages[i].id, &artifact_count, &artifacts) != KPM_OK || artifact_count == 0)
+            {
+                kpm_io.log(KPM_VERBOSITY_WARN, "Could not find an artifact for %s", installed_packages[i].id);
+                KPM_FreeIndexedArtifactList(artifact_count, artifacts);
+                continue;
+            }
+
+            if (SemVerCmp(artifacts[0].version, installed_packages[i].version) <= 0)
+            {
+                kpm_io.log(KPM_VERBOSITY_WARN, "Could not find an upgrade artifact for %s", installed_packages[i].id);
+                KPM_FreeIndexedArtifactList(artifact_count, artifacts);
+                continue;
+            }
+
+            targets[target_count].repository = NULL;
+            if (artifacts[0].repository != NULL)
+            {
+                targets[target_count].repository = strdup(artifacts[0].repository);
+                targets[target_count].id = strdup(artifacts[0].id);
+            }
+            targets[target_count].version = NULL;
+            KPM_FreeIndexedArtifactList(artifact_count, artifacts);
+            target_count++;
         }
 
-        if (installed_package_count == 0)
+        if (target_count == 0)
         {
             kpm_io.log(KPM_VERBOSITY_INFO, "No packages to upgrade.");
             KPM_FreeInstalledPackageList(installed_package_count, installed_packages);
             goto cleanup;
         }
 
-        if ((error = KPM_InstallPackages(&kpm, installed_package_count, targets, &kpm_io)) != KPM_OK)
+        if ((error = KPM_InstallPackages(&kpm, target_count, targets, &kpm_io)) != KPM_OK)
             kpm_io.log(KPM_VERBOSITY_ERROR, "Failed to upgrade packages (%i)", error);
         else
             kpm_io.log(KPM_VERBOSITY_INFO, "Upgraded %i package(s) succesfully.", installed_package_count);
         KPM_FreeInstalledPackageList(installed_package_count, installed_packages);
+        KPM_FreeInstallTargetList(target_count, targets);
     }
     else if (strcmp(argv[command_index], "launch") == 0)
     {

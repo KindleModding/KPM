@@ -15,7 +15,6 @@ void KPM_FreeInstalledPackage(struct InstalledPackage* package)
     package->description = NULL;
 }
 
-
 void KPM_FreeInstalledPackageList(size_t packageCount, struct InstalledPackage* packages)
 {
     for (size_t i=0; i < packageCount; i++)
