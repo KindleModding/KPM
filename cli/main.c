@@ -154,7 +154,7 @@ int main(int argc, char* argv[])
     }
     else if (strcmp(argv[command_index], "list-repo") == 0)
     {
-        size_t repository_count;
+        size_t repository_count = 0;
         struct Repository* repositories;
         if ((error = KPM_ListRepositories(&kpm, &repository_count, &repositories)) != KPM_OK)
             goto cleanup;
