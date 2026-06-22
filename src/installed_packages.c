@@ -5,11 +5,13 @@
 void KPM_FreeInstalledPackage(struct InstalledPackage* package)
 {
     free(package->id);
+    free(package->repository);
     free(package->name);
     free(package->author);
     free(package->description);
     
     package->id = NULL;
+    package->repository = NULL;
     package->name = NULL;
     package->author = NULL;
     package->description = NULL;

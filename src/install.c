@@ -438,6 +438,8 @@ enum KPMResult Internal_DownloadGraphItems(struct KPM* kpm, struct DependencyGra
                 return KPM_CURL_ERROR;
             }
         }
+
+        free(target_url);
     }
 
     return KPM_OK;
@@ -674,11 +676,16 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
             {
                 FreeDependencyGraph(&graph);
                 free(outBuffer);
+                free(traversedNodes);
+                KPM_FreeInstalledPackageList(installedPackageCount, installedPackages);
                 return status;
             }
 
             //cJSON* json = cJSON_Parse(outBuffer);
             FreeDependencyGraph(&graph);
+            free(traversedNodes);
+            free(outBuffer);
+            KPM_FreeInstalledPackageList(installedPackageCount, installedPackages);
             return KPM_GENERIC_ERROR; // @TODO: Come back to this later - install local package files
         }
         else
@@ -689,6 +696,8 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
                 {
                     kpmIO->log(KPM_VERBOSITY_ERROR, "Could not find artifact for given target.");
                     FreeDependencyGraph(&graph);
+                    free(traversedNodes);
+                    KPM_FreeInstalledPackageList(installedPackageCount, installedPackages);
                     return KPM_GENERIC_ERROR;
                 }
             }
@@ -700,6 +709,8 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
                 {
                     kpmIO->log(KPM_VERBOSITY_ERROR, "Could not find artifact for given target.");
                     FreeDependencyGraph(&graph);
+                    free(traversedNodes);
+                    KPM_FreeInstalledPackageList(installedPackageCount, installedPackages);
                     return KPM_GENERIC_ERROR;
                 }
 
@@ -770,6 +781,8 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
         kpmIO->log(KPM_VERBOSITY_ERROR, "Include the state file at /tmp/kpm_state.md");
 
         FreeDependencyGraph(&graph);
+        free(traversedNodes);
+        KPM_FreeInstalledPackageList(installedPackageCount, installedPackages);
         return KPM_GENERIC_ERROR;
     }
 
