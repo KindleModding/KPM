@@ -593,11 +593,11 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
 
     // Add installed packages to the graph
     kpmIO->log(KPM_VERBOSITY_DEBUG, "Adding installed packages to graph:");
-    size_t installedPackageCount;
+    size_t installedPackageCount = 0;
     struct InstalledPackage *installedPackages;
     KPM_ListInstalledPackages(kpm, &installedPackageCount, &installedPackages);
 
-    size_t traversedNodeCount;
+    size_t traversedNodeCount = 0;
     NodeIndex_t* traversedNodes = NULL;
     for (size_t i=0; i < installedPackageCount; i++)
     {
@@ -694,7 +694,7 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
             }
             else
             {
-                size_t artifactCount;
+                size_t artifactCount = 0;
                 struct IndexedArtifact* artifacts;
                 if (KPM_ListPackageArtifacts(kpm, target.repository, target.id, &artifactCount, &artifacts) != KPM_OK || artifactCount == 0)
                 {
@@ -993,9 +993,9 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
         {
             kpmIO->log(KPM_VERBOSITY_ERROR, "Could not install %s", artifact.id);
             KPM_FreeIndexedArtifact(&artifact);
+            remove(kpkg_path);
             free(kpkg_path);
             retval = KPM_GENERIC_ERROR;
-            remove(kpkg_path);
             continue;
         }
 
