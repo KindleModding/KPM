@@ -367,10 +367,7 @@ enum KPMResult Internal_DownloadGraphItems(struct KPM* kpm, struct DependencyGra
         filename++;
 
         kpmIO->log(KPM_VERBOSITY_INFO, "Downloading %s", artifact.id);
-        char* path = malloc(strlen(kpm->pkgPath) + strlen("/tmp/") + strlen(filename) + 1);
-        sprintf(path, "%s/tmp/", kpm->pkgPath);
-        mkdir_r(path, 0775);
-        sprintf(path, "%s/tmp/%s", kpm->pkgPath, filename);
+        char* path = asprintf_hd("%s/tmp/%s", kpm->pkgPath, filename);
         kpmIO->log(KPM_VERBOSITY_DEBUG, "Downloading to %s", path);
         int fd = open(path, O_CREAT|O_SYNC|O_TRUNC|O_WRONLY, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
         free(path);
@@ -944,6 +941,10 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
         return KPM_ABORTED; // @TODO
     }
     
+    char* tmp_path = asprintf_hd("%s/tmp/", kpm->pkgPath);
+    mkdir_r(tmp_path, 0775);
+    free(tmp_path);
+
     enum KPMResult result = Internal_DownloadGraphItems(kpm, &graph, deduplicatedPackageCount, deduplicatedPackages, kpmIO);
     if (result != KPM_OK)
     {
@@ -985,20 +986,22 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
                 kpmIO->log(KPM_VERBOSITY_WARN, "Failed to uninstall %s (%i) - continuing anyway.", artifact.id, result); // I mean it'll probably be fine lol
         }
 
-        char* path = asprintf_hd("%s/tmp/%s", kpm->pkgPath, filename);
+        char* kpkg_path = asprintf_hd("%s/tmp/%s", kpm->pkgPath, filename);
 
         kpmIO->log(KPM_VERBOSITY_INFO, "Installing %s (%u.%u.%u)", artifact.id, artifact.version.major, artifact.version.minor, artifact.version.patch);
-        if (!Internal_InstallItem(kpm, graph.nodes[deduplicatedPackages[i]].repository, path, i != deduplicatedPackageCount-1, kpmIO)) // The last package installed is our target hence the value of installed_as_dependency
+        if (!Internal_InstallItem(kpm, graph.nodes[deduplicatedPackages[i]].repository, kpkg_path, i != deduplicatedPackageCount-1, kpmIO)) // The last package installed is our target hence the value of installed_as_dependency
         {
             kpmIO->log(KPM_VERBOSITY_ERROR, "Could not install %s", artifact.id);
             KPM_FreeIndexedArtifact(&artifact);
-            free(path);
+            free(kpkg_path);
             retval = KPM_GENERIC_ERROR;
+            remove(kpkg_path);
             continue;
         }
 
+        remove(kpkg_path);
         KPM_FreeIndexedArtifact(&artifact);
-        free(path);
+        free(kpkg_path);
 
         // If this package is installed so are its dependencies
         for (int j=0; j < graph.nodes[deduplicatedPackages[i]].connectedCount; j++)
