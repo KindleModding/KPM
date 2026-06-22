@@ -24,7 +24,6 @@ enum KPMResult Internal_UninstallPackage(struct KPM* kpm, const char* packageId,
             uninstallCommand = asprintf_hd("sh %s 2>&1", uninstallScriptPath);
 
         chdir(outPath);
-        free(outPath);
         free(uninstallScriptPath);
         kpmIO->log(KPM_VERBOSITY_INFO, "Running uninstall hooks for %s", packageId);
         FILE* stream = popen(uninstallCommand, "r");
@@ -43,6 +42,7 @@ enum KPMResult Internal_UninstallPackage(struct KPM* kpm, const char* packageId,
             kpmIO->log(KPM_VERBOSITY_ERROR, "Could not run script - POPEN FAILURE");
         }
 
+        chdir("/mnt/us/kmc/kpm");
         if (result != 0)
         {
             // The uninstall hook failed
@@ -53,6 +53,7 @@ enum KPMResult Internal_UninstallPackage(struct KPM* kpm, const char* packageId,
 
     kpmIO->log(KPM_VERBOSITY_DEBUG, "Deleting [%s] files", packageId);
     rmdir_r(outPath);
+    free(outPath);
 
     // Remove installed item from the database
     const char* zSQL = "DELETE FROM installed_packages WHERE id=?";
