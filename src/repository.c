@@ -108,11 +108,13 @@ enum KPMResult KPM_AddRepository(struct KPM *kpm, const char *url, struct Reposi
     SimpleGET_Initialise(&request, url);
     if (SimpleGET_Perform(&request) != CURLE_OK)
     {
+        SimpleGET_Cleanup(&request);
         return KPM_CURL_ERROR;
     }
 
     if (request.response_code >= 400)
     {
+        SimpleGET_Cleanup(&request);
         return KPM_INVALID_RESPONSE_CODE;
     }
 
