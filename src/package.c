@@ -56,8 +56,8 @@ enum KPMResult KPM_GetPackage(struct KPM* kpm, const char* repository, const cha
         package->repository = strdup((const char*) sqlite3_column_text(statement, 0));
         package->id = strdup((const char*) sqlite3_column_text(statement, 1));
         package->name = strdup((const char*) sqlite3_column_text(statement, 2));
-        package->author = strdup((const char*) sqlite3_column_text(statement, 4));
-        package->description = strdup((const char*) sqlite3_column_text(statement, 3));
+        package->author = strdup((const char*) sqlite3_column_text(statement, 3));
+        package->description = strdup((const char*) sqlite3_column_text(statement, 4));
     } else {
         return KPM_SQLITE_ERROR;
     }
