@@ -474,6 +474,11 @@ bool Internal_InstallItem(struct KPM* kpm, char* repository, char* path, bool in
 
     kpmIO->log(KPM_VERBOSITY_DEBUG, "%s", manifest);
     cJSON* json = cJSON_Parse(manifest);
+    if (json == NULL)
+    {
+        kpmIO->log(KPM_VERBOSITY_ERROR, "Could not parse manifest from %s", path);
+        return false;
+    }
 
     if (cJSON_IsNull(cJSON_GetObjectItem(json, "manifest_version")) || cJSON_GetObjectItem(json, "manifest_version") == NULL)
     {
