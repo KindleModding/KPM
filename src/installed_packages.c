@@ -182,7 +182,7 @@ enum KPMResult KPM_ListInstalledPackageDependents(struct KPM* kpm, const char* i
     if (dependents != NULL)
         *dependents = NULL;
     
-    const char* zSQL = "SELECT (SELECT COUNT() FROM current_dependencies WHERE dependancy=?), dependent, dependency_id, min_version_major, min_version_minor, min_version_patch, max_version_major, max_version_minor, max_version_patch FROM current_dependencies WHERE dependency=?;";
+    const char* zSQL = "SELECT (SELECT COUNT() FROM current_dependencies WHERE dependancy_id=?), dependent, dependency_id, min_version_major, min_version_minor, min_version_patch, max_version_major, max_version_minor, max_version_patch FROM current_dependencies WHERE dependency_id=?;";
     sqlite3_stmt* statement;
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
     sqlite3_bind_text(statement, 1, id, -1, SQLITE_STATIC);
