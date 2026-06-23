@@ -202,6 +202,7 @@ enum KPMResult KPM_UpdateIndex(struct KPM *kpm, struct KPMIO* kpmIO)
         {
             kpmIO->log(KPM_VERBOSITY_ERROR, "Could not parse manifest");
             SimpleGET_Cleanup(&request);
+            cJSON_Delete(json);
             continue; // Move onto next repo
         }
 
@@ -209,6 +210,7 @@ enum KPMResult KPM_UpdateIndex(struct KPM *kpm, struct KPMIO* kpmIO)
         {
             kpmIO->log(KPM_VERBOSITY_ERROR, "Invalid manifest version, got %.0f, expected %i", cJSON_GetNumberValue(cJSON_GetObjectItem(json, "manifest_version")), KPM_MANIFEST_VERSION);
             SimpleGET_Cleanup(&request);
+            cJSON_Delete(json);
             continue;
         }
 
@@ -229,13 +231,15 @@ enum KPMResult KPM_UpdateIndex(struct KPM *kpm, struct KPMIO* kpmIO)
         {
             KPM_FreeRepositoryList(repositoryCount, repositories);
             kpmIO->log(KPM_VERBOSITY_ERROR, "Could not clear packages for %s (%i)", repositories[i].id, status);
+            cJSON_Delete(json);
             SimpleGET_Cleanup(&request);
             sqlite3_exec(kpm->db, "ROLLBACK", NULL, NULL, NULL);
-            break; // Move onto next repo
+            continue; // Move onto next repo
         }
 
         // Index packages & artifacts
         // We COULD give progress status here... but nah - HD
+        bool ok = true;
         cJSON* package;
         cJSON_ArrayForEach(package, cJSON_GetObjectItem(json, "packages"))
         {
@@ -243,11 +247,16 @@ enum KPMResult KPM_UpdateIndex(struct KPM *kpm, struct KPMIO* kpmIO)
             {
                 sqlite3_exec(kpm->db, "ROLLBACK", NULL, NULL, NULL);
                 kpmIO->log(KPM_VERBOSITY_ERROR, "Could not index repository [%s]", repositories[i].id);
+                ok = false;
                 break;
             }
         }
 
-        sqlite3_exec(kpm->db, "COMMIT", NULL, NULL, NULL);
+        if (!ok)
+            sqlite3_exec(kpm->db, "ROLLBACK", NULL, NULL, NULL);
+        else
+            sqlite3_exec(kpm->db, "COMMIT", NULL, NULL, NULL);
+        
         cJSON_Delete(json);
         SimpleGET_Cleanup(&request);
     }
