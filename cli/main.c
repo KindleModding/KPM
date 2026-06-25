@@ -260,6 +260,8 @@ int main(int argc, char* argv[])
     }
     else if (strcmp(argv[command_index], "upgrade") == 0)
     {
+        KPM_UpdateIndex(&kpm, &kpm_io);
+
         size_t installed_package_count;
         struct InstalledPackage* installed_packages;
         KPM_ListInstalledPackages(&kpm, &installed_package_count, &installed_packages);
