@@ -308,24 +308,14 @@ int main(int argc, char* argv[])
     }
     else if (strcmp(argv[command_index], "launch") == 0)
     {
-        if (argc - (command_index+1) != 1)
+        if (argc - (command_index+1) < 1)
         {
-            kpm_io.log(KPM_VERBOSITY_ERROR, "Expected 1 argument, received %i", argc - (command_index+1));
+            kpm_io.log(KPM_VERBOSITY_ERROR, "Expected at least 1 argument, received %i", argc - (command_index+1));
             error = KPM_GENERIC_ERROR;
             goto help;
         }
 
         char* id = argv[command_index+1];
-        for (int i=0; i < strlen(id); i++)
-        {
-            if (id[i] == '"' || id[i] == '\'')
-            {
-                kpm_io.log(KPM_VERBOSITY_ERROR, "Invalid package ID: [%s]", id);
-                error = KPM_GENERIC_ERROR;
-                goto cleanup;
-            }
-        }
-
         char* launch_path = asprintf_hd("%s/%s/launch.sh", KPM_PKG_PATH, id);
         kpm_io.log(KPM_VERBOSITY_DEBUG, "Checking for script at %s", launch_path);
         if (access(launch_path, R_OK) != 0)
@@ -337,12 +327,26 @@ int main(int argc, char* argv[])
         }
         free(launch_path);
 
-        char* launch_command = asprintf_hd("sh \"%s/%s/launch.sh\"", KPM_PKG_PATH, id);
+        char** launch_args = malloc(sizeof(char*) * (2 + argc - (command_index + 2)) + 1);
+        launch_args[0] = strdup("/bin/sh");
+        launch_args[1] = asprintf_hd("%s/%s/launch.sh", KPM_PKG_PATH, id);
+        for (int i=0; i < argc - (command_index + 2); i++)
+        {
+            launch_args[i+2] = strdup(argv[i + command_index + 2]);
+        }
+        launch_args[(2 + argc - (command_index + 2))] = 0;
+        kpm_io.log(KPM_VERBOSITY_DEBUG, "args:");
+        for (int i=0; i < (2 + argc - (command_index + 2)) + 1; i++)
+        {
+            kpm_io.log(KPM_VERBOSITY_DEBUG, "\t- %s", launch_args[i]);
+        }
+
         char* launch_folder = asprintf_hd("%s/%s", KPM_PKG_PATH, id);
         chdir(launch_folder);
         free(launch_folder);
-        system(launch_command);
-        free(launch_command);
+        
+        execv("/bin/sh", launch_args);
+        return KPM_GENERIC_ERROR;
     }
     else
     {
