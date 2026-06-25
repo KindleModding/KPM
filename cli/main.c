@@ -218,6 +218,9 @@ int main(int argc, char* argv[])
     }
     else if (strcmp(argv[command_index], "install") == 0)
     {
+        // Update index automatically
+        KPM_UpdateIndex(&kpm, &kpm_io);
+
         struct InstallTarget* targets = malloc((argc - (command_index+1)) * sizeof(struct InstallTarget));
         for (int i=0; i < argc - (command_index+1); i++)
         {
