@@ -25,6 +25,7 @@ struct DependencyNode
     size_t connectedCount; /**< Number of dependencies of this node */
     char* repository; /**< Package repo, may be NULL */
     char* id; /**< Package id */
+    char* url; /**< Artifact url */
     struct SemVer min_version;
     struct SemVer max_version;
 };
@@ -40,8 +41,7 @@ bool FindArtifactNode(struct DependencyGraph* graph, char* repository, char* id,
 void RenderGraph(struct DependencyGraph* graph, char** output);
 void Internal_ArrayAddNode(size_t* traversedNodeCount, NodeIndex_t** traversedNodes, NodeIndex_t node);
 
-enum KPMResult Internal_GetArtifactDependencies(struct KPM* kpm, struct IndexedArtifact* target, size_t* targetDependencyCount, struct ArtifactDependency** targetDependencies);
+enum KPMResult Internal_GetArtifactDependencies(struct KPM* kpm, struct IndexedArtifact* target, size_t* targetDependencyCount, struct ArtifactDependency** targetDependencies, struct KPMIO* statusCallback);
 bool Internal_NarrowDependency(struct ArtifactDependency* currentDependency, struct ArtifactDependency* targetDependency);
-int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph* graph, struct IndexedArtifact* artifact);
-int Internal_ConstructGraphFromArtifactDependencies(struct KPM* kpm, struct DependencyGraph* graph, struct IndexedArtifact* artifact, size_t dependencyCount, struct ArtifactDependency* dependencies);
-bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, NodeIndex_t root, size_t* traversedNodeCount, NodeIndex_t** traversedNodes, struct KPMIO* statusCallback);
+int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph* graph, struct IndexedArtifact* artifact, struct KPMIO* statusCallback);
+bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, NodeIndex_t root, NodeIndex_t currentNode,size_t* traversedNodeCount, NodeIndex_t** traversedNodes, struct KPMIO* statusCallback);

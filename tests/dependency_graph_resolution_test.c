@@ -33,8 +33,13 @@ int main()
 
     struct DependencyGraph graph;
     CreateDependencyGraph(&graph, 0);
+
+    struct KPMIO kpmIO = 
+    {
+        .log = statusCallback
+    };
     
-    assert(Internal_ConstructGraphFromArtifact(&kpm, &graph, &artifacts[0]) != -1);
+    assert(Internal_ConstructGraphFromArtifact(&kpm, &graph, &artifacts[0], &kpmIO) != -1);
     KPM_FreeIndexedArtifactList(artifactCount, artifacts);
     
     char* rendered;
@@ -53,12 +58,7 @@ int main()
     fprintf(stderr, "Resolving graph...\n");
     size_t traversedDependencyCount = 0;
     size_t* traversedDependencies = NULL;
-    struct KPMIO kpmIO = 
-    {
-        .log = statusCallback
-
-    };
-    assert(Internal_ResolveDependencyGraph(&graph, 0, &traversedDependencyCount, &traversedDependencies, &kpmIO));
+    assert(Internal_ResolveDependencyGraph(&graph, 0, 0, &traversedDependencyCount, &traversedDependencies, &kpmIO));
 
     fprintf(stderr, "Traversed:\n");
     for (size_t i=0; i < traversedDependencyCount; i++)

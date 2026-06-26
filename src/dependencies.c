@@ -40,9 +40,11 @@ void FreeNode(struct DependencyNode* node)
 {
     free(node->repository);
     free(node->id);
+    free(node->url);
     free(node->connected);
     node->repository = NULL;
     node->id = NULL;
+    node->url = NULL;
     node->connected = NULL;
     node->connectedCount = 0;
 }
@@ -240,9 +242,9 @@ bool FindDependencyNode(struct DependencyGraph* graph, char* id, struct SemVer m
  * @param targetDependencies 
  * @return enum KPMResult 
  */
-enum KPMResult Internal_GetArtifactDependencies(struct KPM* kpm, struct IndexedArtifact* target, size_t* targetDependencyCount, struct ArtifactDependency** targetDependencies)
+enum KPMResult Internal_GetArtifactDependencies(struct KPM* kpm, struct IndexedArtifact* target, size_t* targetDependencyCount, struct ArtifactDependency** targetDependencies, struct KPMIO* statusCallback)
 {
-    if (strlen(target->url) >= strlen("file://") && strncmp(target->url, "file://", strlen("file://")) == 0)
+    if (target->url != NULL && strlen(target->url) >= strlen("file://") && strncmp(target->url, "file://", strlen("file://")) == 0)
     {
         char* manifestData;
         enum KPMResult result = Internal_GetManifest(target->url+strlen("file://"), &manifestData, NULL);
@@ -270,7 +272,7 @@ enum KPMResult Internal_GetArtifactDependencies(struct KPM* kpm, struct IndexedA
         }
 
         *targetDependencyCount = cJSON_GetArraySize(cJSON_GetObjectItem(json, "dependencies"));
-        targetDependencies = malloc(*targetDependencyCount * sizeof(struct ArtifactDependency));
+        *targetDependencies = malloc(*targetDependencyCount * sizeof(struct ArtifactDependency));
         for (size_t i=0; i < *targetDependencyCount; i++)
         {
             cJSON* dependencyJSON = cJSON_GetArrayItem(cJSON_GetObjectItem(json, "dependencies"), i);
@@ -323,7 +325,7 @@ enum KPMResult Internal_GetArtifactDependencies(struct KPM* kpm, struct IndexedA
         enum KPMResult status = KPM_OK;
 
         // If there is no repository then the package was installed locally
-        if (strlen(target->repository) == 0)
+        if (target->repository == NULL)
         {
             struct InstalledPackage installedPackage;
             KPM_GetInstalledPackage(kpm, target->id, &installedPackage);
@@ -352,9 +354,7 @@ enum KPMResult Internal_GetArtifactDependencies(struct KPM* kpm, struct IndexedA
             }
             KPM_FreeInstalledPackage(&installedPackage);
         }
-
-        // Otherwise... nah
-        if ((status = KPM_ListArtifactDependencies(kpm, target->repository, target->id, target->url, targetDependencyCount, targetDependencies)) != KPM_OK)
+        else if ((status = KPM_ListArtifactDependencies(kpm, target->repository, target->id, target->url, targetDependencyCount, targetDependencies)) != KPM_OK)
             return status;
     }
 
@@ -454,32 +454,32 @@ bool Internal_NarrowDependency(struct ArtifactDependency* currentDependency, str
     }
 }
 
-int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph* graph, struct IndexedArtifact* artifact)
-{
-    size_t dependencyCount = 0;
-    struct ArtifactDependency* dependencies = NULL;
-    if (Internal_GetArtifactDependencies(kpm, artifact, &dependencyCount, &dependencies) != KPM_OK)
-    {
-        KPM_FreeArtifactDependencyList(dependencyCount, dependencies);
-        fprintf(stderr, "Could not list dependencies for %s (%u.%u.%u)\n", artifact->id, artifact->version.major, artifact->version.minor, artifact->version.patch);
-        return -1;
-    }
-    return Internal_ConstructGraphFromArtifactDependencies(kpm, graph,artifact, dependencyCount, dependencies);
-}
-
-int Internal_ConstructGraphFromArtifactDependencies(struct KPM* kpm, struct DependencyGraph* graph, struct IndexedArtifact* artifact, size_t dependencyCount, struct ArtifactDependency* dependencies)
+int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph* graph, struct IndexedArtifact* artifact, struct KPMIO* statusCallback)
 {
     struct DependencyNode node = {
         .type = NODE_ARTIFACT,
         .connected = NULL,
         .connectedCount = 0,
-        .repository = strdup(artifact->repository),
+        .repository = NULL,
         .id = strdup(artifact->id),
+        .url = NULL,
         .min_version = artifact->version,
         .max_version = artifact->version
     };
+    if (artifact->url != NULL)
+        node.url = strdup(artifact->url);
+
     // Add this artifact to the graph
     int root = AddNode(graph, node);
+
+    size_t dependencyCount = 0;
+    struct ArtifactDependency* dependencies = NULL;
+    if (Internal_GetArtifactDependencies(kpm, artifact, &dependencyCount, &dependencies, statusCallback) != KPM_OK)
+    {
+        KPM_FreeArtifactDependencyList(dependencyCount, dependencies);
+        fprintf(stderr, "Could not list dependencies for %s (%u.%u.%u)\n", artifact->id, artifact->version.major, artifact->version.minor, artifact->version.patch);
+        return -1;
+    }
 
     for (size_t i=0; i < dependencyCount; i++)
     {
@@ -523,7 +523,7 @@ int Internal_ConstructGraphFromArtifactDependencies(struct KPM* kpm, struct Depe
             NodeIndex_t artifactNodeId;
             if (!FindArtifactNode(graph, artifacts[j].repository, artifacts[j].id, artifacts[j].version, &artifactNodeId))
             {
-                artifactNodeId = Internal_ConstructGraphFromArtifact(kpm, graph, &artifacts[j]);
+                artifactNodeId = Internal_ConstructGraphFromArtifact(kpm, graph, &artifacts[j], statusCallback);
                 if (artifactNodeId == (NodeIndex_t) -1)
                 {
                     KPM_FreeArtifactDependencyList(dependencyCount, dependencies);
@@ -547,11 +547,14 @@ int Internal_ConstructGraphFromArtifactDependencies(struct KPM* kpm, struct Depe
             {
                 struct IndexedArtifact fakeArtifact = {
                     .id = strdup(installedPackage.id),
-                    .repository = installedPackage.repository,
+                    .repository = NULL,
                     .url = strdup(""),
                     .version = installedPackage.version
                 };
-                artifactNodeId = Internal_ConstructGraphFromArtifact(kpm, graph, &fakeArtifact);
+                if (installedPackage.repository != NULL)
+                    fakeArtifact.repository = strdup(installedPackage.repository);
+                
+                artifactNodeId = Internal_ConstructGraphFromArtifact(kpm, graph, &fakeArtifact, statusCallback);
                 KPM_FreeIndexedArtifact(&fakeArtifact);
                 if (artifactNodeId == (NodeIndex_t) -1)
                 {
@@ -596,12 +599,8 @@ void Internal_ArrayAddNode(size_t* traversedNodeCount, NodeIndex_t** traversedNo
     (*traversedNodes)[*traversedNodeCount - 1] = node;
 }
 
-bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, NodeIndex_t root, size_t* traversedNodeCount, NodeIndex_t** traversedNodes, struct KPMIO* kpmIO)
+bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, NodeIndex_t root, NodeIndex_t currentNode, size_t* traversedNodeCount, NodeIndex_t** traversedNodes, struct KPMIO* kpmIO)
 {
-    *traversedNodes = NULL;
-    *traversedNodeCount = 0;
-
-    NodeIndex_t currentNode = root;
     for (;;)
     {
         kpmIO->log(KPM_VERBOSITY_DEBUG, "Traversing node: %zu - %s", currentNode, graph->nodes[currentNode].id);

@@ -39,7 +39,7 @@ void KPM_FreeArtifactDependency(struct ArtifactDependency* dependency)
 void KPM_FreeArtifactDependencyList(size_t dependencyCount, struct ArtifactDependency* dependencies)
 {
     for (size_t i=0; i < dependencyCount; i++)
-        KPM_FreeArtifactDependency(dependencies + i);
+        KPM_FreeArtifactDependency(&dependencies[i]);
     
     free(dependencies);
 }

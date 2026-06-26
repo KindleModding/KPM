@@ -4,6 +4,15 @@
 #include <stdio.h>
 #include <string.h>
 
+void statusCallback(enum KPMVerbosity verbosity, const char* format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    vfprintf(stderr, format, args);
+    fprintf(stderr, "\n");
+    va_end(args);
+}
+
 int main()
 {
     struct KPM kpm = {
@@ -22,9 +31,14 @@ int main()
     struct InstalledPackage* installedPackages;
     assert(KPM_ListInstalledPackages(&kpm, &installedPackageCount, &installedPackages) == KPM_OK);
 
+    struct KPMIO kpmIO = 
+    {
+        .log = statusCallback
+    };
+
     struct DependencyGraph graph;
     CreateDependencyGraph(&graph, 0);
-    assert(Internal_ConstructGraphFromArtifact(&kpm, &graph, &artifacts[0]) != -1);
+    assert(Internal_ConstructGraphFromArtifact(&kpm, &graph, &artifacts[0], &kpmIO) != -1);
     
     char* rendered;
     fprintf(stderr, "Rendering graph\n");

@@ -251,6 +251,7 @@ enum KPMResult Internal_GetManifest(char* path, char** outBuffer, struct KPMIO* 
  */
 void Internal_TraverseInstalledNode(struct DependencyGraph* graph, NodeIndex_t node, size_t* traversedNodeCount, NodeIndex_t** traversedNodes, size_t installedCount, struct InstalledPackage* installed)
 {
+    Internal_ArrayAddNode(traversedNodeCount, traversedNodes, node);
     // Traverse the dependencies
     for (size_t i = 0; i < graph->nodes[node].connectedCount; i++)
     {
@@ -259,6 +260,7 @@ void Internal_TraverseInstalledNode(struct DependencyGraph* graph, NodeIndex_t n
         for (size_t j=0; j < dependency.connectedCount; j++)
         {
             struct DependencyNode candidateArtifact = graph->nodes[dependency.connected[j]];
+            Internal_ArrayAddNode(traversedNodeCount, traversedNodes, dependency.connected[j]);
 
             // Check if this node is installed
             for (size_t k=0; k < installedCount; k++)
@@ -274,7 +276,6 @@ void Internal_TraverseInstalledNode(struct DependencyGraph* graph, NodeIndex_t n
             }
         }
     }
-    Internal_ArrayAddNode(traversedNodeCount, traversedNodes, node);
 }
 
 struct DownloadData
@@ -346,57 +347,68 @@ enum KPMResult Internal_DownloadGraphItems(struct KPM* kpm, struct DependencyGra
 {
     for (size_t i=0; i < deduplicatedPackageCount; i++)
     {
-        struct IndexedArtifact artifact;
-        if (KPM_GetArtifact(kpm, graph->nodes[deduplicatedPackages[i]].repository, graph->nodes[deduplicatedPackages[i]].id, graph->nodes[deduplicatedPackages[i]].min_version, &artifact) != KPM_OK)
+        char* target_url;
+        if (graph->nodes[deduplicatedPackages[i]].url == NULL)
         {
-            kpmIO->log(KPM_VERBOSITY_WARN, "Could not find artifact for %s", graph->nodes[deduplicatedPackages[i]].id);
-            continue;
+            struct IndexedArtifact artifact;
+            if (KPM_GetArtifact(kpm, graph->nodes[deduplicatedPackages[i]].repository, graph->nodes[deduplicatedPackages[i]].id, graph->nodes[deduplicatedPackages[i]].min_version, &artifact) != KPM_OK)
+            {
+                kpmIO->log(KPM_VERBOSITY_WARN, "Could not find artifact for %s", graph->nodes[deduplicatedPackages[i]].id);
+                continue;
+            }
+            struct Repository repository;
+            if (KPM_GetRepository(kpm, artifact.repository, &repository) != KPM_OK)
+            {
+                kpmIO->log(KPM_VERBOSITY_WARN, "Could not find repository for %s", artifact.repository);
+                continue;
+            }
+
+            char* repo_url = strdup(repository.url);
+            int last_slash = 0;
+            for (int i = 0; i < strlen(repo_url); i++)
+            {
+                if (repo_url[i] == '/')
+                    last_slash = i;
+            }
+            repo_url[last_slash] = 0;
+            char* target_url = asprintf_hd("%s/%s", repo_url, artifact.url);
+            free(repo_url);
+            for (int i = 0; i < strlen(artifact.url); i++)
+            {
+                if (artifact.url[i] == ':')
+                {
+                    free(target_url);
+                    target_url = strdup(artifact.url);
+                    break;
+                }
+            }
+
+            KPM_FreeIndexedArtifact(&artifact);
+            KPM_FreeRepository(&repository);
         }
-        struct Repository repository;
-        if (KPM_GetRepository(kpm, artifact.repository, &repository) != KPM_OK)
+        else
         {
-            kpmIO->log(KPM_VERBOSITY_WARN, "Could not find repository for %s", artifact.repository);
-            continue;
+            target_url = strdup(graph->nodes[deduplicatedPackages[i]].url);
         }
 
-        char* filename = artifact.url + strlen(artifact.url)-1;
-        while (*filename != '/' && filename >= artifact.url)
+        char* filename = target_url + strlen(target_url)-1;
+        while (*filename != '/' && filename > target_url)
         {
             filename--;
         }
         filename++;
 
-        kpmIO->log(KPM_VERBOSITY_INFO, "Downloading %s", artifact.id);
+        kpmIO->log(KPM_VERBOSITY_INFO, "Downloading %s", graph->nodes[deduplicatedPackages[i]].id);
         char* path = asprintf_hd("%s/tmp/%s", kpm->pkgPath, filename);
         kpmIO->log(KPM_VERBOSITY_DEBUG, "Downloading to %s", path);
         int fd = open(path, O_CREAT|O_SYNC|O_TRUNC|O_WRONLY, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
         free(path);
         if (fd == -1)
         {
-            KPM_FreeIndexedArtifact(&artifact);
             return KPM_FILE_SYSTEM_ERROR; // @TODO
         }
 
         CURL* curl = curl_easy_init();
-        char* repo_url = strdup(repository.url);
-        int last_slash = 0;
-        for (int i = 0; i < strlen(repo_url); i++)
-        {
-            if (repo_url[i] == '/')
-                last_slash = i;
-        }
-        repo_url[last_slash] = 0;
-        char* target_url = asprintf_hd("%s/%s", repo_url, artifact.url);
-        free(repo_url);
-        for (int i = 0; i < strlen(artifact.url); i++)
-        {
-            if (artifact.url[i] == ':')
-            {
-                free(target_url);
-                target_url = strdup(artifact.url);
-                break;
-            }
-        }
         kpmIO->log(KPM_VERBOSITY_DEBUG, "Downloading url %s", target_url);
         struct DownloadData download_data = {
             .kpm_io = kpmIO,
@@ -421,8 +433,6 @@ enum KPMResult Internal_DownloadGraphItems(struct KPM* kpm, struct DependencyGra
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
         close(fd);
         curl_easy_cleanup(curl);
-        KPM_FreeIndexedArtifact(&artifact);
-        KPM_FreeRepository(&repository);
 
         if (response_code >= 400)
         {
@@ -592,8 +602,9 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
         .type = NODE_ARTIFACT,
         .connected = NULL,
         .connectedCount = 0,
-        .id = strdup(""),
-        .repository = strdup(""),
+        .id = NULL,
+        .url = NULL,
+        .repository = NULL,
     };
 
     NodeIndex_t rootId = AddNode(&graph, rootNode);
@@ -606,6 +617,9 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
 
     size_t traversedNodeCount = 0;
     NodeIndex_t* traversedNodes = NULL;
+    Internal_ArrayAddNode(&traversedNodeCount, &traversedNodes, rootId);
+    NodeIndex_t firstToInstall = -1;
+
     for (size_t i=0; i < installedPackageCount; i++)
     {
         bool installing = false;
@@ -626,7 +640,8 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
             .connected = NULL,
             .connectedCount = 0,
             .id = strdup(installedPackages[i].id),
-            .repository = strdup(installedPackages[i].repository),
+            .url = NULL,
+            .repository = NULL,
             .min_version = installedPackages[i].version,
             .max_version = SEMVER_MAX
         };
@@ -638,16 +653,17 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
 
         struct IndexedArtifact fakeArtifact = {
             .id = strdup(installedPackages[i].id),
-            .repository = strdup(installedPackages[i].repository),
-            .url = strdup(installedPackages[i].id),
+            .repository = NULL, // Mark as installed package
+            .url = NULL,
             .version = installedPackages[i].version
         };
 
-        NodeIndex_t constructedId = Internal_ConstructGraphFromArtifact(kpm, &graph, &fakeArtifact);
+        NodeIndex_t constructedId = Internal_ConstructGraphFromArtifact(kpm, &graph, &fakeArtifact, kpmIO);
         KPM_FreeIndexedArtifact(&fakeArtifact);
         AddEdge(&graph, depId, constructedId);
-        Internal_ArrayAddNode(&traversedNodeCount, &traversedNodes, constructedId);
-
+        
+        // Add dep to traversal
+        Internal_ArrayAddNode(&traversedNodeCount, &traversedNodes, depId);
         // Add node to traversal
         Internal_TraverseInstalledNode(&graph, constructedId, &traversedNodeCount, &traversedNodes, installedPackageCount, installedPackages);
 
@@ -685,13 +701,15 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
                 KPM_FreeInstalledPackageList(installedPackageCount, installedPackages);
                 return status;
             }
-
-            //cJSON* json = cJSON_Parse(outBuffer);
-            FreeDependencyGraph(&graph);
-            free(traversedNodes);
+            cJSON* manifest = cJSON_Parse(outBuffer);
+            artifact.id = strdup(cJSON_GetStringValue(cJSON_GetObjectItem(manifest, "id")));
+            artifact.repository = NULL;
+            artifact.url = strdup(target.id);
+            artifact.version.major = cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(manifest, "version"), 0));
+            artifact.version.minor = cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(manifest, "version"), 1));
+            artifact.version.patch = cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(manifest, "version"), 2));
+            cJSON_Delete(manifest);
             free(outBuffer);
-            KPM_FreeInstalledPackageList(installedPackageCount, installedPackages);
-            return KPM_GENERIC_ERROR; // @TODO: Come back to this later - install local package files
         }
         else
         {
@@ -733,7 +751,7 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
             .type = NODE_DEPENDENCY,
             .connected = NULL,
             .connectedCount = 0,
-            .id = strdup(target.id),
+            .id = strdup(artifact.id),
             .repository = NULL,
             .min_version = {
                 .major = 0,
@@ -748,10 +766,17 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
         };
         int depId = AddNode(&graph, depNode);
         AddEdge(&graph, rootId, depId);
-
-        NodeIndex_t constructedId = Internal_ConstructGraphFromArtifact(kpm, &graph, &artifact);
+        
+        NodeIndex_t constructedId = Internal_ConstructGraphFromArtifact(kpm, &graph, &artifact, kpmIO);
         AddEdge(&graph, depId, constructedId);
         KPM_FreeIndexedArtifact(&artifact);
+
+        if (firstToInstall == -1)
+        {
+            Internal_ArrayAddNode(&traversedNodeCount, &traversedNodes, rootId);
+            Internal_ArrayAddNode(&traversedNodeCount, &traversedNodes, depId);
+            firstToInstall = constructedId;
+        }
     }
 
     // Render out the graph and log the data for debugging
@@ -779,7 +804,7 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
     }
 
     // @TODO: Validate that it's starting from the right point when handling already-installed artifacts
-    if (!Internal_ResolveDependencyGraph(&graph, rootId, &traversedNodeCount, &traversedNodes, kpmIO))
+    if (!Internal_ResolveDependencyGraph(&graph, rootId, firstToInstall, &traversedNodeCount, &traversedNodes, kpmIO))
     {
         kpmIO->log(KPM_VERBOSITY_ERROR, "Could not resolve dependency graph.");
         kpmIO->log(KPM_VERBOSITY_ERROR, "If you believe this is a bug - please submit an issue");
@@ -828,7 +853,6 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
         {
             if (
                 strcmp(graph.nodes[traversedNodes[i]].id, installedPackages[j].id) == 0 &&
-                (installedPackages[j].repository == NULL || strcmp(graph.nodes[traversedNodes[i]].repository, installedPackages[j].repository) == 0) &&
                 (SemVerCmp(graph.nodes[traversedNodes[i]].min_version, installedPackages[j].version) == 0)
             )
             {
@@ -915,10 +939,12 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
             if (strcmp(graph.nodes[deduplicatedPackages[i]].id, installedPackages[j].id) == 0)
             {
                 installed = true;
-                if (SemVerCmp(graph.nodes[deduplicatedPackages[i]].min_version, installedPackages[j].version) <= 0)
+                if (SemVerCmp(graph.nodes[deduplicatedPackages[i]].min_version, installedPackages[j].version) > 0)
                     Internal_ArrayAddNode(&upgradeCount, &upgrade, deduplicatedPackages[i]);
-                else if (SemVerCmp(graph.nodes[deduplicatedPackages[i]].min_version, installedPackages[j].version) > 0)
+                else if (SemVerCmp(graph.nodes[deduplicatedPackages[i]].min_version, installedPackages[j].version) < 0)
                     Internal_ArrayAddNode(&downgradeCount, &downgrade, deduplicatedPackages[i]);
+                else
+                    Internal_ArrayAddNode(&installCount, &install, deduplicatedPackages[i]);
                 break;
             }
         }
