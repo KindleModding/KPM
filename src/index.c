@@ -215,6 +215,8 @@ enum KPMResult KPM_UpdateIndex(struct KPM *kpm, struct KPMIO* kpmIO)
             continue;
         }
 
+        // V1 - Requires no special logic, only difference is packages are lzma compressed, not gzip
+
         // Start a transaction for every repository
         sqlite3_exec(kpm->db, "BEGIN", NULL, NULL, NULL); // "But Chudda what if?" IT WONT FAIL
 

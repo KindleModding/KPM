@@ -1,5 +1,20 @@
 #!/bin/sh
 
+set -e # Halt on failure!
+
+# Find which chattr to use
+OLD_CHATTR="/bin/chattr"
+NEW_CHATTR="/bin/chattr.e2fsprogs" # KT6 5.18.1.5+ and PW6, KS, & KS2 5.18.5+
+if [ -f "${OLD_CHATTR}" ]; then
+    CHATTR="${OLD_CHATTR}"
+elif [ -f "${NEW_CHATTR}" ]; then
+    CHATTR="${NEW_CHATTR}"
+else
+    # We couldn't find one, show an error, and pretend it's the old one I guess
+    echo "Error: Could not find chattr command. This is bad."
+    CHATTR="${OLD_CHATTR}" # won't be found, but better than nothing?
+fi
+
 ###
 # Helper functions
 ###

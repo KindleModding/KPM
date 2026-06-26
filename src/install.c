@@ -506,6 +506,8 @@ bool Internal_InstallItem(struct KPM* kpm, char* repository, char* path, bool in
         return false;
     }
 
+    // V1 - Requires no special logic, only difference is packages are lzma compressed, not gzip
+
     char* id = cJSON_GetStringValue(cJSON_GetObjectItem(json, "id"));
     kpmIO->log(KPM_VERBOSITY_DEBUG, "Installing item with id: %s", id);
 

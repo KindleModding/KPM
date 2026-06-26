@@ -86,8 +86,11 @@ class Package:
             manifest = json.loads(file.read())
 
         if (manifest["manifest_version"] != KPM_MANIFEST_VERSION):
-            print(f"[ERR] Expected manifest version {KPM_MANIFEST_VERSION}, got {manifest['manifest_version']}")
-            exit(1)
+            if (manifest["manifest_version"] == 1):
+                print("[WARN] Manifest v1 is deprecated. Please upgrade to manifest v2.")
+            else:
+                print(f"[ERR] Expected manifest version {KPM_MANIFEST_VERSION}, got {manifest['manifest_version']}")
+                exit(1)
 
         if (hasattr(args, 'supported_platform') and len(args.supported_platform) > 0):
             manifest["supported_platforms"] = args.supported_platform
@@ -101,7 +104,7 @@ class Package:
         print("Packing...")
 
         packageFilename = os.path.join(args.output_path, f"{manifest['id']}_{'.'.join(str(x) for x in manifest['version'])}_{'-'.join(manifest.get('supported_platforms', ['kindleany']))}.kpkg")
-        if (args.compression != 0):
+        if (args.compression != 0 and manifest["manifest_version"] != 1):
             file = tarfile.open(packageFilename, "w:gz", compresslevel=args.compression)
         else:
             file = tarfile.open(packageFilename, "w:")
