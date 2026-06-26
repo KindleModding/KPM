@@ -43,9 +43,9 @@ jobs:
             meson setup --cross-file ~/x-tools/arm-kindlepw2-linux-gnueabi/meson-crosscompile.txt builddir_kindlepw2 --reconfigure --buildtype=release
             meson compile -C builddir_kindlehf
             meson compile -C builddir_kindlepw2
-            mkdir build
-            mkdir build/kindlehf
-            mkdir build/kindlepw2
+            mkdir -p build
+            mkdir -p build/kindlehf
+            mkdir -p build/kindlepw2
             mv builddir_kindlehf/src/libkpm.so build/kindlehf/
             mv builddir_kindlehf/cli/kpm build/kindlehf/
             mv builddir_kindlepw2/src/libkpm.so build/kindlepw2/

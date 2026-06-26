@@ -177,8 +177,11 @@ class Repo:
                 repositoryManifest = json.loads(file.read())
 
         if (repositoryManifest["manifest_version"] != KPM_MANIFEST_VERSION):
-            print(f"[ERR] Expected manifest version {KPM_MANIFEST_VERSION}, got {repositoryManifest['manifest_version']}")
-            exit(1)
+            if (repositoryManifest["manifest_version"] == 1):
+                pass
+            else:
+                print(f"[ERR] Expected manifest version {KPM_MANIFEST_VERSION}, got {repositoryManifest['manifest_version']}")
+                exit(1)
 
         print(f"Adding package {args.package_path} to the repository...")
         print("Reading manifest")
@@ -197,6 +200,17 @@ class Repo:
                     iconData = iconFile.read()
             except:
                 print("[WARN] Could not open icon.png file")
+            
+        if (manifest["manifest_version"] != KPM_MANIFEST_VERSION):
+            if (manifest["manifest_version"] == 1):
+                pass
+            else:
+                print(f"[ERR] Expected manifest version {KPM_MANIFEST_VERSION}, got {repositoryManifest['manifest_version']}")
+                exit(1)
+
+        if (repositoryManifest["manifest_version"] != manifest["manifest_version"]):
+            print(f"[ERR] Manifest versions must match, got package manifest v{manifest["manifest_version"]}, got repo manifest v{repositoryManifest['manifest_version']}")
+            exit(1)
 
         if (not manifest["id"] in repositoryManifest["packages"]):
             repositoryManifest["packages"][manifest["id"]] = { "name": "", "author": "", "description": "", "artifacts": [] }
