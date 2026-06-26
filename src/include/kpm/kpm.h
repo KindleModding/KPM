@@ -17,10 +17,10 @@
 
 #include "semver.h"
 
-#define KPM_MANIFEST_VERSION 1
+#define KPM_MANIFEST_VERSION 2
 
 #define KPM_VERSION_MAJOR 0
-#define KPM_VERSION_MINOR 1
+#define KPM_VERSION_MINOR 2
 #define KPM_VERSION_PATCH 0
 
 enum KPMResult
@@ -100,7 +100,7 @@ struct InstalledPackage
     char* author; /**< The package author */
     char* description; /**< The package description */
     struct SemVer version; /**< The package version */
-    bool installed_as_dependency;
+    bool installed_as_dependency; /**< Whether or not this package was installed as a dependency of another package */
 };
 
 /**

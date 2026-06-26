@@ -9,7 +9,7 @@ import tarfile
 import json
 import os
 
-KPM_MANIFEST_VERSION=1
+KPM_MANIFEST_VERSION=2
 valid_supported_platforms = [
     "kindle",
     "kindle5",
@@ -101,7 +101,12 @@ class Package:
         print("Packing...")
 
         packageFilename = os.path.join(args.output_path, f"{manifest['id']}_{'.'.join(str(x) for x in manifest['version'])}_{'-'.join(manifest.get('supported_platforms', ['kindleany']))}.kpkg")
-        with tarfile.open(packageFilename, "w|xz", preset=args.compression) as file:
+        if (args.compression != 0):
+            file = tarfile.open(packageFilename, "w:gz", compresslevel=args.compression)
+        else:
+            file = tarfile.open(packageFilename, "w:")
+
+        with file:
             for source_item_name in os.listdir(args.pkg_path):
                 if (source_item_name in ['rootfs', 'startup.sh']):
                     print(f"[ERR] A file or folder with the name '{source_item_name}' was detected in the package - This is currently reserved for future use")

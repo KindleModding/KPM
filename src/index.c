@@ -209,6 +209,7 @@ enum KPMResult KPM_UpdateIndex(struct KPM *kpm, struct KPMIO* kpmIO)
         if (cJSON_GetNumberValue(cJSON_GetObjectItem(json, "manifest_version")) > KPM_MANIFEST_VERSION)
         {
             kpmIO->log(KPM_VERBOSITY_ERROR, "Invalid manifest version, got %.0f, expected %i", cJSON_GetNumberValue(cJSON_GetObjectItem(json, "manifest_version")), KPM_MANIFEST_VERSION);
+            kpmIO->log(KPM_VERBOSITY_ERROR, "You may need to update KPM, run: kpm install kpm or kpm upgrade");
             SimpleGET_Cleanup(&request);
             cJSON_Delete(json);
             continue;
