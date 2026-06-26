@@ -55,6 +55,8 @@ jobs:
       run: |
             mkdir -p package/kmc/kindlehf/bin
             mkdir -p package/kmc/kindlehf/lib
+            mkdir -p package-compat/kmc/kindlehf/bin
+            mkdir -p package-compat/kmc/kindlehf/lib
             cp build/kindlehf/libkpm.so package/kmc/kindlehf/lib/
             cp build/kindlehf/kpm package/kmc/kindlehf/bin/
             cp build/kindlehf/libkpm.so package-compat/kmc/kindlehf/lib/
@@ -63,6 +65,8 @@ jobs:
 
             mkdir -p package/kmc/kindlepw2/bin
             mkdir -p package/kmc/kindlepw2/lib
+            mkdir -p package-compat/kmc/kindlepw2/bin
+            mkdir -p package-compat/kmc/kindlepw2/lib
             cp build/kindlepw2/libkpm.so package/kmc/kindlepw2/lib/
             cp build/kindlepw2/kpm package/kmc/kindlepw2/bin/
             cp build/kindlepw2/libkpm.so package-compat/kmc/kindlepw2/lib/
