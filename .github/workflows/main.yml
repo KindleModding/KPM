@@ -50,6 +50,18 @@ jobs:
             mv builddir_kindlehf/cli/kpm build/kindlehf/
             mv builddir_kindlepw2/src/libkpm.so build/kindlepw2/
             mv builddir_kindlepw2/cli/kpm build/kindlepw2/
+    - name: Package
+      shell: bash
+      run: |
+            mkdir -p package/kmc/kindlehf/bin
+            mkdir -p package/kmc/kindlehf/lib
+            cp build/kindlehf/libkpm.so package/kmc/kindlehf/lib/
+            cp build/kindlehf/kpm package/kmc/kindlehf/bin/
+
+            mkdir -p package/kmc/kindlepw2/bin
+            mkdir -p package/kmc/kindlepw2/lib
+            cp build/kindlepw2/libkpm.so package/kmc/kindlepw2/lib/
+            cp build/kindlepw2/kpm package/kmc/kindlepw2/bin/
     - uses: actions/upload-artifact@v4
       with:
         name: KPM

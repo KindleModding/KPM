@@ -1,0 +1,14 @@
+{
+  "manifest_version": 2,
+  "id": "kpm",
+  "name": "KPM",
+  "author": "Hackerdude",
+  "description": "The Kindle Package Manager allows you to install and uninstall apps and programs easily on your Kindle",
+  "version": [
+    0,
+    2,
+    0
+  ],
+  "dependencies": [],
+  "supported_platforms": ["kindlehf", "kindlepw2"]
+}
