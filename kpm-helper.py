@@ -103,7 +103,9 @@ class Package:
         print(f"Supported Platforms: {', '.join(manifest['supported_platforms'])}")
         print("Packing...")
 
-        packageFilename = os.path.join(args.output_path, f"{manifest['id']}_{'.'.join(str(x) for x in manifest['version'])}_{'-'.join(manifest.get('supported_platforms', ['kindleany']))}.kpkg")
+        packageFilename = args.output_path
+        if (os.path.isdir(packageFilename)):
+            packageFilename = os.path.join(args.output_path, f"{manifest['id']}_{'.'.join(str(x) for x in manifest['version'])}_{'-'.join(manifest.get('supported_platforms', ['kindleany']))}.kpkg")
         if (args.compression != 0 and manifest["manifest_version"] != 1):
             file = tarfile.open(packageFilename, "w:gz", compresslevel=args.compression)
         else:
@@ -166,6 +168,7 @@ class Repo:
     def add(args):
         args.repo_path: str
         args.package_path: str
+        args.no_rename: bool
 
         repositoryManifest = None
         try:
@@ -230,7 +233,10 @@ class Repo:
         print("Adding artifact...")
         packageFolder = os.path.join("packages", manifest['id'])
         artifactFolder = os.path.join(packageFolder, "artifacts")
-        artifactPath = os.path.join(artifactFolder, f"{manifest['id']}_{'.'.join(str(x) for x in manifest['version'])}_{'-'.join(manifest.get('supported_platforms', ['kindleany']))}.kpkg")
+        if (args.no_rename):
+            artifactPath = os.path.join(artifactFolder, f"{manifest['id']}_{'.'.join(str(x) for x in manifest['version'])}_{'-'.join(manifest.get('supported_platforms', ['kindleany']))}.kpkg")
+        else:
+            artifactPath = os.path.join(artifactFolder, os.path.basename(args.package_path))
 
         for artifact in repositoryManifest["packages"][manifest["id"]]["artifacts"]:
             if (artifact["version"][0] == manifest["version"][0] and
@@ -317,6 +323,7 @@ repo_init_parser.set_defaults(func=Repo.init)
 repo_add_parser = repo_subparsers.add_parser("add", help="Add an artifact to the repository")
 repo_add_parser.add_argument("repo_path", help="The path to the repository folder", type=pathlib.Path)
 repo_add_parser.add_argument("package_path", help="The path to the package file", type=pathlib.Path)
+repo_add_parser.add_argument("--no_rename", help="Do not rename package file when copying to the repo", action='store_true')
 repo_add_parser.set_defaults(func=Repo.add)
 
 args = parser.parse_args()
