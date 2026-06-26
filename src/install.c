@@ -348,47 +348,46 @@ enum KPMResult Internal_DownloadGraphItems(struct KPM* kpm, struct DependencyGra
     for (size_t i=0; i < deduplicatedPackageCount; i++)
     {
         char* target_url;
-        if (graph->nodes[deduplicatedPackages[i]].url == NULL)
+        kpmIO->log(KPM_VERBOSITY_DEBUG, "Building target url from repo %s", graph->nodes[deduplicatedPackages[i]].repository);
+        if (graph->nodes[deduplicatedPackages[i]].repository != NULL)
         {
-            struct IndexedArtifact artifact;
-            if (KPM_GetArtifact(kpm, graph->nodes[deduplicatedPackages[i]].repository, graph->nodes[deduplicatedPackages[i]].id, graph->nodes[deduplicatedPackages[i]].min_version, &artifact) != KPM_OK)
-            {
-                kpmIO->log(KPM_VERBOSITY_WARN, "Could not find artifact for %s", graph->nodes[deduplicatedPackages[i]].id);
-                continue;
-            }
             struct Repository repository;
-            if (KPM_GetRepository(kpm, artifact.repository, &repository) != KPM_OK)
+            if (KPM_GetRepository(kpm, graph->nodes[deduplicatedPackages[i]].repository, &repository) != KPM_OK)
             {
-                kpmIO->log(KPM_VERBOSITY_WARN, "Could not find repository for %s", artifact.repository);
+                kpmIO->log(KPM_VERBOSITY_WARN, "Could not find repository for %s", graph->nodes[deduplicatedPackages[i]].repository);
                 continue;
             }
 
+            kpmIO->log(KPM_VERBOSITY_DEBUG, "Got repo %s", graph->nodes[deduplicatedPackages[i]].repository);
+            kpmIO->log(KPM_VERBOSITY_DEBUG, "Got repo url %s", repository.url);
+            kpmIO->log(KPM_VERBOSITY_DEBUG, "Got package url: %s (%i)", graph->nodes[deduplicatedPackages[i]].url, strlen(graph->nodes[deduplicatedPackages[i]].url));
+
             char* repo_url = strdup(repository.url);
             int last_slash = 0;
-            for (int i = 0; i < strlen(repo_url); i++)
+            for (int j = 0; j < strlen(repo_url); j++)
             {
-                if (repo_url[i] == '/')
-                    last_slash = i;
+                if (repo_url[j] == '/')
+                    last_slash = j;
             }
             repo_url[last_slash] = 0;
-            char* target_url = asprintf_hd("%s/%s", repo_url, artifact.url);
+            target_url = asprintf_hd("%s/%s", repo_url, graph->nodes[deduplicatedPackages[i]].url);
             free(repo_url);
-            for (int i = 0; i < strlen(artifact.url); i++)
+            for (int j = 0; j < strlen(graph->nodes[deduplicatedPackages[i]].url); j++)
             {
-                if (artifact.url[i] == ':')
+                if (graph->nodes[deduplicatedPackages[i]].url[j] == ':')
                 {
                     free(target_url);
-                    target_url = strdup(artifact.url);
+                    target_url = strdup(graph->nodes[deduplicatedPackages[i]].url);
                     break;
                 }
             }
 
-            KPM_FreeIndexedArtifact(&artifact);
             KPM_FreeRepository(&repository);
         }
         else
         {
             target_url = strdup(graph->nodes[deduplicatedPackages[i]].url);
+            kpmIO->log(KPM_VERBOSITY_DEBUG, "Got url %s", graph->nodes[deduplicatedPackages[i]].url);
         }
 
         char* filename = target_url + strlen(target_url)-1;
@@ -498,7 +497,7 @@ bool Internal_InstallItem(struct KPM* kpm, char* repository, char* path, bool in
         return false;
     }
 
-    if (cJSON_GetNumberValue(cJSON_GetObjectItem(json, "manifest_version")) < KPM_MANIFEST_VERSION)
+    if (cJSON_GetNumberValue(cJSON_GetObjectItem(json, "manifest_version")) > KPM_MANIFEST_VERSION)
     {
         kpmIO->log(KPM_VERBOSITY_ERROR, "Invalid manifest version, got %.0f, expected %i", cJSON_GetNumberValue(cJSON_GetObjectItem(json, "manifest_version")), KPM_MANIFEST_VERSION);
         free(manifest);
@@ -655,7 +654,7 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
 
         struct IndexedArtifact fakeArtifact = {
             .id = strdup(installedPackages[i].id),
-            .repository = NULL, // Mark as installed package
+            .repository = strdup(installedPackages[i].repository),
             .url = NULL,
             .version = installedPackages[i].version
         };

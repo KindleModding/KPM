@@ -468,6 +468,8 @@ int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph*
     };
     if (artifact->url != NULL)
         node.url = strdup(artifact->url);
+    if (artifact->repository != NULL)
+        node.repository = strdup(artifact->repository);
 
     // Add this artifact to the graph
     int root = AddNode(graph, node);
@@ -547,8 +549,8 @@ int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph*
             {
                 struct IndexedArtifact fakeArtifact = {
                     .id = strdup(installedPackage.id),
-                    .repository = NULL,
-                    .url = strdup(""),
+                    .repository = strdup(installedPackage.repository),
+                    .url = NULL,
                     .version = installedPackage.version
                 };
                 if (installedPackage.repository != NULL)
