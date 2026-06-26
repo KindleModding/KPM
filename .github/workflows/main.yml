@@ -62,6 +62,8 @@ jobs:
             mkdir -p package/kmc/kindlepw2/lib
             cp build/kindlepw2/libkpm.so package/kmc/kindlepw2/lib/
             cp build/kindlepw2/kpm package/kmc/kindlepw2/bin/
+
+            python kpm-helper.py package pack package ./build
     - uses: actions/upload-artifact@v4
       with:
         name: KPM
