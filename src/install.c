@@ -1003,11 +1003,8 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
     bool retval = KPM_OK;
     for (size_t i=0; i < deduplicatedPackageCount; i++) // 1 to skip the dummy root
     {
-        struct IndexedArtifact artifact;
-        KPM_GetArtifact(kpm, graph.nodes[deduplicatedPackages[i]].repository, graph.nodes[deduplicatedPackages[i]].id, graph.nodes[deduplicatedPackages[i]].min_version, &artifact);
-
-        char* filename = artifact.url + strlen(artifact.url)-1;
-        while (*filename != '/' && filename >= artifact.url)
+        char* filename = graph.nodes[deduplicatedPackages[i]].url + strlen(graph.nodes[deduplicatedPackages[i]].url)-1;
+        while (*filename != '/' && filename >= graph.nodes[deduplicatedPackages[i]].url)
         {
             filename--;
         }
@@ -1017,7 +1014,7 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
         bool upgrading=false;
         for (size_t j=0; j < upgradeCount; j++)
         {
-            if (strcmp(graph.nodes[upgrade[j]].id, artifact.id) == 0)
+            if (strcmp(graph.nodes[upgrade[j]].id, graph.nodes[deduplicatedPackages[i]].id) == 0)
             {
                 upgrading = true;
                 break;
@@ -1027,17 +1024,16 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
         if (upgrading)
         {
             int result = KPM_OK;
-            if ((result = Internal_UninstallPackage(kpm, artifact.id, true, kpmIO)) != KPM_OK)
-                kpmIO->log(KPM_VERBOSITY_WARN, "Failed to uninstall %s (%i) - continuing anyway.", artifact.id, result); // I mean it'll probably be fine lol
+            if ((result = Internal_UninstallPackage(kpm, graph.nodes[deduplicatedPackages[i]].id, true, kpmIO)) != KPM_OK)
+                kpmIO->log(KPM_VERBOSITY_WARN, "Failed to uninstall %s (%i) - continuing anyway.", graph.nodes[deduplicatedPackages[i]].id, result); // I mean it'll probably be fine lol
         }
 
         char* kpkg_path = asprintf_hd("%s/tmp/%s", kpm->pkgPath, filename);
 
-        kpmIO->log(KPM_VERBOSITY_INFO, "Installing %s (%u.%u.%u)", artifact.id, artifact.version.major, artifact.version.minor, artifact.version.patch);
+        kpmIO->log(KPM_VERBOSITY_INFO, "Installing %s (%u.%u.%u)", graph.nodes[deduplicatedPackages[i]].id, graph.nodes[deduplicatedPackages[i]].min_version.major, graph.nodes[deduplicatedPackages[i]].min_version.minor, graph.nodes[deduplicatedPackages[i]].min_version.patch);
         if (!Internal_InstallItem(kpm, graph.nodes[deduplicatedPackages[i]].repository, kpkg_path, i != deduplicatedPackageCount-1, kpmIO)) // The last package installed is our target hence the value of installed_as_dependency
         {
-            kpmIO->log(KPM_VERBOSITY_ERROR, "Could not install %s", artifact.id);
-            KPM_FreeIndexedArtifact(&artifact);
+            kpmIO->log(KPM_VERBOSITY_ERROR, "Could not install %s", graph.nodes[deduplicatedPackages[i]].id);
             remove(kpkg_path);
             free(kpkg_path);
             retval = KPM_GENERIC_ERROR;
@@ -1045,7 +1041,6 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
         }
 
         remove(kpkg_path);
-        KPM_FreeIndexedArtifact(&artifact);
         free(kpkg_path);
 
         // If this package is installed so are its dependencies

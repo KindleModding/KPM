@@ -21,7 +21,7 @@
 
 #define KPM_VERSION_MAJOR 0
 #define KPM_VERSION_MINOR 2
-#define KPM_VERSION_PATCH 0
+#define KPM_VERSION_PATCH 1
 
 enum KPMResult
 {
@@ -167,8 +167,6 @@ enum KPMResult KPM_Initialise(struct KPM *kpm);
  * @param kpm 
  */
 void KPM_Cleanup(struct KPM *kpm);
-
-enum KPMPlatform KPM_GetDevice();
 
 // Repo management functions
 /**
