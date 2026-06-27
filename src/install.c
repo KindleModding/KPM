@@ -940,7 +940,7 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
             if (strcmp(graph.nodes[deduplicatedPackages[i]].id, installedPackages[j].id) == 0)
             {
                 installed = true;
-                if (SemVerCmp(graph.nodes[deduplicatedPackages[i]].min_version, installedPackages[j].version) > 0)
+                if (SemVerCmp(graph.nodes[deduplicatedPackages[i]].min_version, installedPackages[j].version) >= 0)
                     Internal_ArrayAddNode(&upgradeCount, &upgrade, deduplicatedPackages[i]);
                 else if (SemVerCmp(graph.nodes[deduplicatedPackages[i]].min_version, installedPackages[j].version) < 0)
                     Internal_ArrayAddNode(&downgradeCount, &downgrade, deduplicatedPackages[i]);
