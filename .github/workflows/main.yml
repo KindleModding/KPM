@@ -73,8 +73,8 @@ jobs:
             cp build/kindlepw2/kpm package-compat/kmc/kindlepw2/bin/
             
 
-            python kpm-helper.py package pack package ./build/kpm_0.2.0_kindlehf-kindlepw2.kpkg
-            python kpm-helper.py package pack package-compat ./build/kpm_0.2.0_kindlehf-kindlepw2-compat.kpkg --compression 0
+            python kpm-helper.py package pack package ./build/kpm_0.2.1_kindlehf-kindlepw2.kpkg
+            python kpm-helper.py package pack package-compat ./build/kpm_0.2.1_kindlehf-kindlepw2-compat.kpkg --compression 0
     - uses: actions/upload-artifact@v4
       with:
         name: KPM
