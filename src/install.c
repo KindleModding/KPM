@@ -565,7 +565,10 @@ bool Internal_InstallItem(struct KPM* kpm, char* repository, char* path, bool in
     const char* zSQL = "INSERT OR REPLACE INTO installed_packages (id, repository, name, author, description, version_major, version_minor, version_patch, installed_as_dependency) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);";
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
     sqlite3_bind_text(statement, 1, id, -1, SQLITE_STATIC);
-    sqlite3_bind_text(statement, 2, repository, -1, SQLITE_STATIC);
+    if (repository != NULL)
+        sqlite3_bind_text(statement, 2, repository, -1, SQLITE_STATIC);
+    else
+        sqlite3_bind_text(statement, 2, "", -1, SQLITE_STATIC);
     sqlite3_bind_text(statement, 3, cJSON_GetStringValue(cJSON_GetObjectItem(json, "name")), -1, SQLITE_STATIC);
     sqlite3_bind_text(statement, 4, cJSON_GetStringValue(cJSON_GetObjectItem(json, "author")), -1, SQLITE_STATIC);
     sqlite3_bind_text(statement, 5, cJSON_GetStringValue(cJSON_GetObjectItem(json, "description")), -1, SQLITE_STATIC);
@@ -654,10 +657,12 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
 
         struct IndexedArtifact fakeArtifact = {
             .id = strdup(installedPackages[i].id),
-            .repository = strdup(installedPackages[i].repository),
+            .repository = NULL,
             .url = NULL,
             .version = installedPackages[i].version
         };
+        if (installedPackages[i].repository != NULL)
+            fakeArtifact.repository = strdup(installedPackages[i].repository);
 
         NodeIndex_t constructedId = Internal_ConstructGraphFromArtifact(kpm, &graph, &fakeArtifact, kpmIO);
         KPM_FreeIndexedArtifact(&fakeArtifact);
@@ -669,6 +674,7 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
         Internal_TraverseInstalledNode(&graph, constructedId, &traversedNodeCount, &traversedNodes, installedPackageCount, installedPackages);
 
         // @TODO: Add valid upgradable package versions
+        // @TODO: Add explicitly specified target of same package id
     }
     
     for (int i=0; i < targetCount; i++)

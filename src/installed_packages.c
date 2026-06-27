@@ -1,4 +1,5 @@
 #include "kpm/kpm.h"
+#include "sqlite3.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -46,7 +47,10 @@ enum KPMResult KPM_GetInstalledPackage(struct KPM* kpm, const char* packageId, s
         if (package != NULL)
         {
             package->id = strdup((const char*) sqlite3_column_text(statement, 0));
-            package->repository = strdup((const char*) sqlite3_column_text(statement, 1));
+            if (sqlite3_column_type(statement, 1) != SQLITE_NULL)
+                package->repository = strdup((const char*) sqlite3_column_text(statement, 1));
+            else
+                package->repository = NULL;
             package->name = strdup((const char*) sqlite3_column_text(statement, 2));
             package->author = strdup((const char*) sqlite3_column_text(statement, 3));
             package->description = strdup((const char*) sqlite3_column_text(statement, 4));
@@ -89,7 +93,10 @@ enum KPMResult KPM_ListInstalledPackages(struct KPM* kpm, size_t* packageCount, 
             }
 
             (*packages)[i].id = strdup((const char*) sqlite3_column_text(statement, 1));
-            (*packages)[i].repository = strdup((const char*) sqlite3_column_text(statement, 2));
+            if (sqlite3_column_type(statement, 2) != SQLITE_NULL)
+                (*packages)[i].repository = strdup((const char*) sqlite3_column_text(statement, 2));
+            else
+                (*packages)[i].repository = NULL;
             (*packages)[i].name = strdup((const char*) sqlite3_column_text(statement, 3));
             (*packages)[i].author = strdup((const char*) sqlite3_column_text(statement, 4));
             (*packages)[i].description = strdup((const char*) sqlite3_column_text(statement, 5));

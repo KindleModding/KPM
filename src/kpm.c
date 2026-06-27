@@ -73,6 +73,9 @@ enum KPMResult KPM_Initialise(struct KPM *kpm)
         ) STRICT;
     )", NULL, NULL, NULL);
 
+    // For old db format, update installed_packages to allow NULL values
+    sqlite3_exec(kpm->db, "ALTER TABLE installed_packages ALTER COLUMN repository TEXT", NULL, NULL, NULL);
+
     sqlite3_exec(kpm->db, R"(
         CREATE TABLE IF NOT EXISTS current_dependencies (
             dependent TEXT NOT NULL REFERENCES installed_packages(id) ON DELETE CASCADE,

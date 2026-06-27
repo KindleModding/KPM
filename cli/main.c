@@ -270,6 +270,12 @@ int main(int argc, char* argv[])
         struct InstallTarget* targets = malloc(installed_package_count * sizeof(struct InstallTarget));
         for (int i=0; i < installed_package_count; i++)
         {
+            if (installed_packages[i].repository == NULL)
+            {
+                kpm_io.log(KPM_VERBOSITY_DEBUG, "%s was installed locally - skipping", installed_packages[i].id);
+                continue;
+            }
+
             size_t artifact_count;
             struct IndexedArtifact* artifacts;
             if (KPM_ListPackageArtifacts(&kpm, installed_packages[i].repository, installed_packages[i].id, &artifact_count, &artifacts) != KPM_OK || artifact_count == 0)
