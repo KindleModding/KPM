@@ -179,6 +179,8 @@ enum KPMResult Internal_GetManifest(char* path, char** outBuffer, struct KPMIO* 
         return KPM_LIBARCHIVE_ERROR;
     }
 
+    kpmIO->log(KPM_VERBOSITY_DEBUG, "Reading manifest from: %s", path);
+    bool found = false;
     for (;;)
     {
         r = archive_read_next_header(a, &entry);
@@ -198,11 +200,12 @@ enum KPMResult Internal_GetManifest(char* path, char** outBuffer, struct KPMIO* 
             return KPM_LIBARCHIVE_ERROR;
         }
 
-        if (strcmp(archive_entry_pathname(entry), "manifest.json") != 0 && strcmp(archive_entry_pathname(entry), "/manifest.json") != 0)
-        {
+        kpmIO->log(KPM_VERBOSITY_DEBUG, "\t- %s", archive_entry_pathname(entry));
+        if (strcmp(archive_entry_pathname(entry), "manifest.json") != 0 && strcmp(archive_entry_pathname(entry), "/manifest.json") != 0 && strcmp(archive_entry_pathname(entry), "./manifest.json") != 0)
             continue;
-        }
 
+        kpmIO->log(KPM_VERBOSITY_DEBUG, "Found manifest.json file - reading data");
+        found = true;
         *outBuffer = malloc(archive_entry_size(entry) + 1);
         memset(*outBuffer, 0, archive_entry_size(entry) + 1);
         const void* blockBuffer;
@@ -230,6 +233,9 @@ enum KPMResult Internal_GetManifest(char* path, char** outBuffer, struct KPMIO* 
 
     archive_read_close(a);
     archive_read_free(a);
+
+    if (!found)
+        kpmIO->log(KPM_VERBOSITY_ERROR, "Could not find manifest.json file in package.");
 
     if (*outBuffer == NULL)
     {
@@ -471,7 +477,7 @@ bool Internal_InstallItem(struct KPM* kpm, char* repository, char* path, bool in
     enum KPMResult result;
     if ((result = Internal_GetManifest(path, &manifest, kpmIO)) != KPM_OK)
     {
-        kpmIO->log(KPM_VERBOSITY_ERROR, "Could not load manifest from %s (%i)", path, result);
+        kpmIO->log(KPM_VERBOSITY_ERROR, "Could not load manifest from %s (%i: %s)", path, result, KPM_ErrorToString(result));
         return false;
     }
 

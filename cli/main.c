@@ -111,7 +111,7 @@ int main(int argc, char* argv[])
         for (int i = command_index+1; i < argc; i++)
         {
             if ((error = KPM_AddRepository(&kpm, argv[i], &repository, &kpm_io)) != KPM_OK)
-                kpm_io.log(KPM_VERBOSITY_ERROR, "Could not add repository '%s' (%i)", argv[i], error);
+                kpm_io.log(KPM_VERBOSITY_ERROR, "Could not add repository '%s' (%i: %s)", argv[i], error, KPM_ErrorToString(error));
             else
             {
                 kpm_io.log(KPM_VERBOSITY_INFO, "Added repository '%s'", repository.id);
@@ -140,7 +140,7 @@ int main(int argc, char* argv[])
             int tmp_error = 0;
             if ((tmp_error = KPM_GetRepository(&kpm, argv[i], NULL)) != KPM_OK || (tmp_error = KPM_RemoveRepository(&kpm, argv[i])) != KPM_OK)
             {
-                kpm_io.log(KPM_VERBOSITY_ERROR, "Could not remove repository '%s' (%i)", argv[i], tmp_error);
+                kpm_io.log(KPM_VERBOSITY_ERROR, "Could not remove repository '%s' (%i: %s)", argv[i], tmp_error, KPM_ErrorToString(tmp_error));
                 error = tmp_error;
             }
             else
@@ -170,7 +170,7 @@ int main(int argc, char* argv[])
     {
         if ((error = KPM_UpdateIndex(&kpm, &kpm_io)) != KPM_OK)
         {
-            kpm_io.log(KPM_VERBOSITY_ERROR, "Could not update indexed packages (%i)", error);
+            kpm_io.log(KPM_VERBOSITY_ERROR, "Could not update indexed packages (%i: %s)", error, KPM_ErrorToString(error));
             goto cleanup;
         }
 
@@ -202,7 +202,7 @@ int main(int argc, char* argv[])
         struct IndexedPackage* packages;
         if ((error = KPM_SearchPackages(&kpm, query, &package_count, &packages)) != KPM_OK)
         {
-            kpm_io.log(KPM_VERBOSITY_ERROR, "Could not search for '%s' (%i)", query, error);
+            kpm_io.log(KPM_VERBOSITY_ERROR, "Could not search for '%s' (%i: %s)", query, error, KPM_ErrorToString(error));
             free(query);
             goto cleanup;
         }
@@ -239,7 +239,7 @@ int main(int argc, char* argv[])
 
         if ((error = KPM_InstallPackages(&kpm, argc - (command_index+1), targets, &kpm_io)) != KPM_OK)
         {
-            kpm_io.log(KPM_VERBOSITY_ERROR, "Failed to install all packages (%i)", error);
+            kpm_io.log(KPM_VERBOSITY_ERROR, "Failed to install all packages (%i: %s)", error, KPM_ErrorToString(error));
         }
         else
         {
@@ -251,7 +251,7 @@ int main(int argc, char* argv[])
     {
         if ((error = KPM_UninstallPackages(&kpm, argc - (command_index+1), (const char**) &argv[command_index+1], &kpm_io)) != KPM_OK)
         {
-            kpm_io.log(KPM_VERBOSITY_ERROR, "Failed to uninstall packages (%i)", error);
+            kpm_io.log(KPM_VERBOSITY_ERROR, "Failed to uninstall packages (%i: %s)", error, KPM_ErrorToString(error));
         }
         else
         {
@@ -278,7 +278,7 @@ int main(int argc, char* argv[])
 
             size_t artifact_count;
             struct IndexedArtifact* artifacts;
-            if (KPM_ListPackageArtifacts(&kpm, installed_packages[i].repository, installed_packages[i].id, &artifact_count, &artifacts) != KPM_OK || artifact_count == 0)
+            if (KPM_ListPackageArtifacts(&kpm, installed_packages[i].repository, installed_packages[i].id, &artifact_count, &artifacts) != KPM_OK || artifact_count == 0) // @TODO: Allow cross-repository upgrades?
             {
                 kpm_io.log(KPM_VERBOSITY_WARN, "Could not find an artifact for %s", installed_packages[i].id);
                 KPM_FreeIndexedArtifactList(artifact_count, artifacts);
@@ -311,7 +311,7 @@ int main(int argc, char* argv[])
         }
 
         if ((error = KPM_InstallPackages(&kpm, target_count, targets, &kpm_io)) != KPM_OK)
-            kpm_io.log(KPM_VERBOSITY_ERROR, "Failed to upgrade packages (%i)", error);
+            kpm_io.log(KPM_VERBOSITY_ERROR, "Failed to upgrade packages (%i: %s)", error, KPM_ErrorToString(error));
         else
             kpm_io.log(KPM_VERBOSITY_INFO, "Upgraded %i package(s) succesfully.", installed_package_count);
         KPM_FreeInstalledPackageList(installed_package_count, installed_packages);

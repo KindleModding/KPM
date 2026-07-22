@@ -4,6 +4,33 @@
 #include "kpm/kpm.h"
 #include "internal_utils.h"
 
+const char* KPM_ErrorToString(enum KPMResult error)
+{
+    switch (error)
+    {
+        case KPM_OK:
+            return "Ok";
+        case KPM_ABORTED:
+            return "Aborted";
+        case KPM_GENERIC_ERROR:
+            return "Generic Error";
+        case KPM_SQLITE_ERROR:
+            return "SQLite Error";
+        case KPM_CURL_ERROR:
+            return "cURL error";
+        case KPM_INVALID_RESPONSE_CODE:
+            return "Invalid response code";
+        case KPM_INVALID_RESPONSE_CONTENT:
+            return "Invalid response content";
+        case KPM_FILE_SYSTEM_ERROR:
+            return "File system error";
+        case KPM_LIBARCHIVE_ERROR:
+            return "Libarchive error";
+        case KPM_PARSE_ERROR:
+            return "Parse error";
+    }
+};
+
 enum KPMResult KPM_Initialise(struct KPM *kpm)
 {
     sqlite3_open(kpm->dbPath, &kpm->db);

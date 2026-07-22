@@ -47,7 +47,7 @@ bool indexDependency(struct KPM* kpm, char* artifact_repository, char* artifact_
     if ((status = sqlite3_step(statement)) != SQLITE_DONE)
     {
         sqlite3_finalize(statement);
-        kpmIO->log(KPM_VERBOSITY_ERROR, "SQLite error: (%i)", status);
+        kpmIO->log(KPM_VERBOSITY_ERROR, "SQLite error: (%i: %s - %s)", status, sqlite3_errstr(status), sqlite3_errmsg(kpm->db));
         return false;
     }
 
@@ -71,7 +71,7 @@ bool indexArtifact(struct KPM* kpm, char* repositoryId, char* packageId, cJSON* 
     int status;
     if ((status = sqlite3_step(statement)) != SQLITE_DONE)
     {
-        kpmIO->log(KPM_VERBOSITY_ERROR, "SQLite3 error (%i)", status);
+        kpmIO->log(KPM_VERBOSITY_ERROR, "SQLite3 error (%i: %s - %s)", status, sqlite3_errstr(status), sqlite3_errmsg(kpm->db));
         sqlite3_finalize(statement);
         return false;
     }
@@ -233,7 +233,7 @@ enum KPMResult KPM_UpdateIndex(struct KPM *kpm, struct KPMIO* kpmIO)
         if (status != SQLITE_DONE)
         {
             KPM_FreeRepositoryList(repositoryCount, repositories);
-            kpmIO->log(KPM_VERBOSITY_ERROR, "Could not clear packages for %s (%i)", repositories[i].id, status);
+            kpmIO->log(KPM_VERBOSITY_ERROR, "Could not clear packages for %s (%i: %s - %s)", repositories[i].id, status, sqlite3_errstr(status), sqlite3_errmsg(kpm->db));
             cJSON_Delete(json);
             SimpleGET_Cleanup(&request);
             sqlite3_exec(kpm->db, "ROLLBACK", NULL, NULL, NULL);
