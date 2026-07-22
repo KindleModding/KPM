@@ -186,6 +186,7 @@ int main(int argc, char* argv[])
                 query_length += 1; // For the space
         }
         char* query = malloc(query_length + 1);
+        query[query_length] = 0;
         size_t cur_len = 0;
         for (int i=command_index+1; i < argc; i++)
         {
