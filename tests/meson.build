@@ -1,22 +1,21 @@
-graph_test = executable('graph_test', 'graph_test.c', dependencies: [kpm_dep], include_directories: '../src/include/')
-db_test = executable('db_test', 'db_test.c', dependencies: [kpm_dep, sqlite3_dep])
-add_repository_test = executable('add_repository_test', 'add_repository_test.c', dependencies: [kpm_dep])
-index_test = executable('index_test', 'index_test.c', dependencies: [kpm_dep])
-dependency_graph_generation_test = executable('dependency_graph_generation_test', 'dependency_graph_generation_test.c', dependencies: [kpm_dep], include_directories: '../src/include/')
-dependency_graph_resolution_test = executable('dependency_graph_resolution_test', 'dependency_graph_resolution_test.c', dependencies: [kpm_dep], include_directories: '../src/include/')
-search_test = executable('search_test', 'search_test.c', dependencies: [kpm_dep])
-index_test_empty = executable('index_test_empty', 'index_test_empty.c', dependencies: [kpm_dep])
-remove_repository_test = executable('remove_repository_test', 'remove_repository_test.c', dependencies: [kpm_dep])
-install_package_test = executable('install_package_test', 'install_package_test.c', dependencies: [kpm_dep])
+all_test_files = files(
+    'common/kpm_test_io.c',
+    'common/kpm_test_common.c'
+)
 
-test('Graph Test', graph_test, is_parallel: false)
-test('Database Test', db_test, is_parallel: false)
-test('Add Repository Test', add_repository_test, is_parallel: false)
-test('Index Test', index_test, is_parallel: false)
-test('Index Test 2', index_test, is_parallel: false)
-test('Dependency Graph Generation Test', dependency_graph_generation_test, is_parallel: false)
-test('Dependency Graph Resolution Test', dependency_graph_resolution_test, is_parallel: false)
-test('Search Test', search_test, is_parallel: false)
-test('Install Package Test', install_package_test, is_parallel: false)
-test('Remove Repository Test', remove_repository_test, is_parallel: false)
-test('Index Test Empty', index_test_empty, is_parallel: false)
+all_test_includes = include_directories(
+    'common',
+    '../src/include/'
+)
+
+test(
+    'KPM Init Test',
+    executable('kpm_init_test', files('kpm_init_test.c') + all_test_files, dependencies: [kpm_dep], include_directories: all_test_includes),
+    is_parallel: false
+)
+
+test(
+    'KPM Repo Test',
+    executable('kpm_REPO_test', files('kpm_repo_test.c') + all_test_files, dependencies: [kpm_dep], include_directories: all_test_includes),
+    is_parallel: false
+)
