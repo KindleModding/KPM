@@ -110,7 +110,7 @@ class Package:
                 exit(1)
 
         # Try to read the manifest
-        if os.path.exists(self.manifest_path):
+        if os.path.exists(self.manifest_path) and id == None:
             with open(self.manifest_path, "r") as file:
                 manifest = json.loads(file.read())
                 self.manifest_version = manifest["manifest_version"]
@@ -119,13 +119,13 @@ class Package:
                 self.name = manifest["name"]
                 self.author = manifest["author"]
                 self.description = manifest["description"]
-                self.version = Version.decode(self.manifest["version"])
+                self.version = Version.decode(manifest["version"])
 
                 self.dependencies = []
-                for dependency in self.manifest["dependencies"]:
+                for dependency in manifest["dependencies"]:
                     self.dependencies.append(Dependency.decode(dependency))
 
-                self.supported_platforms = set(manifest["supported_platforms"])
+                self.supported_platforms = manifest["supported_platforms"]
         else:
             self.id = id
             self.name = name
@@ -133,7 +133,7 @@ class Package:
             self.description = description
             self.version = version
             self.dependencies = dependencies
-            self.supported_platforms = set(supported_platforms)
+            self.supported_platforms = supported_platforms
         self.validate()
 
     def set_id(self, id: str):
@@ -177,16 +177,17 @@ class Package:
         self.supported_platforms.remove(platform)
 
     def validate(self):
-        assert self.manifest != None
+        invalid_id = False
+        for letter in self.id:
+            if letter.isspace() or letter.isupper():
+                invalid_id = True
+            if not (letter.isascii() or letter in ['-', '_']):
+                invalid_id = True
 
-        for c in self.manifest["id"]:
-            c: str
-            if c.isascii() and (c.isnumeric() or c.isalpha()) and (not c.isspace()):
-                continue
-            else:
-                raise RuntimeError(
-                    "Package manifest id must be alphanumeric with no symbols or whitespaces"
-                )
+        if invalid_id:
+            raise RuntimeError(
+                "id must only contain alphanumeric characters, or _ and -"
+            )
 
         for supported_platform in self.supported_platforms:
             if not supported_platform in valid_supported_platforms:
@@ -213,9 +214,9 @@ class Package:
                 manifest["dependencies"].append(dependency.encode())
 
             if self.supported_platforms != None:
-                manifest["supported_platforms"] = self.supported_platforms
+                manifest["supported_platforms"] = list(self.supported_platforms)
 
-            file.write(json.dumps(manifest))
+            file.write(json.dumps(manifest, indent=2))
 
     def pack(self, output_path: str, compression: int = 5):
         self.write_manifest()
@@ -229,7 +230,7 @@ class Package:
         if os.path.isdir(packageFilename):
             packageFilename = os.path.join(
                 output_path,
-                f"{self.id}_{'.'.join(str(x) for x in self.version)}_{'-'.join(self.supported_platforms if self.supported_platforms else ["kindleany"])}.kpkg",
+                f"{self.id}_{self.version}_{'-'.join(self.supported_platforms if self.supported_platforms else ["kindleany"])}.kpkg",
             )
 
         if compression == 0:
@@ -424,7 +425,7 @@ class Repo:
                 "url": artifact.url,
                 "version": Version.encode(artifact.version),
                 "dependencies": [],
-                "supported_platforms": artifact.supported_platforms,
+                "supported_platforms": list(artifact.supported_platforms),
             }
             for dependency in artifact.dependencies:
                 encoded_artifact["dependencies"].append(Dependency.encode(dependency))
@@ -450,6 +451,7 @@ if __name__ == "__main__":
             raise RuntimeError(
                 "id must only contain alphanumeric characters, or _ and -"
             )
+        return id
 
     parser = argparse.ArgumentParser(
         prog="KPM Helper",
@@ -478,7 +480,7 @@ if __name__ == "__main__":
             break
 
         package = Package(
-            os.path.join(args.path, "manifest.json"),
+            args.path,
             id,
             name,
             author,
@@ -508,9 +510,8 @@ if __name__ == "__main__":
 
     # pack
     def pack_package(args):
-        package = Package(os.path.join(args.pkg_path, "manifest.json"))
-        for platform in args.supported_platform:
-            package.add_supported_platform(platform)
+        assert(os.path.isdir(args.pkg_path))
+        package = Package(args.pkg_path)
         package.pack(args.output_path, args.compression)
 
     package_pack_parser = pack_subparsers.add_parser(
@@ -527,13 +528,6 @@ if __name__ == "__main__":
         help="The compression level (0-9) (defaults to 5)",
         type=int,
         default=5,
-    )
-    package_pack_parser.add_argument(
-        "--supported_platform",
-        help="Add a supported platform to the manifest",
-        action="append",
-        default=[],
-        choices=valid_supported_platforms,
     )
     package_pack_parser.set_defaults(func=pack_package)
 
