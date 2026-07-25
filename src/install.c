@@ -580,11 +580,13 @@ bool Internal_InstallItem(struct KPM* kpm, char* repository, char* path, bool in
             kpmIO->log(KPM_VERBOSITY_ERROR, "Could not run script - POPEN FAILURE");
         }
 
-        chdir("/mnt/us/kmc/kpm");
+        chdir("/");
         if (result != 0)
         {
             // The install hook failed
             kpmIO->log(KPM_VERBOSITY_ERROR, "Could not execute install hook for [%s]", id);
+            Internal_RunUninstallHook(outPath, id, false, kpmIO);
+            chdir("/");
             rmdir_r(outPath);
             free(outPath);
             free(manifest);

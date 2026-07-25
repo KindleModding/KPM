@@ -6,14 +6,13 @@
 #include "internal_utils.h"
 #include "uninstall.h"
 
-enum KPMResult Internal_UninstallPackage(struct KPM* kpm, const char* packageId, bool upgrading, struct KPMIO* kpmIO)
+enum KPMResult Internal_RunUninstallHook(const char* outPath, const char* packageId, bool upgrading, struct KPMIO* kpm_io)
 {
-    char* outPath = asprintf_hd("%s/%s/", kpm->pkgPath, packageId);
     char* uninstallScriptPath = asprintf_hd( "%suninstall.sh", outPath);
 
     if (access(uninstallScriptPath, R_OK) == 0)
     {
-        kpmIO->log(KPM_VERBOSITY_DEBUG, "Running uninstall script for [%s]", packageId);
+        kpm_io->log(KPM_VERBOSITY_DEBUG, "Running uninstall script for [%s]", packageId);
         // Run uninstall script
         int result = -1;
 
@@ -25,7 +24,7 @@ enum KPMResult Internal_UninstallPackage(struct KPM* kpm, const char* packageId,
 
         chdir(outPath);
         free(uninstallScriptPath);
-        kpmIO->log(KPM_VERBOSITY_INFO, "Running uninstall hooks for %s", packageId);
+        kpm_io->log(KPM_VERBOSITY_INFO, "Running uninstall hooks for %s", packageId);
         FILE* stream = popen(uninstallCommand, "r");
         free(uninstallCommand);
         if (stream != NULL)
@@ -33,25 +32,34 @@ enum KPMResult Internal_UninstallPackage(struct KPM* kpm, const char* packageId,
             int c;
             while ((c = fgetc(stream)) != EOF)
             {
-                kpmIO->stream((char) c);
+                kpm_io->stream((char) c);
             }
             result = pclose(stream);
         }
         else
         {
-            kpmIO->log(KPM_VERBOSITY_ERROR, "Could not run script - POPEN FAILURE");
+            kpm_io->log(KPM_VERBOSITY_ERROR, "Could not run script - POPEN FAILURE");
         }
 
-        chdir("/mnt/us/kmc/kpm");
+        chdir("/");
         if (result != 0)
         {
             // The uninstall hook failed
-            kpmIO->log(KPM_VERBOSITY_ERROR, "Could not execute uninstall hook for [%s]", packageId);
+            kpm_io->log(KPM_VERBOSITY_ERROR, "Could not execute uninstall hook for [%s]", packageId);
             return KPM_GENERIC_ERROR;
         }
     }
+}
 
-    kpmIO->log(KPM_VERBOSITY_DEBUG, "Deleting [%s] files", packageId);
+enum KPMResult Internal_UninstallPackage(struct KPM* kpm, const char* packageId, bool upgrading, struct KPMIO* kpm_io)
+{
+    char* outPath = asprintf_hd("%s/%s/", kpm->pkgPath, packageId);
+    
+    enum KPMResult result;
+    if ((result = Internal_RunUninstallHook(outPath, packageId, upgrading, kpm_io)) != KPM_OK)
+        return result;
+
+    kpm_io->log(KPM_VERBOSITY_DEBUG, "Deleting [%s] files", packageId);
     rmdir_r(outPath);
     free(outPath);
 
