@@ -10,7 +10,7 @@ import tarfile
 import json
 import os
 
-logging.basicConfig(format = "[%(levelname)s] %(message)s", level=logging.INFO)
+logging.basicConfig(format="[%(levelname)s] %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 KPM_MANIFEST_VERSION = 2
@@ -170,6 +170,8 @@ class Package:
                 return
 
     def add_supported_platform(self, platform: str):
+        if self.supported_platforms == None:
+            self.supported_platforms = []
         self.supported_platforms.add(platform)
 
     def remove_supported_platform(self, platform: str):
@@ -192,11 +194,12 @@ class Package:
                 "id must only contain alphanumeric characters, or _ and -"
             )
 
-        for supported_platform in self.supported_platforms:
-            if not supported_platform in valid_supported_platforms:
-                raise RuntimeError(
-                    f"Supported platform must be one of: {valid_supported_platforms}"
-                )
+        if self.supported_platforms != None:
+            for supported_platform in self.supported_platforms:
+                if not supported_platform in valid_supported_platforms:
+                    raise RuntimeError(
+                        f"Supported platform must be one of: {valid_supported_platforms}"
+                    )
 
         if len(self.name.strip()) == 0:
             raise RuntimeError("Package must have a non-empty name")
@@ -218,6 +221,8 @@ class Package:
 
             if self.supported_platforms != None:
                 manifest["supported_platforms"] = list(self.supported_platforms)
+            else:
+                manifest["supported_platforms"] = self.supported_platforms
 
             file.write(json.dumps(manifest, indent=2))
 
@@ -226,7 +231,9 @@ class Package:
         logger.info(f"ID: {self.id}")
         logger.info(f"Name: {self.name}")
         logger.info(f"Author: {self.author}")
-        logger.info(f"Supported Platforms: {', '.join(self.supported_platforms)}")
+        logger.info(
+            f"Supported Platforms: {'-'.join(self.supported_platforms if self.supported_platforms else ["kindleany"])}"
+        )
         logger.info("Packing...")
 
         packageFilename = output_path
@@ -272,7 +279,7 @@ class Artifact:
         url: str,
         version: Version,
         dependencies: list[Dependency],
-        supported_platforms: list[str],
+        supported_platforms: list[str] | None,
     ):
         self.id = id
         self.name = name
@@ -340,11 +347,20 @@ class Repo:
                 raise RuntimeError("[ERR] Could not open manifest.json file")
 
         for existing_artifact in self.artifacts:
-            existing_platforms = list(existing_artifact.supported_platforms)
-            platforms = list(manifest["supported_platforms"])
-            platforms_overlap = len(set(existing_platforms + platforms)) != len(
-                existing_platforms
-            ) + len(platforms)
+            if (
+                existing_artifact.supported_platforms != None
+                and manifest["supported_platforms"] != None
+            ):
+                existing_platforms = list(existing_artifact.supported_platforms)
+                platforms = list(manifest["supported_platforms"])
+                platforms_overlap = len(set(existing_platforms + platforms)) != len(
+                    existing_platforms
+                ) + len(platforms)
+            else:
+                platforms_overlap = (
+                    existing_artifact.supported_platforms
+                    == manifest["supported_platforms"]
+                )
 
             if (
                 platforms_overlap
@@ -352,7 +368,7 @@ class Repo:
                 and existing_artifact.version == Version.decode(manifest["version"])
             ):
                 raise RuntimeError(
-                    f"Artifact {existing_artifact.id} @ {existing_artifact.version} : {','.join(manifest["supported_platforms"])} already exists in repository"
+                    f"Artifact {existing_artifact.id} @ {existing_artifact.version} : {'-'.join(manifest.get('supported_platforms', ['kindleany']))} already exists in repository"
                 )
 
         dependencies = []
@@ -432,7 +448,11 @@ class Repo:
                 "url": artifact.url,
                 "version": Version.encode(artifact.version),
                 "dependencies": [],
-                "supported_platforms": list(artifact.supported_platforms),
+                "supported_platforms": (
+                    list(artifact.supported_platforms)
+                    if artifact.supported_platforms
+                    else None
+                ),
             }
             for dependency in artifact.dependencies:
                 encoded_artifact["dependencies"].append(Dependency.encode(dependency))
@@ -494,7 +514,7 @@ if __name__ == "__main__":
             description,
             Version(1, 0, 0),
             [],
-            args.supported_platform,
+            args.supported_platform if len(args.supported_platform) > 0 else None,
         )
         package.validate()
         package.write_manifest()
