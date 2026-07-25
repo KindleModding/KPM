@@ -129,7 +129,7 @@ bool indexPackage(struct KPM* kpm, char* repositoryId, cJSON* package, struct KP
     cJSON* artifact;
     cJSON_ArrayForEach(artifact, cJSON_GetObjectItem(package, "artifacts"))
     {
-        // Check if this artifact's supported_platforms
+        // Check this artifact's supported_platforms
         if (cJSON_IsArray(cJSON_GetObjectItem(artifact, "supported_platforms")))
         {
             bool supported=false;

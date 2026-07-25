@@ -513,6 +513,29 @@ bool Internal_InstallItem(struct KPM* kpm, char* repository, char* path, bool in
 
     // V1 - Requires no special logic, only difference is packages are lzma compressed, not gzip
 
+    // Check the platforms
+    if (cJSON_IsArray(cJSON_GetObjectItem(json, "supported_platforms")))
+    {
+        bool supported=false;
+        cJSON* supported_platform;
+        cJSON_ArrayForEach(supported_platform, cJSON_GetObjectItem(json, "supported_platforms"))
+        {
+            if (strcmp(supported_platform->valuestring, KPM_PLATFORM) == 0)
+            {
+                supported = true;
+                break;
+            }
+        }
+
+        if (!supported)
+        {
+            kpmIO->log(KPM_VERBOSITY_ERROR, "Package does not support platform %s", KPM_PLATFORM);
+            free(manifest);
+            cJSON_Delete(json);
+            return false;
+        }
+    }
+
     char* id = cJSON_GetStringValue(cJSON_GetObjectItem(json, "id"));
     kpmIO->log(KPM_VERBOSITY_DEBUG, "Installing item with id: %s", id);
 
