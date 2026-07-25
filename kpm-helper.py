@@ -10,6 +10,9 @@ import tarfile
 import json
 import os
 
+logging.basicConfig(format = "[%(levelname)s] %(message)s", level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 KPM_MANIFEST_VERSION = 2
 valid_supported_platforms = [
     "kindle",
@@ -38,9 +41,9 @@ class Version:
         return self.__str__()
 
     def __eq__(self, other):
-        if (type(other) != type(self)):
+        if type(other) != type(self):
             return False
-        
+
         return (
             self.major == other.major
             and self.minor == other.minor
@@ -100,12 +103,12 @@ class Package:
         # @TODO
         if manifest_version != KPM_MANIFEST_VERSION:
             if manifest_version["manifest_version"] == 1:
-                print(
-                    "[WARN] Manifest v1 is deprecated. Please upgrade to manifest v2."
+                logger.warning(
+                    "Manifest v1 is deprecated. Please upgrade to manifest v2."
                 )
             else:
-                print(
-                    f"[ERR] Expected manifest version {KPM_MANIFEST_VERSION}, got {manifest_version}"
+                logger.error(
+                    f"Expected manifest version {KPM_MANIFEST_VERSION}, got {manifest_version}"
                 )
                 exit(1)
 
@@ -181,7 +184,7 @@ class Package:
         for letter in self.id:
             if letter.isspace() or letter.isupper():
                 invalid_id = True
-            if not (letter.isascii() or letter in ['-', '_']):
+            if not (letter.isascii() or letter in ["-", "_"]):
                 invalid_id = True
 
         if invalid_id:
@@ -220,11 +223,11 @@ class Package:
 
     def pack(self, output_path: str, compression: int = 5):
         self.write_manifest()
-        print(f"ID: {self.id}")
-        print(f"Name: {self.name}")
-        print(f"Author: {self.author}")
-        print(f"Supported Platforms: {', '.join(self.supported_platforms)}")
-        print("Packing...")
+        logger.info(f"ID: {self.id}")
+        logger.info(f"Name: {self.name}")
+        logger.info(f"Author: {self.author}")
+        logger.info(f"Supported Platforms: {', '.join(self.supported_platforms)}")
+        logger.info("Packing...")
 
         packageFilename = output_path
         if os.path.isdir(packageFilename):
@@ -249,14 +252,14 @@ class Package:
                         f"[ERR] A file or folder with the name '{source_item_name}' was detected in the package - This is currently reserved for future use"
                     )
 
-                print(f"- {source_item_name}")
+                logger.debug(f"- {source_item_name}")
                 file.add(
                     os.path.join(self.path, source_item_name),
                     arcname=source_item_name,
                 )
 
-        print("Done!")
-        print(f"Saved as {packageFilename}")
+        logger.info("Done!")
+        logger.info(f"Saved as {packageFilename}")
 
 
 class Artifact:
@@ -339,7 +342,9 @@ class Repo:
         for existing_artifact in self.artifacts:
             existing_platforms = list(existing_artifact.supported_platforms)
             platforms = list(manifest["supported_platforms"])
-            platforms_overlap = len(set(existing_platforms + platforms)) != len(existing_platforms) + len(platforms)
+            platforms_overlap = len(set(existing_platforms + platforms)) != len(
+                existing_platforms
+            ) + len(platforms)
 
             if (
                 platforms_overlap
@@ -395,13 +400,15 @@ class Repo:
                 if platforms_match:
                     to_remove.append(artifact)
 
-        print(f"Found {len(to_remove)} artifact(s) to remove")
+        logger.info(f"Found {len(to_remove)} artifact(s) to remove")
         for artifact in to_remove:
-            print(f"Removing artifact {artifact.name} @ {artifact.version} ({','.join(artifact.supported_platforms)})")
+            logger.info(
+                f"Removing artifact {artifact.name} @ {artifact.version} ({','.join(artifact.supported_platforms)})"
+            )
             try:
                 os.remove(os.path.join(self.path, artifact.url))
             except:
-                print(f"[WARN] Could not delete artifact file at {artifact.url}")
+                logger.warning(f"Could not delete artifact file at {artifact.url}")
             self.artifacts.remove(artifact)
 
     def write_manifest(self):
@@ -444,7 +451,7 @@ if __name__ == "__main__":
         for letter in id:
             if letter.isspace() or letter.isupper():
                 invalid = True
-            if not (letter.isascii() or letter in ['-', '_']):
+            if not (letter.isascii() or letter in ["-", "_"]):
                 invalid = True
 
         if invalid:
@@ -510,7 +517,7 @@ if __name__ == "__main__":
 
     # pack
     def pack_package(args):
-        assert(os.path.isdir(args.pkg_path))
+        assert os.path.isdir(args.pkg_path)
         package = Package(args.pkg_path)
         package.pack(args.output_path, args.compression)
 
@@ -592,12 +599,12 @@ if __name__ == "__main__":
         repo = Repo(manifest_path)
 
         target_version = None
-        if (args.version != None):
-            target_version = Version.decode(args.version.split('.'))
+        if args.version != None:
+            target_version = Version.decode(args.version.split("."))
 
         repo.remove_artifact(args.id, target_version, args.supported_platform)
         repo.write_manifest()
-    
+
     repo_remove_parser = repo_subparsers.add_parser(
         "remove", help="Remove an artifact from the repository"
     )
@@ -608,9 +615,7 @@ if __name__ == "__main__":
         "id", help="The id of the artifact to remove", type=str
     )
     repo_remove_parser.add_argument(
-        "--version",
-        help="The specific version to remove",
-        type=str
+        "--version", help="The specific version to remove", type=str
     )
     repo_remove_parser.add_argument(
         "--supported_platform",
