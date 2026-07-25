@@ -19,9 +19,9 @@ enum KPMResult Internal_UninstallPackage(struct KPM* kpm, const char* packageId,
 
         char* uninstallCommand;
         if (upgrading)
-            uninstallCommand = asprintf_hd("sh %s upgrade 2>&1", uninstallScriptPath);
+            uninstallCommand = asprintf_hd("KPM_VERSION_MAJOR=%i KPM_VERSION_MINOR=%i KPM_VERSION_PATCH=%i KPM_PLATFORM=\"%s\" sh %s upgrade 2>&1", KPM_VERSION_MAJOR, KPM_VERSION_MINOR, KPM_VERSION_PATCH, KPM_PLATFORM, uninstallScriptPath);
         else
-            uninstallCommand = asprintf_hd("sh %s 2>&1", uninstallScriptPath);
+            uninstallCommand = asprintf_hd("KPM_VERSION_MAJOR=%i KPM_VERSION_MINOR=%i KPM_VERSION_PATCH=%i KPM_PLATFORM=\"%s\" sh %s 2>&1", KPM_VERSION_MAJOR, KPM_VERSION_MINOR, KPM_VERSION_PATCH, KPM_PLATFORM, uninstallScriptPath);
 
         chdir(outPath);
         free(uninstallScriptPath);

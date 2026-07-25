@@ -557,9 +557,9 @@ bool Internal_InstallItem(struct KPM* kpm, char* repository, char* path, bool in
         int result = -1;
         char* installCommand;
         if (upgrading)
-            installCommand = asprintf_hd("sh %s upgrade 2>&1", installScriptPath);
+            installCommand = asprintf_hd("KPM_VERSION_MAJOR=%i KPM_VERSION_MINOR=%i KPM_VERSION_PATCH=%i KPM_PLATFORM=\"%s\" sh %s upgrade 2>&1", KPM_VERSION_MAJOR, KPM_VERSION_MINOR, KPM_VERSION_PATCH, KPM_PLATFORM, installScriptPath);
         else
-            installCommand = asprintf_hd("sh %s 2>&1", installScriptPath);
+            installCommand = asprintf_hd("KPM_VERSION_MAJOR=%i KPM_VERSION_MINOR=%i KPM_VERSION_PATCH=%i KPM_PLATFORM=\"%s\" sh %s 2>&1", KPM_VERSION_MAJOR, KPM_VERSION_MINOR, KPM_VERSION_PATCH, KPM_PLATFORM, installScriptPath);
 
         chdir(outPath);
         free(installScriptPath);

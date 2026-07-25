@@ -6,6 +6,7 @@
 #include <limits.h>
 #include <string.h>
 #include "callback.h"
+#include "sqlite3.h"
 
 bool indexDependency(struct KPM* kpm, char* artifact_repository, char* artifact_id, char* artifact_url, cJSON* dependency, struct KPMIO* kpmIO)
 {
@@ -172,6 +173,8 @@ enum KPMResult KPM_UpdateIndex(struct KPM *kpm, struct KPMIO* kpmIO)
     if ((result = KPM_ListRepositories(kpm, &repositoryCount, &repositories)) != KPM_OK)
     {
         kpmIO->log(KPM_VERBOSITY_ERROR, "Unable to list KPM repositories");
+        if (result == KPM_SQLITE_ERROR)
+            kpmIO->log(KPM_VERBOSITY_ERROR, "SQLite error: %s", sqlite3_errmsg(kpm->db));
         return result;
     }
 

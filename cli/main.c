@@ -356,7 +356,11 @@ int main(int argc, char* argv[])
         char* launch_folder = asprintf_hd("%s/%s", KPM_PKG_PATH, id);
         chdir(launch_folder);
         free(launch_folder);
-        
+
+        putenv(asprintf_hd("KPM_VERSION_MAJOR=%i", KPM_VERSION_MAJOR));
+        putenv(asprintf_hd("KPM_VERSION_MINOR=%i", KPM_VERSION_MAJOR));
+        putenv(asprintf_hd("KPM_VERSION_PATCH=%i", KPM_VERSION_MAJOR));
+        putenv(asprintf_hd("KPM_PLATFORM=%s", KPM_PLATFORM));
         execv("/bin/sh", launch_args);
         return KPM_GENERIC_ERROR;
     }
