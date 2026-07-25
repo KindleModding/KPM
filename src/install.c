@@ -469,7 +469,7 @@ enum KPMResult Internal_DownloadGraphItems(struct KPM* kpm, struct DependencyGra
  * @return true 
  * @return false 
  */
-bool Internal_InstallItem(struct KPM* kpm, char* repository, char* path, bool installed_as_dependency, struct KPMIO* kpmIO)
+bool Internal_InstallItem(struct KPM* kpm, char* repository, char* path, bool installed_as_dependency, bool upgrading, struct KPMIO* kpmIO)
 {
     char* manifest;
     kpmIO->log(KPM_VERBOSITY_DEBUG, "Reading manifest from %s", path);
@@ -555,7 +555,12 @@ bool Internal_InstallItem(struct KPM* kpm, char* repository, char* path, bool in
         kpmIO->log(KPM_VERBOSITY_DEBUG, "Running install script for [%s]", id);
         // Run install script
         int result = -1;
-        char* installCommand = asprintf_hd("sh %s 2>&1", installScriptPath);
+        char* installCommand;
+        if (upgrading)
+            installCommand = asprintf_hd("sh %s upgrade 2>&1", installScriptPath);
+        else
+            installCommand = asprintf_hd("sh %s 2>&1", installScriptPath);
+
         chdir(outPath);
         free(installScriptPath);
         kpmIO->log(KPM_VERBOSITY_INFO, "Running install hooks for %s", id);
@@ -1049,7 +1054,7 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
         bool upgrading=false;
         for (size_t j=0; j < upgradeCount; j++)
         {
-            if (strcmp(graph.nodes[upgrade[j]].id, graph.nodes[deduplicatedPackages[i]].id) == 0)
+            if (upgrade[j] == deduplicatedPackages[i])
             {
                 upgrading = true;
                 break;
@@ -1066,7 +1071,7 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
         char* kpkg_path = asprintf_hd("%s/tmp/%s", kpm->pkgPath, filename);
 
         kpmIO->log(KPM_VERBOSITY_INFO, "Installing %s (%u.%u.%u)", graph.nodes[deduplicatedPackages[i]].id, graph.nodes[deduplicatedPackages[i]].min_version.major, graph.nodes[deduplicatedPackages[i]].min_version.minor, graph.nodes[deduplicatedPackages[i]].min_version.patch);
-        if (!Internal_InstallItem(kpm, graph.nodes[deduplicatedPackages[i]].repository, kpkg_path, i != deduplicatedPackageCount-1, kpmIO)) // The last package installed is our target hence the value of installed_as_dependency
+        if (!Internal_InstallItem(kpm, graph.nodes[deduplicatedPackages[i]].repository, kpkg_path, i != deduplicatedPackageCount-1, upgrading, kpmIO)) // The last package installed is our target hence the value of installed_as_dependency
         {
             kpmIO->log(KPM_VERBOSITY_ERROR, "Could not install %s", graph.nodes[deduplicatedPackages[i]].id);
             remove(kpkg_path);
