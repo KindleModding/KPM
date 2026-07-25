@@ -37,7 +37,7 @@ void FreeDependencyGraph(struct DependencyGraph* graph);
 NodeIndex_t AddNode(struct DependencyGraph* graph, struct DependencyNode node);
 void AddEdge(struct DependencyGraph* graph, NodeIndex_t firstNodeIndex, NodeIndex_t nextNodeIndex);
 void AddFirstEdge(struct DependencyGraph* graph, NodeIndex_t firstNodeIndex, NodeIndex_t nextNodeIndex);
-bool FindArtifactNode(struct DependencyGraph* graph, char* repository, char* id, struct SemVer version, NodeIndex_t* index);
+bool FindArtifactNode(struct DependencyGraph* graph, char* id, struct SemVer version, NodeIndex_t* index);
 void RenderGraph(struct DependencyGraph* graph, char** output);
 void Internal_ArrayAddNode(size_t* traversedNodeCount, NodeIndex_t** traversedNodes, NodeIndex_t node);
 

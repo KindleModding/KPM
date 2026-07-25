@@ -32,7 +32,8 @@ class Version:
         return [self.major, self.minor, self.patch]
 
     def decode(encoded: list):
-        return Version(encoded[0], encoded[1], encoded[2])
+        assert len(encoded) == 3
+        return Version(int(encoded[0]), int(encoded[1]), int(encoded[2]))
 
     def __str__(self):
         return f"{self.major}.{self.minor}.{self.patch}"
@@ -58,7 +59,7 @@ class Dependency:
         self.max = max
 
     def encode(self):
-        encoded = {"id": id}
+        encoded = {"id": self.id}
         if self.min:
             encoded["min"] = self.min.encode()
         if self.max:
@@ -465,8 +466,8 @@ class Repo:
 
 if __name__ == "__main__":
 
-    def get_id():
-        id = input("Enter id: ").strip()
+    def get_id(prompt: str = "Enter id: "):
+        id = input(prompt).strip()
         invalid = False
         for letter in id:
             if letter.isspace() or letter.isupper():
@@ -479,6 +480,19 @@ if __name__ == "__main__":
                 "id must only contain alphanumeric characters, or _ and -"
             )
         return id
+
+    def get_version(prompt: str = "Enter version: "):
+        while True:
+            try:
+                version_str = input(prompt).strip()
+                if len(version_str) == 0:
+                    return None
+                else:
+                    return Version.decode(version_str.split("."))
+            except Exception as e:
+                if (type(e) is KeyboardInterrupt or type(e) is InterruptedError):
+                    return
+                logger.warning("Invalid version, please try again.")
 
     parser = argparse.ArgumentParser(
         prog="KPM Helper",
@@ -496,7 +510,7 @@ if __name__ == "__main__":
     # init
     def create_package(args):
         while True:
-            id = get_id()
+            id = get_id("Enter package id: ")
 
             name = input("Enter package name: ").strip()
             if len(name) == 0:
@@ -558,6 +572,47 @@ if __name__ == "__main__":
     )
     package_pack_parser.set_defaults(func=pack_package)
 
+    # add dependency
+    def package_add_dependency(args):
+        assert os.path.isdir(args.pkg_path)
+        package = Package(args.pkg_path)
+
+        package.add_dependency(
+            Dependency(
+                get_id("Enter dependency id: "),
+                get_version("Enter minimum version (inclusive): "),
+                get_version("Enter maximum version (exclusive): "),
+            )
+        )
+
+        package.write_manifest()
+
+    package_add_dependency_parser = pack_subparsers.add_parser(
+        "add_dependency", help="Pack a package folder into a kpkg file"
+    )
+    package_add_dependency_parser.add_argument(
+        "pkg_path", help="The path to the package folder", type=pathlib.Path
+    )
+    package_add_dependency_parser.set_defaults(func=package_add_dependency)
+
+
+    # remove dependency
+    def package_remove_dependency(args):
+        assert os.path.isdir(args.pkg_path)
+        package = Package(args.pkg_path)
+
+        package.remove_dependency(get_id("Enter dependency id: "))
+        package.write_manifest()
+
+    package_remove_dependency_parser = pack_subparsers.add_parser(
+        "remove_dependency", help="Pack a package folder into a kpkg file"
+    )
+    package_remove_dependency_parser.add_argument(
+        "pkg_path", help="The path to the package folder", type=pathlib.Path
+    )
+    package_remove_dependency_parser.set_defaults(func=package_remove_dependency)
+
+
     ###
     # REPO
     ###
@@ -570,7 +625,7 @@ if __name__ == "__main__":
         if os.path.isdir(manifest_path):
             manifest_path = os.path.join(manifest_path, "manifest.json")
 
-        id = get_id()
+        id = get_id("Enter repository id: ")
         name = input("Enter repository name: ").strip()
         if len(name) == 0:
             raise RuntimeError("Repository must have a non-empty name")
