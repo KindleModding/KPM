@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
     if (access(KPM_PKG_PATH, R_OK) != 0)
         mkdir_r(KPM_PKG_PATH, 0775);
 
-    struct KPM kpm = {
+    KPM kpm = {
         .maxConnections = 5, // @TODO
         .pkgPath = KPM_PKG_PATH,
         .dbPath = KPM_DB_PATH
@@ -107,7 +107,7 @@ int main(int argc, char* argv[])
         }
 
         error = KPM_OK;
-        struct Repository repository;
+        Repository repository;
         for (int i = command_index+1; i < argc; i++)
         {
             if ((error = KPM_AddRepository(&kpm, argv[i], &repository, &kpm_io)) != KPM_OK)
@@ -155,7 +155,7 @@ int main(int argc, char* argv[])
     else if (strcmp(argv[command_index], "list-repo") == 0)
     {
         size_t repository_count = 0;
-        struct Repository* repositories;
+        Repository* repositories;
         if ((error = KPM_ListRepositories(&kpm, &repository_count, &repositories)) != KPM_OK)
             goto cleanup;
 
@@ -200,7 +200,7 @@ int main(int argc, char* argv[])
         }
 
         size_t package_count;
-        struct IndexedPackage* packages;
+        IndexedPackage* packages;
         if ((error = KPM_SearchPackages(&kpm, query, &package_count, &packages)) != KPM_OK)
         {
             kpm_io.log(KPM_VERBOSITY_ERROR, "Could not search for '%s' (%i: %s)", query, error, KPM_ErrorToString(error));
@@ -222,7 +222,7 @@ int main(int argc, char* argv[])
         // Update index automatically
         KPM_UpdateIndex(&kpm, &kpm_io);
 
-        struct InstallTarget* targets = malloc((argc - (command_index+1)) * sizeof(struct InstallTarget));
+        InstallTarget* targets = malloc((argc - (command_index+1)) * sizeof(struct InstallTarget));
         for (int i=0; i < argc - (command_index+1); i++)
         {
             targets[i].repository = NULL;
@@ -264,11 +264,11 @@ int main(int argc, char* argv[])
         KPM_UpdateIndex(&kpm, &kpm_io);
 
         size_t installed_package_count;
-        struct InstalledPackage* installed_packages;
+        InstalledPackage* installed_packages;
         KPM_ListInstalledPackages(&kpm, &installed_package_count, &installed_packages);
 
         size_t target_count = 0;
-        struct InstallTarget* targets = malloc(installed_package_count * sizeof(struct InstallTarget));
+        InstallTarget* targets = malloc(installed_package_count * sizeof(struct InstallTarget));
         for (int i=0; i < installed_package_count; i++)
         {
             if (installed_packages[i].repository == NULL)
@@ -278,7 +278,7 @@ int main(int argc, char* argv[])
             }
 
             size_t artifact_count;
-            struct IndexedArtifact* artifacts;
+            IndexedArtifact* artifacts;
             if (KPM_ListPackageArtifacts(&kpm, installed_packages[i].repository, installed_packages[i].id, &artifact_count, &artifacts) != KPM_OK || artifact_count == 0) // @TODO: Allow cross-repository upgrades?
             {
                 kpm_io.log(KPM_VERBOSITY_WARN, "Could not find an artifact for %s", installed_packages[i].id);

@@ -14,4 +14,4 @@ struct IOState {
 };
 
 extern struct IOState io_state;
-extern struct KPMIO kpm_io;
+extern KPMIO kpm_io;

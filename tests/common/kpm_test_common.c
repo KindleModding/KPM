@@ -1,8 +1,8 @@
 #include "kpm.h"
 
-struct KPM initialise_kpm()
+KPM initialise_kpm()
 {
-    struct KPM kpm = {
+    KPM kpm = {
         .dbPath = "./repo_test.db",
         .pkgPath = "./packages",
         .maxConnections = 5

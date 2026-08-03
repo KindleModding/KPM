@@ -9,9 +9,10 @@ struct SimpleGETRequest
     char* buffer;
     size_t size;
 };
+typedef struct SimpleGETRequest SimpleGETRequest;
 
 size_t SimpleGET_Callback(char* ptr, size_t size, size_t nmemb, void* userdata);
-void SimpleGET_Initialise(struct SimpleGETRequest* request, const char* url);
-void SimpleGET_Cleanup(struct SimpleGETRequest* request);
-CURLcode SimpleGET_Perform(struct SimpleGETRequest* request);
-long SimpleGET_GetResponseCode(struct SimpleGETRequest* request);
+void SimpleGET_Initialise(SimpleGETRequest* request, const char* url);
+void SimpleGET_Cleanup(SimpleGETRequest* request);
+CURLcode SimpleGET_Perform(SimpleGETRequest* request);
+long SimpleGET_GetResponseCode(SimpleGETRequest* request);

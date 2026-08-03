@@ -6,7 +6,7 @@
 #include "internal_utils.h"
 #include "uninstall.h"
 
-enum KPMResult Internal_RunUninstallHook(const char* outPath, const char* packageId, bool upgrading, struct KPMIO* kpm_io)
+KPMResult Internal_RunUninstallHook(const char* outPath, const char* packageId, bool upgrading, KPMIO* kpm_io)
 {
     char* uninstallScriptPath = asprintf_hd( "%suninstall.sh", outPath);
 
@@ -51,11 +51,11 @@ enum KPMResult Internal_RunUninstallHook(const char* outPath, const char* packag
     }
 }
 
-enum KPMResult Internal_UninstallPackage(struct KPM* kpm, const char* packageId, bool upgrading, struct KPMIO* kpm_io)
+KPMResult Internal_UninstallPackage(KPM* kpm, const char* packageId, bool upgrading, KPMIO* kpm_io)
 {
     char* outPath = asprintf_hd("%s/%s/", kpm->pkgPath, packageId);
     
-    enum KPMResult result;
+    KPMResult result;
     if ((result = Internal_RunUninstallHook(outPath, packageId, upgrading, kpm_io)) != KPM_OK)
         return result;
 
@@ -79,7 +79,7 @@ enum KPMResult Internal_UninstallPackage(struct KPM* kpm, const char* packageId,
     return KPM_OK;
 }
 
-enum KPMResult KPM_UninstallPackages(struct KPM* kpm, size_t packageCount, const char* packageIds[], struct KPMIO* kpmIO)
+KPMResult KPM_UninstallPackages(KPM* kpm, size_t packageCount, const char* packageIds[], KPMIO* kpmIO)
 {
     kpmIO->log(KPM_VERBOSITY_INFO, "Uninstalling %zu packages.", packageCount);
 
@@ -95,7 +95,7 @@ enum KPMResult KPM_UninstallPackages(struct KPM* kpm, size_t packageCount, const
     for (int i=0; i < packageCount; i++)
     {
         size_t dependentCount;
-        struct InstalledDependency* dependents;
+        InstalledDependency* dependents;
         KPM_ListInstalledPackageDependents(kpm, packageIds[i], &dependentCount, &dependents);
 
         size_t unaccountedDependencies = dependentCount;

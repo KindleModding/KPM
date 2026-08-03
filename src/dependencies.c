@@ -18,7 +18,7 @@
  * @param graph Pointer to an empty graph struct to initialise
  * @param count Number of nodes to allocate in the graph object initially
  */
-void CreateDependencyGraph(struct DependencyGraph* graph, int count)
+void CreateDependencyGraph(DependencyGraph* graph, int count)
 {
     graph->nodeCount = 0;
     graph->nodes = NULL;
@@ -26,7 +26,7 @@ void CreateDependencyGraph(struct DependencyGraph* graph, int count)
 
     if (count != 0)
     {
-        graph->nodes = malloc(sizeof(struct DependencyNode) * count);
+        graph->nodes = malloc(sizeof(DependencyNode) * count);
         graph->allocated = count;
     }
 }
@@ -36,7 +36,7 @@ void CreateDependencyGraph(struct DependencyGraph* graph, int count)
  * 
  * @param node The node to free
  */
-void FreeNode(struct DependencyNode* node)
+void FreeNode(DependencyNode* node)
 {
     free(node->repository);
     free(node->id);
@@ -54,7 +54,7 @@ void FreeNode(struct DependencyNode* node)
  * 
  * @param graph The graph to free
  */
-void FreeDependencyGraph(struct DependencyGraph* graph)
+void FreeDependencyGraph(DependencyGraph* graph)
 {
     for (NodeIndex_t i=0; i < graph->nodeCount; i++)
     {
@@ -73,10 +73,10 @@ void FreeDependencyGraph(struct DependencyGraph* graph)
  * @param graph The dependency graph object
  * @param allocate How many nodes to expand it by
  */
-void ExtendDependencyGraph(struct DependencyGraph* graph, int allocate)
+void ExtendDependencyGraph(DependencyGraph* graph, int allocate)
 {
     graph->allocated += allocate;
-    graph->nodes = realloc(graph->nodes, sizeof(struct DependencyNode) * graph->allocated);
+    graph->nodes = realloc(graph->nodes, sizeof(DependencyNode) * graph->allocated);
 }
 
 /**
@@ -86,7 +86,7 @@ void ExtendDependencyGraph(struct DependencyGraph* graph, int allocate)
  * @param node 
  * @return NodeIndex_t 
  */
-NodeIndex_t AddNode(struct DependencyGraph *graph, struct DependencyNode node)
+NodeIndex_t AddNode(DependencyGraph *graph, DependencyNode node)
 {
     if (graph->nodeCount == graph->allocated)
     {
@@ -104,7 +104,7 @@ NodeIndex_t AddNode(struct DependencyGraph *graph, struct DependencyNode node)
  * @param firstNodeIndex 
  * @param nextNodeIndex 
  */
-void AddEdge(struct DependencyGraph* graph, NodeIndex_t firstNodeIndex, NodeIndex_t nextNodeIndex)
+void AddEdge(DependencyGraph* graph, NodeIndex_t firstNodeIndex, NodeIndex_t nextNodeIndex)
 {
     graph->nodes[firstNodeIndex].connectedCount++;
     graph->nodes[firstNodeIndex].connected = realloc(graph->nodes[firstNodeIndex].connected, graph->nodes[firstNodeIndex].connectedCount * sizeof(size_t));
@@ -135,7 +135,7 @@ void AddEdge(struct DependencyGraph* graph, NodeIndex_t firstNodeIndex, NodeInde
  * @param firstNodeIndex 
  * @param nextNodeIndex 
  */
-void AddFirstEdge(struct DependencyGraph* graph, NodeIndex_t firstNodeIndex, NodeIndex_t nextNodeIndex)
+void AddFirstEdge(DependencyGraph* graph, NodeIndex_t firstNodeIndex, NodeIndex_t nextNodeIndex)
 {
     graph->nodes[firstNodeIndex].connectedCount++;
     graph->nodes[firstNodeIndex].connected = realloc(graph->nodes[firstNodeIndex].connected, graph->nodes[firstNodeIndex].connectedCount * sizeof(size_t));
@@ -164,7 +164,7 @@ void AddFirstEdge(struct DependencyGraph* graph, NodeIndex_t firstNodeIndex, Nod
  * @return true Returned if the node is found and index is set
  * @return false Returned if the node is not found and index is not set
  */
-bool FindArtifactNode(struct DependencyGraph* graph, char* id, struct SemVer version, NodeIndex_t* index)
+bool FindArtifactNode(DependencyGraph* graph, char* id, SemVer version, NodeIndex_t* index)
 {
     for (NodeIndex_t i=0; i < graph->nodeCount; i++)
     {
@@ -202,7 +202,7 @@ bool FindArtifactNode(struct DependencyGraph* graph, char* id, struct SemVer ver
  * @return true 
  * @return false 
  */
-bool FindDependencyNode(struct DependencyGraph* graph, char* id, struct SemVer min_version, struct SemVer max_version, NodeIndex_t* index)
+bool FindDependencyNode(DependencyGraph* graph, char* id, SemVer min_version, SemVer max_version, NodeIndex_t* index)
 {
     for (NodeIndex_t i=0; i < graph->nodeCount; i++)
     {
@@ -240,14 +240,14 @@ bool FindDependencyNode(struct DependencyGraph* graph, char* id, struct SemVer m
  * @param target 
  * @param targetDependencyCount 
  * @param targetDependencies 
- * @return enum KPMResult 
+ * @return KPMResult 
  */
-enum KPMResult Internal_GetArtifactDependencies(struct KPM* kpm, struct IndexedArtifact* target, size_t* targetDependencyCount, struct ArtifactDependency** targetDependencies, struct KPMIO* kpm_io)
+KPMResult Internal_GetArtifactDependencies(KPM* kpm, IndexedArtifact* target, size_t* targetDependencyCount, ArtifactDependency** targetDependencies, KPMIO* kpm_io)
 {
     if (target->url != NULL && strlen(target->url) >= strlen("file://") && strncmp(target->url, "file://", strlen("file://")) == 0)
     {
         char* manifestData;
-        enum KPMResult result = Internal_GetManifest(target->url+strlen("file://"), &manifestData, NULL);
+        KPMResult result = Internal_GetManifest(target->url+strlen("file://"), &manifestData, NULL);
         if (result != KPM_OK)
         {
             free(manifestData);
@@ -272,7 +272,7 @@ enum KPMResult Internal_GetArtifactDependencies(struct KPM* kpm, struct IndexedA
         }
 
         *targetDependencyCount = cJSON_GetArraySize(cJSON_GetObjectItem(json, "dependencies"));
-        *targetDependencies = malloc(*targetDependencyCount * sizeof(struct ArtifactDependency));
+        *targetDependencies = malloc(*targetDependencyCount * sizeof(ArtifactDependency));
         for (size_t i=0; i < *targetDependencyCount; i++)
         {
             cJSON* dependencyJSON = cJSON_GetArrayItem(cJSON_GetObjectItem(json, "dependencies"), i);
@@ -323,17 +323,17 @@ enum KPMResult Internal_GetArtifactDependencies(struct KPM* kpm, struct IndexedA
     }
     else
     {
-        enum KPMResult status = KPM_OK;
+        KPMResult status = KPM_OK;
 
         // If there is no repository then the package was installed locally
         if (target->repository == NULL)
         {
-            struct InstalledPackage installedPackage;
+            InstalledPackage installedPackage;
             KPM_GetInstalledPackage(kpm, target->id, &installedPackage);
             if (SemVerCmp(installedPackage.version, target->version) == 0)
             {
                 size_t extraDependencyCount;
-                struct InstalledDependency* extraDependencies;
+                InstalledDependency* extraDependencies;
                 if ((status = KPM_ListInstalledPackageDependencies(kpm, target->id, &extraDependencyCount, &extraDependencies)) != KPM_OK)
                 {
                     KPM_FreeInstalledPackageDependencyList(extraDependencyCount, extraDependencies);
@@ -341,7 +341,7 @@ enum KPMResult Internal_GetArtifactDependencies(struct KPM* kpm, struct IndexedA
                 }
 
                 *targetDependencyCount = extraDependencyCount;
-                *targetDependencies = malloc(extraDependencyCount * sizeof(struct ArtifactDependency));
+                *targetDependencies = malloc(extraDependencyCount * sizeof(ArtifactDependency));
                 for (size_t i=0; i < *targetDependencyCount; i++)
                 {
                     (*targetDependencies)[i].artifact_id = strdup(target->id);
@@ -369,7 +369,7 @@ void stringConcatenate(char* dest, char* src, size_t* length, bool dry)
         strcat(dest, src);
 }
 
-void getNameFromNode(struct DependencyGraph* graph, NodeIndex_t index, char** output, bool declaration)
+void getNameFromNode(DependencyGraph* graph, NodeIndex_t index, char** output, bool declaration)
 {
     if (declaration)
     {
@@ -392,7 +392,7 @@ void getNameFromNode(struct DependencyGraph* graph, NodeIndex_t index, char** ou
     }
 }
 
-int Internal_RenderGraph(struct DependencyGraph* graph, char* output, bool dry)
+int Internal_RenderGraph(DependencyGraph* graph, char* output, bool dry)
 {
     size_t outputLength=0;
     stringConcatenate(output, "flowchart TD\n", &outputLength, dry);
@@ -424,7 +424,7 @@ int Internal_RenderGraph(struct DependencyGraph* graph, char* output, bool dry)
     return outputLength;
 }
 
-void RenderGraph(struct DependencyGraph* graph, char** output)
+void RenderGraph(DependencyGraph* graph, char** output)
 {
     size_t targetSize = 1 + Internal_RenderGraph(graph, NULL, true);
     *output = malloc(targetSize);
@@ -438,9 +438,9 @@ void RenderGraph(struct DependencyGraph* graph, char** output)
  * 
  * @param currentDependency 
  * @param targetDependency 
- * @return enum KPMResult 
+ * @return KPMResult 
  */
-bool Internal_NarrowDependency(struct ArtifactDependency* currentDependency, struct ArtifactDependency* targetDependency)
+bool Internal_NarrowDependency(ArtifactDependency* currentDependency, ArtifactDependency* targetDependency)
 {
     if (SemVerCmp(currentDependency->min_version, targetDependency->min_version) > 0 ||
         SemVerCmp(currentDependency->max_version, targetDependency->max_version) <= 0)
@@ -455,10 +455,10 @@ bool Internal_NarrowDependency(struct ArtifactDependency* currentDependency, str
     }
 }
 
-int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph* graph, struct IndexedArtifact* artifact, struct KPMIO* kpm_io)
+int Internal_ConstructGraphFromArtifact(KPM* kpm, DependencyGraph* graph, IndexedArtifact* artifact, KPMIO* kpm_io)
 {
     kpm_io->log(KPM_VERBOSITY_DEBUG, "Constructing graph from %i", artifact->id);
-    struct DependencyNode node = {
+    DependencyNode node = {
         .type = NODE_ARTIFACT,
         .connected = NULL,
         .connectedCount = 0,
@@ -477,7 +477,7 @@ int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph*
     int root = AddNode(graph, node);
 
     size_t dependencyCount = 0;
-    struct ArtifactDependency* dependencies = NULL;
+    ArtifactDependency* dependencies = NULL;
     if (Internal_GetArtifactDependencies(kpm, artifact, &dependencyCount, &dependencies, kpm_io) != KPM_OK)
     {
         KPM_FreeArtifactDependencyList(dependencyCount, dependencies);
@@ -499,7 +499,7 @@ int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph*
             continue; // We can skip this dependency if it already exists in the graph
         }
 
-        struct DependencyNode dependencyNode = {
+        DependencyNode dependencyNode = {
             .type = NODE_DEPENDENCY,
             .connected = NULL,
             .connectedCount = 0,
@@ -517,7 +517,7 @@ int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph*
         // Add indexed artifacts that match the dependency
         kpm_io->log(KPM_VERBOSITY_DEBUG, "Searching for artifact that matches %s", dependencies[i].id);
         size_t artifactCount;
-        struct IndexedArtifact* artifacts;
+        IndexedArtifact* artifacts;
         KPM_ListPackageArtifacts(kpm, NULL, dependencies[i].id, &artifactCount, &artifacts);
         kpm_io->log(KPM_VERBOSITY_DEBUG, "Found %i matches", artifactCount);
 
@@ -548,7 +548,7 @@ int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph*
         KPM_FreeIndexedArtifactList(artifactCount, artifacts);
 
         // Add locally installed package if present
-        struct InstalledPackage installedPackage;
+        InstalledPackage installedPackage;
         KPM_GetInstalledPackage(kpm, dependencies[i].id, &installedPackage);
         if (installedPackage.id != NULL && SemVerCmp(installedPackage.version, dependencies[i].min_version) >= 0 && SemVerCmp(installedPackage.version, dependencies[i].max_version) < 0)
         {
@@ -557,7 +557,7 @@ int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph*
             NodeIndex_t artifactNodeId;
             if (!FindArtifactNode(graph, installedPackage.id, installedPackage.version, &artifactNodeId))
             {
-                struct IndexedArtifact fakeArtifact = {
+                IndexedArtifact fakeArtifact = {
                     .id = strdup(installedPackage.id),
                     .repository = NULL,
                     .url = NULL,
@@ -592,7 +592,7 @@ int Internal_ConstructGraphFromArtifact(struct KPM* kpm, struct DependencyGraph*
     return root;
 }
 
-bool CheckIdInDependencyList(char* id, NodeIndex_t* needleIndex, size_t haystackSize, struct DependencyNode* haystack)
+bool CheckIdInDependencyList(char* id, NodeIndex_t* needleIndex, size_t haystackSize, DependencyNode* haystack)
 {
     for (*needleIndex = 0; *needleIndex < haystackSize; (*needleIndex)++)
     {
@@ -612,7 +612,7 @@ void Internal_ArrayAddNode(size_t* traversedNodeCount, NodeIndex_t** traversedNo
     (*traversedNodes)[*traversedNodeCount - 1] = node;
 }
 
-bool Internal_ResolveDependencyGraph(struct DependencyGraph* graph, NodeIndex_t root, NodeIndex_t currentNode, size_t* traversedNodeCount, NodeIndex_t** traversedNodes, struct KPMIO* kpmIO)
+bool Internal_ResolveDependencyGraph(DependencyGraph* graph, NodeIndex_t root, NodeIndex_t currentNode, size_t* traversedNodeCount, NodeIndex_t** traversedNodes, KPMIO* kpmIO)
 {
     for (;;)
     {

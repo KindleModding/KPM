@@ -8,7 +8,7 @@
 #include "callback.h"
 #include "sqlite3.h"
 
-bool indexDependency(struct KPM* kpm, char* artifact_repository, char* artifact_id, char* artifact_url, cJSON* dependency, struct KPMIO* kpmIO)
+bool indexDependency(KPM* kpm, char* artifact_repository, char* artifact_id, char* artifact_url, cJSON* dependency, KPMIO* kpmIO)
 {
     const char* zSQL = "INSERT INTO artifact_dependencies (artifact_repository, artifact_id, artifact_url, id, min_version_major, min_version_minor, min_version_patch, max_version_major, max_version_minor, max_version_patch) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
     sqlite3_stmt* statement;
@@ -56,7 +56,7 @@ bool indexDependency(struct KPM* kpm, char* artifact_repository, char* artifact_
     return true;
 }
 
-bool indexArtifact(struct KPM* kpm, char* repositoryId, char* packageId, cJSON* artifact, struct KPMIO* kpmIO)
+bool indexArtifact(KPM* kpm, char* repositoryId, char* packageId, cJSON* artifact, KPMIO* kpmIO)
 {
     kpmIO->log(KPM_VERBOSITY_DEBUG, "  indexing artifact %s (%.0f.%.0f.%.0f)", packageId, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(artifact, "version"), 0)), cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(artifact, "version"), 1)), cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(artifact, "version"), 2)));
     const char* zSQL = "INSERT INTO artifacts (url, repository, id, version_major, version_minor, version_patch) VALUES (?, ?, ?, ?, ?, ?);";
@@ -92,7 +92,7 @@ bool indexArtifact(struct KPM* kpm, char* repositoryId, char* packageId, cJSON* 
     return true;
 }
 
-bool indexPackage(struct KPM* kpm, char* repositoryId, cJSON* package, struct KPMIO* kpmIO)
+bool indexPackage(KPM* kpm, char* repositoryId, cJSON* package, KPMIO* kpmIO)
 {
     // Ensure the package is well-formed
     if (cJSON_GetObjectItem(package, "name") == NULL ||
@@ -158,7 +158,7 @@ bool indexPackage(struct KPM* kpm, char* repositoryId, cJSON* package, struct KP
     return true;
 }
 
-enum KPMResult KPM_UpdateIndex(struct KPM *kpm, struct KPMIO* kpmIO)
+KPMResult KPM_UpdateIndex(KPM *kpm, KPMIO* kpmIO)
 {
     if (kpmIO == NULL)
     {
@@ -168,8 +168,8 @@ enum KPMResult KPM_UpdateIndex(struct KPM *kpm, struct KPMIO* kpmIO)
     kpmIO->log(KPM_VERBOSITY_INFO, "Getting repositories...");
 
     size_t repositoryCount;
-    struct Repository* repositories;
-    enum KPMResult result;
+    Repository* repositories;
+    KPMResult result;
     if ((result = KPM_ListRepositories(kpm, &repositoryCount, &repositories)) != KPM_OK)
     {
         kpmIO->log(KPM_VERBOSITY_ERROR, "Unable to list KPM repositories");
@@ -178,7 +178,7 @@ enum KPMResult KPM_UpdateIndex(struct KPM *kpm, struct KPMIO* kpmIO)
         return result;
     }
 
-    struct SimpleGETRequest request;
+    SimpleGETRequest request;
     for (size_t i=0; i < repositoryCount; i++)
     {
         kpmIO->log(KPM_VERBOSITY_INFO, "Downloading index [%s]", repositories[i].url);

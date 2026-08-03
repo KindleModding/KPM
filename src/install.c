@@ -56,9 +56,9 @@ static int copy_data(struct archive *ar, struct archive *aw)
  * @param path 
  * @param out 
  * @param kpmIO 
- * @return enum KPMResult 
+ * @return KPMResult 
  */
-enum KPMResult Internal_ExtractArchive(char* path, char* out, struct KPMIO* kpmIO)
+KPMResult Internal_ExtractArchive(char* path, char* out, KPMIO* kpmIO)
 {
     if (access(path, R_OK) != 0)
     {
@@ -148,9 +148,9 @@ libarchive_error:
  * @param path 
  * @param outBuffer 
  * @param kpmIO 
- * @return enum KPMResult 
+ * @return KPMResult 
  */
-enum KPMResult Internal_GetManifest(char* path, char** outBuffer, struct KPMIO* kpmIO)
+KPMResult Internal_GetManifest(char* path, char** outBuffer, KPMIO* kpmIO)
 {
     if (kpmIO == NULL)
     {
@@ -255,17 +255,17 @@ enum KPMResult Internal_GetManifest(char* path, char** outBuffer, struct KPMIO* 
  * @param installedCount 
  * @param installed 
  */
-void Internal_TraverseInstalledNode(struct DependencyGraph* graph, NodeIndex_t node, size_t* traversedNodeCount, NodeIndex_t** traversedNodes, size_t installedCount, struct InstalledPackage* installed)
+void Internal_TraverseInstalledNode(DependencyGraph* graph, NodeIndex_t node, size_t* traversedNodeCount, NodeIndex_t** traversedNodes, size_t installedCount, InstalledPackage* installed)
 {
     Internal_ArrayAddNode(traversedNodeCount, traversedNodes, node);
     // Traverse the dependencies
     for (size_t i = 0; i < graph->nodes[node].connectedCount; i++)
     {
         // Get the first artifact of this dependency that is installed
-        struct DependencyNode dependency = graph->nodes[graph->nodes[node].connected[i]];
+        DependencyNode dependency = graph->nodes[graph->nodes[node].connected[i]];
         for (size_t j=0; j < dependency.connectedCount; j++)
         {
-            struct DependencyNode candidateArtifact = graph->nodes[dependency.connected[j]];
+            DependencyNode candidateArtifact = graph->nodes[dependency.connected[j]];
             Internal_ArrayAddNode(traversedNodeCount, traversedNodes, dependency.connected[j]);
 
             // Check if this node is installed
@@ -286,7 +286,7 @@ void Internal_TraverseInstalledNode(struct DependencyGraph* graph, NodeIndex_t n
 
 struct DownloadData
 {
-    struct KPMIO* kpm_io;
+    KPMIO* kpm_io;
     long int total_size;
     long int downloaded;
     int reported_progress;
@@ -347,9 +347,9 @@ size_t Internal_DownloadHeaderCallback(char* ptr, size_t size, size_t nitems, vo
  * @param graph 
  * @param deduplicatedPackageCount 
  * @param deduplicatedPackages 
- * @return enum KPMResult 
+ * @return KPMResult 
  */
-enum KPMResult Internal_DownloadGraphItems(struct KPM* kpm, struct DependencyGraph* graph, size_t deduplicatedPackageCount, NodeIndex_t* deduplicatedPackages, struct KPMIO* kpmIO)
+KPMResult Internal_DownloadGraphItems(KPM* kpm, DependencyGraph* graph, size_t deduplicatedPackageCount, NodeIndex_t* deduplicatedPackages, KPMIO* kpmIO)
 {
     for (size_t i=0; i < deduplicatedPackageCount; i++)
     {
@@ -357,7 +357,7 @@ enum KPMResult Internal_DownloadGraphItems(struct KPM* kpm, struct DependencyGra
         kpmIO->log(KPM_VERBOSITY_DEBUG, "Building target url from repo %s", graph->nodes[deduplicatedPackages[i]].repository);
         if (graph->nodes[deduplicatedPackages[i]].repository != NULL)
         {
-            struct Repository repository;
+            Repository repository;
             if (KPM_GetRepository(kpm, graph->nodes[deduplicatedPackages[i]].repository, &repository) != KPM_OK)
             {
                 kpmIO->log(KPM_VERBOSITY_WARN, "Could not find repository for %s", graph->nodes[deduplicatedPackages[i]].repository);
@@ -469,12 +469,12 @@ enum KPMResult Internal_DownloadGraphItems(struct KPM* kpm, struct DependencyGra
  * @return true 
  * @return false 
  */
-bool Internal_InstallItem(struct KPM* kpm, char* repository, char* path, bool installed_as_dependency, bool upgrading, struct KPMIO* kpmIO)
+bool Internal_InstallItem(KPM* kpm, char* repository, char* path, bool installed_as_dependency, bool upgrading, KPMIO* kpmIO)
 {
     char* manifest;
     kpmIO->log(KPM_VERBOSITY_DEBUG, "Reading manifest from %s", path);
 
-    enum KPMResult result;
+    KPMResult result;
     if ((result = Internal_GetManifest(path, &manifest, kpmIO)) != KPM_OK)
     {
         kpmIO->log(KPM_VERBOSITY_ERROR, "Could not load manifest from %s (%i: %s)", path, result, KPM_ErrorToString(result));
@@ -626,19 +626,19 @@ bool Internal_InstallItem(struct KPM* kpm, char* repository, char* path, bool in
     return true;
 }
 
-enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct InstallTarget* targets, struct KPMIO* kpm_io)
+KPMResult KPM_InstallPackages(KPM* kpm, size_t targetCount, InstallTarget* targets, KPMIO* kpm_io)
 {
     if (kpm_io == NULL)
         kpm_io = &dummyKPMStub;
 
     // Construct a graph
     kpm_io->log(KPM_VERBOSITY_DEBUG, "Constructing dependency graph...");
-    struct DependencyGraph graph;
+    DependencyGraph graph;
     CreateDependencyGraph(&graph, 0);
 
     // Fake rootnode is important so that we can handle previously installed packages
     // (See the rendered graph)
-    struct DependencyNode rootNode = {
+    DependencyNode rootNode = {
         .type = NODE_ARTIFACT,
         .connected = NULL,
         .connectedCount = 0,
@@ -652,7 +652,7 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
     // Add installed packages to the graph
     kpm_io->log(KPM_VERBOSITY_DEBUG, "Adding installed packages to graph:");
     size_t installedPackageCount = 0;
-    struct InstalledPackage *installedPackages;
+    InstalledPackage *installedPackages;
     KPM_ListInstalledPackages(kpm, &installedPackageCount, &installedPackages);
 
     size_t traversedNodeCount = 0;
@@ -675,7 +675,7 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
         if (installing)
             continue;
 
-        struct DependencyNode depNode = {
+        DependencyNode depNode = {
             .type = NODE_DEPENDENCY,
             .connected = NULL,
             .connectedCount = 0,
@@ -691,7 +691,7 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
         int depId = AddNode(&graph, depNode);
         AddEdge(&graph, rootId, depId);
 
-        struct IndexedArtifact fakeArtifact = {
+        IndexedArtifact fakeArtifact = {
             .id = strdup(installedPackages[i].id),
             .repository = NULL,
             .url = NULL,
@@ -715,7 +715,7 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
     
     for (int i=0; i < targetCount; i++)
     {
-        struct InstallTarget target = targets[i];
+        InstallTarget target = targets[i];
         if (target.repository == NULL)
         {
             if (target.version == NULL)
@@ -731,7 +731,7 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
                 kpm_io->log(KPM_VERBOSITY_INFO, "Preparing to install %s/%s (%u.%u.%u)", target.repository, target.id, target.version->major, target.version->minor, target.version->patch);
         }
 
-        struct IndexedArtifact artifact;
+        IndexedArtifact artifact;
         if (strncmp(target.id, "file://", strlen("file://")) == 0)
         {
             char* outBuffer = NULL;
@@ -770,7 +770,7 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
             else
             {
                 size_t artifactCount = 0;
-                struct IndexedArtifact* artifacts;
+                IndexedArtifact* artifacts;
                 if (KPM_ListPackageArtifacts(kpm, target.repository, target.id, &artifactCount, &artifacts) != KPM_OK || artifactCount == 0)
                 {
                     kpm_io->log(KPM_VERBOSITY_ERROR, "Could not find artifact for given target.");
@@ -790,7 +790,7 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
 
         kpm_io->log(KPM_VERBOSITY_DEBUG, "Adding target to graph");
         // Add the target to the graph
-        struct DependencyNode depNode = {
+        DependencyNode depNode = {
             .type = NODE_DEPENDENCY,
             .connected = NULL,
             .connectedCount = 0,
@@ -1041,7 +1041,7 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
     mkdir_r(tmp_path, 0775);
     free(tmp_path);
 
-    enum KPMResult result = Internal_DownloadGraphItems(kpm, &graph, deduplicatedPackageCount, deduplicatedPackages, kpm_io);
+    KPMResult result = Internal_DownloadGraphItems(kpm, &graph, deduplicatedPackageCount, deduplicatedPackages, kpm_io);
     if (result != KPM_OK)
     {
         kpm_io->log(KPM_VERBOSITY_ERROR, "Error: Could not download dependency graph (%i)", result);
@@ -1097,7 +1097,7 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
         // If this package is installed so are its dependencies
         for (int j=0; j < graph.nodes[deduplicatedPackages[i]].connectedCount; j++)
         {
-            struct DependencyNode dependency = graph.nodes[graph.nodes[deduplicatedPackages[i]].connected[j]];
+            DependencyNode dependency = graph.nodes[graph.nodes[deduplicatedPackages[i]].connected[j]];
             assert(dependency.type == NODE_DEPENDENCY);
 
             const char* zSQL = "INSERT INTO current_dependencies (dependent, dependency_id, min_version_major, min_version_minor, min_version_patch, max_version_major, max_version_minor, max_version_patch) VALUES (?, ?, ?, ?, ?, ?, ?, ?);";

@@ -1,3 +1,3 @@
 #pragma once
 
-extern struct KPMIO kpm_io;
+extern KPMIO kpm_io;

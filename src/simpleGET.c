@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-void SimpleGET_Initialise(struct SimpleGETRequest* request, const char* url)
+void SimpleGET_Initialise(SimpleGETRequest* request, const char* url)
 {
     request->buffer = NULL;
     request->size = 0;
@@ -21,13 +21,13 @@ void SimpleGET_Initialise(struct SimpleGETRequest* request, const char* url)
     curl_easy_setopt(request->curl, CURLOPT_TCP_KEEPALIVE, 1L);
 }
 
-void SimpleGET_Cleanup(struct SimpleGETRequest *request)
+void SimpleGET_Cleanup(SimpleGETRequest *request)
 {
     free(request->buffer);
     curl_easy_cleanup(request->curl);
 }
 
-CURLcode SimpleGET_Perform(struct SimpleGETRequest *request)
+CURLcode SimpleGET_Perform(SimpleGETRequest *request)
 {
     CURLcode result = curl_easy_perform(request->curl);
     curl_easy_getinfo(request->curl, CURLINFO_RESPONSE_CODE, &request->response_code);
@@ -37,7 +37,7 @@ CURLcode SimpleGET_Perform(struct SimpleGETRequest *request)
 size_t SimpleGET_Callback(char* ptr, size_t size, size_t nmemb, void* userdata)
 {
     size_t realsize = size * nmemb;
-    struct SimpleGETRequest* current = (struct SimpleGETRequest*) userdata;
+    SimpleGETRequest* current = (SimpleGETRequest*) userdata;
 
     char* newBuffer = (char*) realloc(current->buffer, current->size + realsize + 1);
     if (!newBuffer)

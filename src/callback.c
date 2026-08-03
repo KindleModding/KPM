@@ -1,7 +1,7 @@
 #include "kpm/kpm.h"
 #include "callback.h"
 
-void logStub(enum KPMVerbosity verbosity, const char* details, ...)
+void logStub(KPMVerbosity verbosity, const char* details, ...)
 {
     return;
 }
@@ -16,7 +16,7 @@ bool getInputStub(const char* details, ...)
     return false;
 }
 
-struct KPMIO dummyKPMStub = 
+KPMIO dummyKPMStub = 
 {
     .log = logStub,
     .logProgress = logProgressStub,

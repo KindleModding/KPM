@@ -5,7 +5,7 @@
 
 int main(int argc, char* argv[])
 {
-    struct KPM kpm = initialise_kpm();
+    KPM kpm = initialise_kpm();
     size_t repositoryCount;
     assert(KPM_ListRepositories(&kpm, &repositoryCount, NULL) == KPM_OK);
     assert(repositoryCount == 1);

@@ -4,7 +4,7 @@
 #include <string.h>
 #include <sys/stat.h>
 
-void KPM_FreeInstallTarget(struct InstallTarget* target)
+void KPM_FreeInstallTarget(InstallTarget* target)
 {
     free(target->id);
     free(target->repository);
@@ -12,7 +12,7 @@ void KPM_FreeInstallTarget(struct InstallTarget* target)
     target->repository = NULL;
 }
 
-void KPM_FreeInstallTargetList(size_t targetCount, struct InstallTarget* targets)
+void KPM_FreeInstallTargetList(size_t targetCount, InstallTarget* targets)
 {
     for (size_t i=0; i < targetCount; i++)
     {

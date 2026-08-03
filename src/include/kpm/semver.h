@@ -11,6 +11,7 @@ struct SemVer
     unsigned int minor;
     unsigned int patch;
 };
+typedef struct SemVer SemVer;
 
 /**
  * @brief If a > b it returns a number > 0, if a < b it returns a number < 0, if a == b it returns 0
@@ -19,7 +20,7 @@ struct SemVer
  * @param b 
  * @return int 
  */
-static inline long SemVerCmp(struct SemVer a, struct SemVer b)
+static inline long SemVerCmp(SemVer a, SemVer b)
 {
     if (a.major != b.major)
     {

@@ -22,7 +22,7 @@ void hd_log(const char* format, ...)
     va_end(args);
 }
 
-void kpm_log(enum KPMVerbosity verbosity, const char* format, ...)
+void kpm_log(KPMVerbosity verbosity, const char* format, ...)
 {
     char* prefixed_format;
     switch (verbosity)
@@ -64,7 +64,7 @@ bool kpm_get_input(const char* format, ...)
 }
 
 
-struct KPMIO kpm_io = {
+KPMIO kpm_io = {
     .stream = kpm_stream,
     .log = kpm_log,
     .logProgress = kpm_log_progress,

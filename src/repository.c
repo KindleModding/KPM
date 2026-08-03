@@ -6,7 +6,7 @@
 #include "kpm/kpm.h"
 #include "simpleGET.h"
 
-void KPM_FreeRepository(struct Repository *repository)
+void KPM_FreeRepository(Repository *repository)
 {
     free(repository->id);
     free(repository->url);
@@ -18,7 +18,7 @@ void KPM_FreeRepository(struct Repository *repository)
     repository->description = NULL;
 }
 
-void KPM_FreeRepositoryList(size_t repositoryCount, struct Repository* repositories)
+void KPM_FreeRepositoryList(size_t repositoryCount, Repository* repositories)
 {
     for (size_t i=0; i < repositoryCount; i++)
         KPM_FreeRepository(&repositories[i]);
@@ -26,7 +26,7 @@ void KPM_FreeRepositoryList(size_t repositoryCount, struct Repository* repositor
     free(repositories);
 }
 
-enum KPMResult KPM_ListRepositories(struct KPM* kpm, size_t* repositoryCount, struct Repository** repositories)
+KPMResult KPM_ListRepositories(KPM* kpm, size_t* repositoryCount, Repository** repositories)
 {
     *repositoryCount = 0;
     if (repositories != NULL)
@@ -48,7 +48,7 @@ enum KPMResult KPM_ListRepositories(struct KPM* kpm, size_t* repositoryCount, st
         {
             if (*repositories == NULL)
             {
-                *repositories = malloc(*repositoryCount * sizeof(struct Repository));
+                *repositories = malloc(*repositoryCount * sizeof(Repository));
             }
 
             (*repositories)[i].id = strdup((char*) sqlite3_column_text(statement, 1));
@@ -69,7 +69,7 @@ enum KPMResult KPM_ListRepositories(struct KPM* kpm, size_t* repositoryCount, st
     return KPM_OK;
 }
 
-enum KPMResult KPM_GetRepository(struct KPM *kpm, const char *repositoryId, struct Repository* repository)
+KPMResult KPM_GetRepository(KPM *kpm, const char *repositoryId, Repository* repository)
 {
     if (repository != NULL)
     {
@@ -102,9 +102,9 @@ enum KPMResult KPM_GetRepository(struct KPM *kpm, const char *repositoryId, stru
     return KPM_OK;
 }
 
-enum KPMResult KPM_AddRepository(struct KPM *kpm, const char *url, struct Repository* repository, struct KPMIO* kpm_io)
+KPMResult KPM_AddRepository(KPM *kpm, const char *url, Repository* repository, KPMIO* kpm_io)
 {
-    struct SimpleGETRequest request;
+    SimpleGETRequest request;
     SimpleGET_Initialise(&request, url);
     if (SimpleGET_Perform(&request) != CURLE_OK)
     {
@@ -174,7 +174,7 @@ enum KPMResult KPM_AddRepository(struct KPM *kpm, const char *url, struct Reposi
     return KPM_OK;
 }
 
-enum KPMResult KPM_RemoveRepository(struct KPM *kpm, const char* repositoryId)
+KPMResult KPM_RemoveRepository(KPM *kpm, const char* repositoryId)
 {
     sqlite3_exec(kpm->db, "BEGIN", NULL, NULL, NULL);
     const char* zSQL = "DELETE FROM repositories WHERE id=?;";
@@ -194,7 +194,7 @@ enum KPMResult KPM_RemoveRepository(struct KPM *kpm, const char* repositoryId)
     return KPM_OK;
 }
 
-enum KPMResult KPM_ListRepositoryPackages(struct KPM* kpm, const char* repositoryId, size_t* packageCount, struct IndexedPackage** packages)
+KPMResult KPM_ListRepositoryPackages(KPM* kpm, const char* repositoryId, size_t* packageCount, IndexedPackage** packages)
 {
     *packageCount = 0;
     if (packages != NULL)
@@ -218,7 +218,7 @@ enum KPMResult KPM_ListRepositoryPackages(struct KPM* kpm, const char* repositor
         {
             if (!*packages)
             {
-                *packages = malloc(*packageCount * sizeof(struct IndexedPackage));
+                *packages = malloc(*packageCount * sizeof(IndexedPackage));
             }
 
             (*packages)[i].repository = strdup((const char*) sqlite3_column_text(statement, 1));

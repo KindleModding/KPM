@@ -7,8 +7,8 @@
 
 int main(int argc, char* argv[])
 {
-    struct KPM kpm = initialise_kpm();
-    struct Repository* repositories;
+    KPM kpm = initialise_kpm();
+    Repository* repositories;
     size_t repositoryCount;
     assert(KPM_ListRepositories(&kpm, &repositoryCount, NULL) == KPM_OK);
     assert(repositoryCount == 1);
@@ -20,7 +20,7 @@ int main(int argc, char* argv[])
     assert(strcmp(repositories[0].description, "The official KMC repo") == 0);
     assert(strcmp(repositories[0].url, "https://repo.kindlemodding.org/manifest.v2.json") == 0);
 
-    struct Repository repository;
+    Repository repository;
     KPM_GetRepository(&kpm, "kindlemodding", &repository);
     assert(strcmp(repository.id, "kindlemodding") == 0);
     assert(strcmp(repository.name, "Official KMC Repo") == 0);

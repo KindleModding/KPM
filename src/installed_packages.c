@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-void KPM_FreeInstalledPackage(struct InstalledPackage* package)
+void KPM_FreeInstalledPackage(InstalledPackage* package)
 {
     free(package->id);
     free(package->repository);
@@ -18,7 +18,7 @@ void KPM_FreeInstalledPackage(struct InstalledPackage* package)
     package->description = NULL;
 }
 
-void KPM_FreeInstalledPackageList(size_t packageCount, struct InstalledPackage* packages)
+void KPM_FreeInstalledPackageList(size_t packageCount, InstalledPackage* packages)
 {
     for (size_t i=0; i < packageCount; i++)
     {
@@ -27,7 +27,7 @@ void KPM_FreeInstalledPackageList(size_t packageCount, struct InstalledPackage* 
     free(packages);
 }
 
-enum KPMResult KPM_GetInstalledPackage(struct KPM* kpm, const char* packageId, struct InstalledPackage* package)
+KPMResult KPM_GetInstalledPackage(KPM* kpm, const char* packageId, InstalledPackage* package)
 {
     if (package != NULL)
     {
@@ -67,7 +67,7 @@ enum KPMResult KPM_GetInstalledPackage(struct KPM* kpm, const char* packageId, s
     return KPM_OK;
 }
 
-enum KPMResult KPM_ListInstalledPackages(struct KPM* kpm, size_t* packageCount, struct InstalledPackage** packages)
+KPMResult KPM_ListInstalledPackages(KPM* kpm, size_t* packageCount, InstalledPackage** packages)
 {
     *packageCount = 0;
     if (packages != NULL)
@@ -89,7 +89,7 @@ enum KPMResult KPM_ListInstalledPackages(struct KPM* kpm, size_t* packageCount, 
         {
             if (!*packages)
             {
-                *packages = malloc(*packageCount * sizeof(struct InstalledPackage));
+                *packages = malloc(*packageCount * sizeof(InstalledPackage));
             }
 
             (*packages)[i].id = strdup((const char*) sqlite3_column_text(statement, 1));
@@ -117,7 +117,7 @@ enum KPMResult KPM_ListInstalledPackages(struct KPM* kpm, size_t* packageCount, 
     return KPM_OK;
 }
 
-void KPM_FreeInstalledPackageDependency(struct InstalledDependency* dependency)
+void KPM_FreeInstalledPackageDependency(InstalledDependency* dependency)
 {
     free(dependency->dependency_id);
     free(dependency->dependent);
@@ -126,7 +126,7 @@ void KPM_FreeInstalledPackageDependency(struct InstalledDependency* dependency)
     dependency->dependent = NULL;
 }
 
-void KPM_FreeInstalledPackageDependencyList(size_t dependencyCount, struct InstalledDependency* dependencies)
+void KPM_FreeInstalledPackageDependencyList(size_t dependencyCount, InstalledDependency* dependencies)
 {
     for (size_t i=0; i < dependencyCount; i++)
         KPM_FreeInstalledPackageDependency(dependencies + i);
@@ -135,7 +135,7 @@ void KPM_FreeInstalledPackageDependencyList(size_t dependencyCount, struct Insta
 }
 
 
-enum KPMResult KPM_ListInstalledPackageDependencies(struct KPM* kpm, const char* id, size_t* dependencyCount, struct InstalledDependency** dependencies)
+KPMResult KPM_ListInstalledPackageDependencies(KPM* kpm, const char* id, size_t* dependencyCount, InstalledDependency** dependencies)
 {
     *dependencyCount = 0;
     if (dependencies != NULL)
@@ -159,7 +159,7 @@ enum KPMResult KPM_ListInstalledPackageDependencies(struct KPM* kpm, const char*
         {
             if (!*dependencies)
             {
-                *dependencies = malloc(*dependencyCount * sizeof(struct ArtifactDependency));
+                *dependencies = malloc(*dependencyCount * sizeof(ArtifactDependency));
             }
 
             (*dependencies)[i].dependent = strdup((const char*) sqlite3_column_text(statement, 1));
@@ -183,7 +183,7 @@ enum KPMResult KPM_ListInstalledPackageDependencies(struct KPM* kpm, const char*
     return KPM_OK;
 }
 
-enum KPMResult KPM_ListInstalledPackageDependents(struct KPM* kpm, const char* id, size_t* dependentCount, struct InstalledDependency** dependents)
+KPMResult KPM_ListInstalledPackageDependents(KPM* kpm, const char* id, size_t* dependentCount, InstalledDependency** dependents)
 {
     *dependentCount = 0;
     if (dependents != NULL)
@@ -207,7 +207,7 @@ enum KPMResult KPM_ListInstalledPackageDependents(struct KPM* kpm, const char* i
         {
             if (!*dependents)
             {
-                *dependents = malloc(*dependentCount * sizeof(struct InstalledPackage));
+                *dependents = malloc(*dependentCount * sizeof(InstalledPackage));
             }
 
             (*dependents)[i].dependent = strdup((const char*) sqlite3_column_text(statement, 1));

@@ -4,7 +4,7 @@
 #include "kpm/kpm.h"
 #include "internal_utils.h"
 
-const char* KPM_ErrorToString(enum KPMResult error)
+const char* KPM_ErrorToString(KPMResult error)
 {
     switch (error)
     {
@@ -31,7 +31,7 @@ const char* KPM_ErrorToString(enum KPMResult error)
     }
 };
 
-enum KPMResult KPM_Initialise(struct KPM *kpm)
+KPMResult KPM_Initialise(KPM *kpm)
 {
     sqlite3_open(kpm->dbPath, &kpm->db);
     sqlite3_exec(kpm->db, "PRAGMA foreign_keys=ON;", NULL, NULL, NULL); // @TODO: Ensure this succeeds
@@ -125,7 +125,7 @@ enum KPMResult KPM_Initialise(struct KPM *kpm)
     return KPM_OK;
 }
 
-void KPM_Cleanup(struct KPM *kpm)
+void KPM_Cleanup(KPM *kpm)
 {
     sqlite3_close(kpm->db);
     kpm->db = NULL;

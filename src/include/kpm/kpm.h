@@ -23,7 +23,7 @@
 #define KPM_VERSION_MINOR 2
 #define KPM_VERSION_PATCH 3
 
-enum KPMResult
+typedef enum
 {
     KPM_OK,
     KPM_ABORTED,
@@ -35,9 +35,9 @@ enum KPMResult
     KPM_FILE_SYSTEM_ERROR,
     KPM_LIBARCHIVE_ERROR,
     KPM_PARSE_ERROR
-};
+} KPMResult;
 
-const char* KPM_ErrorToString(enum KPMResult error);
+const char* KPM_ErrorToString(KPMResult error);
 
 /**
 * @brief A repository that KPM is using
@@ -50,6 +50,7 @@ struct Repository
     char* name; /**< The repository's name */
     char* description; /**< The repository's description */
 };
+typedef struct Repository Repository;
 
 /**
 * @brief A package that KPM has indexed
@@ -63,6 +64,7 @@ struct IndexedPackage
     char* author; /**< The author of the package */
     char* description; /**< The description of the package */
 };
+typedef struct IndexedPackage IndexedPackage;
 
 /**
 * @brief An artifact KPM has indexed
@@ -73,8 +75,10 @@ struct IndexedArtifact
     char* repository; /**< The repository ID */
     char* id; /**< The package ID */
     char* url; /**< URL of the artifact - primary key */
-    struct SemVer version; /**< The version of this artifact */
+    SemVer version; /**< The version of this artifact */
 };
+typedef struct IndexedArtifact IndexedArtifact;
+
 
 /**
 * @brief A dependency object
@@ -86,9 +90,11 @@ struct ArtifactDependency
     char* artifact_id; /**< ID of the artifact */
     char* artifact_url; /**< URL of the artifact */
     char* id; /**< The package ID */
-    struct SemVer min_version; /**< The min version of the dependency (inclusive) */
-    struct SemVer max_version; /**< The max version of the dependency (exclusive) */
+    SemVer min_version; /**< The min version of the dependency (inclusive) */
+    SemVer max_version; /**< The max version of the dependency (exclusive) */
 };
+typedef struct ArtifactDependency ArtifactDependency;
+
 
 /**
 * @brief A package KPM has installed
@@ -101,9 +107,11 @@ struct InstalledPackage
     char* name; /**< The package name */
     char* author; /**< The package author */
     char* description; /**< The package description */
-    struct SemVer version; /**< The package version */
+    SemVer version; /**< The package version */
     bool installed_as_dependency; /**< Whether or not this package was installed as a dependency of another package */
 };
+typedef struct InstalledPackage InstalledPackage;
+
 
 /**
 * @brief A dependency of a package KPM has installed
@@ -113,18 +121,19 @@ struct InstalledDependency
 {
     char* dependent; /**< ID of installed package */
     char* dependency_id; /**< ID of the dependency */
-    struct SemVer min_version; /**< The min version of the dependency (inclusive) */
-    struct SemVer max_version; /**< The max version of the dependency (exclusive) */
+    SemVer min_version; /**< The min version of the dependency (inclusive) */
+    SemVer max_version; /**< The max version of the dependency (exclusive) */
 };
-
+typedef struct InstalledDependency InstalledDependency;
 
 
 struct InstallTarget
 {
     char* repository; /**< The repository to look for the package in (or NULL) */
     char* id; /**< The id of the package to install */
-    struct SemVer* version; /**< Note: may be NULL if version doesn't matter */
+    SemVer* version; /**< Note: may be NULL if version doesn't matter */
 };
+typedef struct InstallTarget InstallTarget;
 
 struct KPM
 {
@@ -133,17 +142,18 @@ struct KPM
     char* pkgPath; /**< The path to KPM packages */
     int maxConnections; /**< Maximum number of parallel connections to hold when downloading stuff */
 };
+typedef struct KPM KPM;
 
-enum KPMVerbosity
+typedef enum
 {
     KPM_VERBOSITY_DEBUG,
     KPM_VERBOSITY_INFO,
     KPM_VERBOSITY_WARN,
     KPM_VERBOSITY_ERROR
-};
+} KPMVerbosity;
 
 typedef void KPMStream(char c);
-typedef void KPMLog(enum KPMVerbosity, const char* format, ...) __attribute__((format(printf, 2, 3)));
+typedef void KPMLog(KPMVerbosity, const char* format, ...) __attribute__((format(printf, 2, 3)));
 typedef void KPMLogProgress(unsigned int progress, const char* format, ...) __attribute__((format(printf, 2, 3)));
 typedef bool KPMGetInput(const char* format, ...) __attribute__((format(printf, 1, 2)));
 
@@ -154,21 +164,22 @@ struct KPMIO
     KPMLogProgress* logProgress;
     KPMGetInput* getInput;
 };
+typedef struct KPMIO KPMIO;
 
 /**
  * @brief Initialise the KPM object
  * 
  * @param kpm A pointer to an uninitialised KPM struct
- * @return enum KPMResult 
+ * @return KPMResult 
  */
-enum KPMResult KPM_Initialise(struct KPM *kpm);
+KPMResult KPM_Initialise(KPM *kpm);
 
 /**
  * @brief Cleanup a KPM object and free its resources
  * 
  * @param kpm 
  */
-void KPM_Cleanup(struct KPM *kpm);
+void KPM_Cleanup(KPM *kpm);
 
 // Repo management functions
 /**
@@ -176,7 +187,7 @@ void KPM_Cleanup(struct KPM *kpm);
  * 
  * @param repository 
  */
-void KPM_FreeRepository(struct Repository* repository);
+void KPM_FreeRepository(Repository* repository);
 
 /**
  * @brief Free an allocated repository list returned by KPM_ListRepositories
@@ -184,7 +195,7 @@ void KPM_FreeRepository(struct Repository* repository);
  * @param repositoryCount The number of repositories in the list
  * @param repositories The list of repositories
  */
-void KPM_FreeRepositoryList(size_t repositoryCount, struct Repository* repositories);
+void KPM_FreeRepositoryList(size_t repositoryCount, Repository* repositories);
 
 /**
  * @brief List indexed repositories
@@ -192,9 +203,9 @@ void KPM_FreeRepositoryList(size_t repositoryCount, struct Repository* repositor
  * @param kpm The KPM object
  * @param repositoryCount A pointer to store the number of repositories indexed
  * @param repositories A pointer to allocate and store store the indexed repository objects in (must be freed with KPM_FreeRepositoryList) - can be NULL to only get a count
- * @return enum KPMResult 
+ * @return KPMResult 
  */
-enum KPMResult KPM_ListRepositories(struct KPM* kpm, size_t* repositoryCount, struct Repository** repositories);
+KPMResult KPM_ListRepositories(KPM* kpm, size_t* repositoryCount, Repository** repositories);
 
 /**
  * @brief Get a single indexed repository from its Id
@@ -202,9 +213,9 @@ enum KPMResult KPM_ListRepositories(struct KPM* kpm, size_t* repositoryCount, st
  * @param kpm The KPM object
  * @param repositoryId The Id of the repository to get
  * @param repository A pointer to return the repository object (Values will be NULL if the repository could not be fetched, pointer can be set to NULL)
- * @return enum KPMResult 
+ * @return KPMResult 
  */
-enum KPMResult KPM_GetRepository(struct KPM *kpm, const char *repositoryId, struct Repository* repository);
+KPMResult KPM_GetRepository(KPM *kpm, const char *repositoryId, Repository* repository);
 
 /**
  * @brief Index a repository from a URL
@@ -213,18 +224,18 @@ enum KPMResult KPM_GetRepository(struct KPM *kpm, const char *repositoryId, stru
  * @param url The URL to the repository manifest file
  * @param repository A pointer to return the indexed repository object (or NULL)
  * @param kpm_io A KPM IO object
- * @return enum KPMResult 
+ * @return KPMResult 
  */
-enum KPMResult KPM_AddRepository(struct KPM *kpm, const char *url, struct Repository* repository, struct KPMIO* kpm_io);
+KPMResult KPM_AddRepository(KPM *kpm, const char *url, Repository* repository, KPMIO* kpm_io);
 
 /**
  * @brief Remove an indexed repository by its Id
  * 
  * @param kpm The KPM object
  * @param repositoryId The Id of the repository to remove
- * @return enum KPMResult 
+ * @return KPMResult 
  */
-enum KPMResult KPM_RemoveRepository(struct KPM* kpm, const char* repositoryId);
+KPMResult KPM_RemoveRepository(KPM* kpm, const char* repositoryId);
 
 /**
  * @brief Return a list of indexed packages under a repository
@@ -233,9 +244,9 @@ enum KPMResult KPM_RemoveRepository(struct KPM* kpm, const char* repositoryId);
  * @param repositoryId The Id of the repository to get packages for
  * @param packageCount A pointer to return the number of packages indexed
  * @param packages A pointer to allocate and return an array of packages - Must be freed with KPM_FreeIndexedPackageList - Can be NULL to return only a count
- * @return enum KPMResult 
+ * @return KPMResult 
  */
-enum KPMResult KPM_ListRepositoryPackages(struct KPM* kpm, const char* repositoryId, size_t* packageCount, struct IndexedPackage** packages);
+KPMResult KPM_ListRepositoryPackages(KPM* kpm, const char* repositoryId, size_t* packageCount, IndexedPackage** packages);
 
 
 
@@ -245,7 +256,7 @@ enum KPMResult KPM_ListRepositoryPackages(struct KPM* kpm, const char* repositor
  * 
  * @param package The package to free the properties of
  */
-void KPM_FreeIndexedPackage(struct IndexedPackage* package);
+void KPM_FreeIndexedPackage(IndexedPackage* package);
 
 /**
  * @brief Free an allocated list of packages - such as returned by KPM_ListRepositoryPackages
@@ -253,7 +264,7 @@ void KPM_FreeIndexedPackage(struct IndexedPackage* package);
  * @param packageCount The number of packages in the array
  * @param packages The package array
  */
-void KPM_FreeIndexedPackageList(size_t packageCount, struct IndexedPackage* packages);
+void KPM_FreeIndexedPackageList(size_t packageCount, IndexedPackage* packages);
 
 /**
  * @brief Get a package given a repositoryId (optional) and a packageId
@@ -262,9 +273,9 @@ void KPM_FreeIndexedPackageList(size_t packageCount, struct IndexedPackage* pack
  * @param repository The id of the repository to get the package from (or NULL)
  * @param id The id of the package to get
  * @param package A pointer to write the returned package info
- * @return enum KPMResult 
+ * @return KPMResult 
  */
-enum KPMResult KPM_GetPackage(struct KPM* kpm, const char* repository, const char* id, struct IndexedPackage* package);
+KPMResult KPM_GetPackage(KPM* kpm, const char* repository, const char* id, IndexedPackage* package);
 
 /**
  * @brief Get a list of packages given a package id
@@ -273,9 +284,9 @@ enum KPMResult KPM_GetPackage(struct KPM* kpm, const char* repository, const cha
  * @param id The id of the package to get
  * @param packageCount The number of packages in the array
  * @param packages The package array
- * @return enum KPMResult 
+ * @return KPMResult 
  */
-enum KPMResult KPM_GetPackages(struct KPM* kpm, const char* id, size_t* packageCount, struct IndexedPackage** packages);
+KPMResult KPM_GetPackages(KPM* kpm, const char* id, size_t* packageCount, IndexedPackage** packages);
 
 /**
  * @brief Return a list of packages where either the name or id contain the query
@@ -284,9 +295,9 @@ enum KPMResult KPM_GetPackages(struct KPM* kpm, const char* id, size_t* packageC
  * @param query The query to search for
  * @param packageCount The number of packages in the array
  * @param packages The package array
- * @return enum KPMResult 
+ * @return KPMResult 
  */
-enum KPMResult KPM_SearchPackages(struct KPM* kpm, const char* query, size_t* packageCount, struct IndexedPackage** packages);
+KPMResult KPM_SearchPackages(KPM* kpm, const char* query, size_t* packageCount, IndexedPackage** packages);
 
 // Installed package management functions
 /**
@@ -294,7 +305,7 @@ enum KPMResult KPM_SearchPackages(struct KPM* kpm, const char* query, size_t* pa
  * 
  * @param package The package to free
  */
-void KPM_FreeInstalledPackage(struct InstalledPackage* package);
+void KPM_FreeInstalledPackage(InstalledPackage* package);
 
 /**
  * @brief Free an allocated list of installed packages
@@ -302,7 +313,7 @@ void KPM_FreeInstalledPackage(struct InstalledPackage* package);
  * @param packageCount The number of packages in the array
  * @param packages The package array
  */
-void KPM_FreeInstalledPackageList(size_t packageCount, struct InstalledPackage* packages);
+void KPM_FreeInstalledPackageList(size_t packageCount, InstalledPackage* packages);
 
 /**
  * @brief Get an installed package object by ID
@@ -310,9 +321,9 @@ void KPM_FreeInstalledPackageList(size_t packageCount, struct InstalledPackage* 
  * @param kpm The KPM object
  * @param packageId The package ID
  * @param package The installed package object
- * @return enum KPMResult 
+ * @return KPMResult 
  */
-enum KPMResult KPM_GetInstalledPackage(struct KPM* kpm, const char* packageId, struct InstalledPackage* package);
+KPMResult KPM_GetInstalledPackage(KPM* kpm, const char* packageId, InstalledPackage* package);
 
 /**
  * @brief Get the list of installed packages
@@ -320,9 +331,9 @@ enum KPMResult KPM_GetInstalledPackage(struct KPM* kpm, const char* packageId, s
  * @param kpm The KPM object
  * @param packageCount The number of installed packages in the packages array
  * @param packages The packages array
- * @return enum KPMResult 
+ * @return KPMResult 
  */
-enum KPMResult KPM_ListInstalledPackages(struct KPM* kpm, size_t* packageCount, struct InstalledPackage** packages);
+KPMResult KPM_ListInstalledPackages(KPM* kpm, size_t* packageCount, InstalledPackage** packages);
 
 // Installed dependency management functions
 /**
@@ -330,14 +341,14 @@ enum KPMResult KPM_ListInstalledPackages(struct KPM* kpm, size_t* packageCount, 
  * 
  * @param dependency The installed dependency to free the properties of
  */
-void KPM_FreeInstalledPackageDependency(struct InstalledDependency* dependency);
+void KPM_FreeInstalledPackageDependency(InstalledDependency* dependency);
 /**
  * @brief Free an allocated list of installed dependencies
  * 
  * @param dependencyCount The number of installed dependencies in the array
  * @param dependency The installed dependency array
 */
-void KPM_FreeInstalledPackageDependencyList(size_t dependencyCount, struct InstalledDependency* dependency);
+void KPM_FreeInstalledPackageDependencyList(size_t dependencyCount, InstalledDependency* dependency);
 
 /**
  * @brief List dependencies for an installed package
@@ -346,9 +357,9 @@ void KPM_FreeInstalledPackageDependencyList(size_t dependencyCount, struct Insta
  * @param id The id of the installed package
  * @param dependencyCount The number of dependencies in the dependency array
  * @param dependencies The dependency array
- * @return enum KPMResult 
+ * @return KPMResult 
  */
-enum KPMResult KPM_ListInstalledPackageDependencies(struct KPM* kpm, const char* id, size_t* dependencyCount, struct InstalledDependency** dependencies);
+KPMResult KPM_ListInstalledPackageDependencies(KPM* kpm, const char* id, size_t* dependencyCount, InstalledDependency** dependencies);
 
 /**
  * @brief Get the list of dependent packages for a given package id
@@ -357,9 +368,9 @@ enum KPMResult KPM_ListInstalledPackageDependencies(struct KPM* kpm, const char*
  * @param id The id of the package to check
  * @param dependentCount The number of dependent packages in the packages array
  * @param dependents The dependent packages array
- * @return enum KPMResult 
+ * @return KPMResult 
  */
-enum KPMResult KPM_ListInstalledPackageDependents(struct KPM* kpm, const char* id, size_t* dependentCount, struct InstalledDependency** dependents);
+KPMResult KPM_ListInstalledPackageDependents(KPM* kpm, const char* id, size_t* dependentCount, InstalledDependency** dependents);
 
 // Artifact management functions
 /**
@@ -367,7 +378,7 @@ enum KPMResult KPM_ListInstalledPackageDependents(struct KPM* kpm, const char* i
  * 
  * @param artifact The artifact to free the properties of
  */
-void KPM_FreeIndexedArtifact(struct IndexedArtifact* artifact);
+void KPM_FreeIndexedArtifact(IndexedArtifact* artifact);
 
 /**
  * @brief Free an allocated list of indexed artifact
@@ -375,7 +386,7 @@ void KPM_FreeIndexedArtifact(struct IndexedArtifact* artifact);
  * @param artifactCount The number of indexed artifacts in the array
  * @param artifacts The indexed artifact array
 */
-void KPM_FreeIndexedArtifactList(size_t artifactCount, struct IndexedArtifact* artifacts);
+void KPM_FreeIndexedArtifactList(size_t artifactCount, IndexedArtifact* artifacts);
 
 /**
  * @brief Get an IndexedArtifact
@@ -385,9 +396,9 @@ void KPM_FreeIndexedArtifactList(size_t artifactCount, struct IndexedArtifact* a
  * @param packageId The id of the package to get an artifact for
  * @param version The version to get the artifact for
  * @param artifact The indexed artifact
- * @return enum KPMResult 
+ * @return KPMResult 
  */
-enum KPMResult KPM_GetArtifact(struct KPM* kpm, const char* repositoryId, const char* packageId, struct SemVer version, struct IndexedArtifact* artifact);
+KPMResult KPM_GetArtifact(KPM* kpm, const char* repositoryId, const char* packageId, SemVer version, IndexedArtifact* artifact);
 
 /**
  * @brief List the indexed artifacts of a package 
@@ -397,9 +408,9 @@ enum KPMResult KPM_GetArtifact(struct KPM* kpm, const char* repositoryId, const 
  * @param packageId The package ID of the package
  * @param artifactCount Pointer to store the artifact count
  * @param artifacts Pointer to store the artifact array
- * @return enum KPMResult 
+ * @return KPMResult 
  */
-enum KPMResult KPM_ListPackageArtifacts(struct KPM* kpm, const char* repositoryId, const char* packageId, size_t* artifactCount, struct IndexedArtifact** artifacts);
+KPMResult KPM_ListPackageArtifacts(KPM* kpm, const char* repositoryId, const char* packageId, size_t* artifactCount, IndexedArtifact** artifacts);
 
 // Dependency management functions
 /**
@@ -407,14 +418,14 @@ enum KPMResult KPM_ListPackageArtifacts(struct KPM* kpm, const char* repositoryI
  * 
  * @param dependency The artifact dependency to free the properties of
  */
-void KPM_FreeArtifactDependency(struct ArtifactDependency* dependency);
+void KPM_FreeArtifactDependency(ArtifactDependency* dependency);
 /**
  * @brief Free an allocated list of artifact dependencies
  * 
  * @param dependencyCount The number of artifact dependencies in the array
  * @param dependencies The artifact dependency array
 */
-void KPM_FreeArtifactDependencyList(size_t dependencyCount, struct ArtifactDependency* dependencies);
+void KPM_FreeArtifactDependencyList(size_t dependencyCount, ArtifactDependency* dependencies);
 
 /**
  * @brief Get a list of dependencies for a given artifact
@@ -425,18 +436,18 @@ void KPM_FreeArtifactDependencyList(size_t dependencyCount, struct ArtifactDepen
  * @param url The url of the artifact
  * @param dependencyCount The number of dependencies in the dependency array
  * @param dependencies The dependency array
- * @return enum KPMResult 
+ * @return KPMResult 
  */
-enum KPMResult KPM_ListArtifactDependencies(struct KPM* kpm, const char* repository, const char* id, const char* url, size_t* dependencyCount, struct ArtifactDependency** dependencies);
+KPMResult KPM_ListArtifactDependencies(KPM* kpm, const char* repository, const char* id, const char* url, size_t* dependencyCount, ArtifactDependency** dependencies);
 
 /**
  * @brief Update the local index of package by downloading repository manifests
  * 
  * @param kpm The KPM object
  * @param statusCallback A callback for progress information
- * @return enum KPMResult 
+ * @return KPMResult 
  */
-enum KPMResult KPM_UpdateIndex(struct KPM *kpm, struct KPMIO* kpmIO);
+KPMResult KPM_UpdateIndex(KPM *kpm, KPMIO* kpmIO);
 
 
 /**
@@ -444,7 +455,7 @@ enum KPMResult KPM_UpdateIndex(struct KPM *kpm, struct KPMIO* kpmIO);
  * 
  * @param target The installation target object to free
  */
-void KPM_FreeInstallTarget(struct InstallTarget* target);
+void KPM_FreeInstallTarget(InstallTarget* target);
 
 /**
  * @brief Frees a list of InstallTarget objects
@@ -452,7 +463,7 @@ void KPM_FreeInstallTarget(struct InstallTarget* target);
  * @param targetCount The number of InstallTarget objects
  * @param targets The list of InstallTarget objects
  */
-void KPM_FreeInstallTargetList(size_t targetCount, struct InstallTarget* targets);
+void KPM_FreeInstallTargetList(size_t targetCount, InstallTarget* targets);
 
 
 /**
@@ -462,9 +473,9 @@ void KPM_FreeInstallTargetList(size_t targetCount, struct InstallTarget* targets
  * @param targetCount The number of packages to install
  * @param targets An array of packages to install
  * @param kpmIO 
- * @return enum KPMResult 
+ * @return KPMResult 
  */
-enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct InstallTarget* targets, struct KPMIO* kpmIO);
+KPMResult KPM_InstallPackages(KPM* kpm, size_t targetCount, InstallTarget* targets, KPMIO* kpmIO);
 
 /**
  * @brief Uninstalls a package
@@ -473,6 +484,6 @@ enum KPMResult KPM_InstallPackages(struct KPM* kpm, size_t targetCount, struct I
  * @param packageCount
  * @param packageIds 
  * @param kpmIO 
- * @return enum KPMResult 
+ * @return KPMResult 
  */
-enum KPMResult KPM_UninstallPackages(struct KPM* kpm, size_t packageCount, const char* packageIds[], struct KPMIO* kpmIO);
+KPMResult KPM_UninstallPackages(KPM* kpm, size_t packageCount, const char* packageIds[], KPMIO* kpmIO);

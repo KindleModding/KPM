@@ -6,7 +6,7 @@
 #include <string.h>
 #include "internal_utils.h"
 
-void KPM_FreeIndexedPackage(struct IndexedPackage* package)
+void KPM_FreeIndexedPackage(IndexedPackage* package)
 {
     free(package->repository);
     free(package->id);
@@ -21,7 +21,7 @@ void KPM_FreeIndexedPackage(struct IndexedPackage* package)
     package->author = NULL;
 }
 
-void KPM_FreeIndexedPackageList(size_t packageCount, struct IndexedPackage* packages)
+void KPM_FreeIndexedPackageList(size_t packageCount, IndexedPackage* packages)
 {
     for (size_t i=0; i < packageCount; i++)
         KPM_FreeIndexedPackage(&packages[i]);
@@ -29,7 +29,7 @@ void KPM_FreeIndexedPackageList(size_t packageCount, struct IndexedPackage* pack
     free(packages);
 }
 
-enum KPMResult KPM_GetPackage(struct KPM* kpm, const char* repository, const char* id, struct IndexedPackage* package)
+KPMResult KPM_GetPackage(KPM* kpm, const char* repository, const char* id, IndexedPackage* package)
 {
     package->repository = NULL;
     package->id = NULL;
@@ -66,7 +66,7 @@ enum KPMResult KPM_GetPackage(struct KPM* kpm, const char* repository, const cha
     return KPM_OK;
 }
 
-enum KPMResult KPM_GetPackages(struct KPM* kpm, const char* id, size_t* packageCount, struct IndexedPackage** packages)
+KPMResult KPM_GetPackages(KPM* kpm, const char* id, size_t* packageCount, IndexedPackage** packages)
 {
     *packageCount = 0;
     if (packages != NULL)
@@ -90,7 +90,7 @@ enum KPMResult KPM_GetPackages(struct KPM* kpm, const char* id, size_t* packageC
         {
             if (!*packages)
             {
-                *packages = malloc(*packageCount * sizeof(struct IndexedPackage));
+                *packages = malloc(*packageCount * sizeof(IndexedPackage));
             }
 
             (*packages)[i].repository = strdup((const char*) sqlite3_column_text(statement, 1));
@@ -111,7 +111,7 @@ enum KPMResult KPM_GetPackages(struct KPM* kpm, const char* id, size_t* packageC
     return KPM_OK;
 }
 
-enum KPMResult KPM_SearchPackages(struct KPM* kpm, const char* query, size_t* packageCount, struct IndexedPackage** packages)
+KPMResult KPM_SearchPackages(KPM* kpm, const char* query, size_t* packageCount, IndexedPackage** packages)
 {
     *packageCount = 0;
     if (packages != NULL)
@@ -139,7 +139,7 @@ enum KPMResult KPM_SearchPackages(struct KPM* kpm, const char* query, size_t* pa
         {
             if (!*packages)
             {
-                *packages = malloc(*packageCount * sizeof(struct IndexedPackage));
+                *packages = malloc(*packageCount * sizeof(IndexedPackage));
             }
 
             (*packages)[i].repository = strdup((const char*) sqlite3_column_text(statement, 1));
@@ -162,7 +162,7 @@ enum KPMResult KPM_SearchPackages(struct KPM* kpm, const char* query, size_t* pa
     return KPM_OK;
 }
 
-enum KPMResult KPM_ListPackageArtifacts(struct KPM* kpm, const char* repositoryId, const char* packageId, size_t* artifactCount, struct IndexedArtifact** artifacts)
+KPMResult KPM_ListPackageArtifacts(KPM* kpm, const char* repositoryId, const char* packageId, size_t* artifactCount, IndexedArtifact** artifacts)
 {
     *artifactCount = 0;
     if (artifacts != NULL)
@@ -206,7 +206,7 @@ enum KPMResult KPM_ListPackageArtifacts(struct KPM* kpm, const char* repositoryI
         {
             if (!*artifacts)
             {
-                *artifacts = malloc(*artifactCount * sizeof(struct IndexedArtifact));
+                *artifacts = malloc(*artifactCount * sizeof(IndexedArtifact));
             }
 
             (*artifacts)[i].url = strdup((const char*) sqlite3_column_text(statement, 1));

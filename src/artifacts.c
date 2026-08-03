@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-void KPM_FreeIndexedArtifact(struct IndexedArtifact* artifact)
+void KPM_FreeIndexedArtifact(IndexedArtifact* artifact)
 {
      free(artifact->repository);
      free(artifact->id);
@@ -15,7 +15,7 @@ void KPM_FreeIndexedArtifact(struct IndexedArtifact* artifact)
      artifact->url = NULL;
 }
  
-void KPM_FreeIndexedArtifactList(size_t artifactCount, struct IndexedArtifact* artifacts)
+void KPM_FreeIndexedArtifactList(size_t artifactCount, IndexedArtifact* artifacts)
 {
      for (size_t i=0; i < artifactCount; i++)
         KPM_FreeIndexedArtifact(&artifacts[i]);
@@ -23,7 +23,7 @@ void KPM_FreeIndexedArtifactList(size_t artifactCount, struct IndexedArtifact* a
      free(artifacts);
 }
 
-void KPM_FreeArtifactDependency(struct ArtifactDependency* dependency)
+void KPM_FreeArtifactDependency(ArtifactDependency* dependency)
 {
     free(dependency->artifact_repository);
     free(dependency->artifact_id);
@@ -36,7 +36,7 @@ void KPM_FreeArtifactDependency(struct ArtifactDependency* dependency)
     dependency->id = NULL;
 }
 
-void KPM_FreeArtifactDependencyList(size_t dependencyCount, struct ArtifactDependency* dependencies)
+void KPM_FreeArtifactDependencyList(size_t dependencyCount, ArtifactDependency* dependencies)
 {
     for (size_t i=0; i < dependencyCount; i++)
         KPM_FreeArtifactDependency(&dependencies[i]);
@@ -44,7 +44,7 @@ void KPM_FreeArtifactDependencyList(size_t dependencyCount, struct ArtifactDepen
     free(dependencies);
 }
 
-enum KPMResult KPM_GetArtifact(struct KPM* kpm, const char* repositoryId, const char* packageId, struct SemVer version, struct IndexedArtifact* artifact)
+KPMResult KPM_GetArtifact(KPM* kpm, const char* repositoryId, const char* packageId, SemVer version, IndexedArtifact* artifact)
 {
     const char* zSQL;
     sqlite3_stmt* statement;
@@ -85,7 +85,7 @@ enum KPMResult KPM_GetArtifact(struct KPM* kpm, const char* repositoryId, const 
     return KPM_OK;
 }
 
-enum KPMResult KPM_ListArtifactDependencies(struct KPM* kpm, const char* repository, const char* id, const char* url, size_t* dependencyCount, struct ArtifactDependency** dependencies)
+KPMResult KPM_ListArtifactDependencies(KPM* kpm, const char* repository, const char* id, const char* url, size_t* dependencyCount, ArtifactDependency** dependencies)
 {
     *dependencyCount = 0;
     if (dependencies != NULL)
@@ -113,7 +113,7 @@ enum KPMResult KPM_ListArtifactDependencies(struct KPM* kpm, const char* reposit
         {
             if (!*dependencies)
             {
-                *dependencies = malloc(*dependencyCount * sizeof(struct ArtifactDependency));
+                *dependencies = malloc(*dependencyCount * sizeof(ArtifactDependency));
             }
 
             (*dependencies)[i].artifact_repository = strdup((const char*) sqlite3_column_text(statement, 1));
