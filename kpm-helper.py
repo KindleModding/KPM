@@ -694,7 +694,7 @@ if __name__ == "__main__":
     )
     repo_remove_parser.add_argument(
         "--supported_platform",
-        help="Add a supported platform to the manifest",
+        help="The supported platform of the artifact to remove",
         action="append",
         default=[],
         choices=valid_supported_platforms,
