@@ -64,7 +64,7 @@ bool indexArtifact(KPM* kpm, char* repositoryId, char* packageId, cJSON* artifac
         return false;
     }
 
-    if (cJSON_GetArraySize(cJSON_GetObjectItem(artifact, "version")) != 3)
+    if (!cJSON_IsArray(cJSON_GetObjectItem(artifact, "version")) || cJSON_GetArraySize(cJSON_GetObjectItem(artifact, "version")) != 3)
     {
         kpmIO->log(KPM_VERBOSITY_ERROR, "Artifact version field is invalid");
         return false;

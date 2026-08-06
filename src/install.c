@@ -539,7 +539,43 @@ bool Internal_InstallItem(KPM* kpm, char* repository, char* path, bool installed
     }
 
     char* id = cJSON_GetStringValue(cJSON_GetObjectItem(json, "id"));
-    kpmIO->log(KPM_VERBOSITY_DEBUG, "Installing item with id: %s", id);
+    if (strlen(id) == 0)
+    {
+        kpmIO->log(KPM_VERBOSITY_ERROR, "Package has an empty id");
+        free(manifest);
+        cJSON_Delete(json);
+        return false;
+    }
+
+    if (strlen(cJSON_GetStringValue(cJSON_GetObjectItem(json, "name"))) == 0)
+    {
+        kpmIO->log(KPM_VERBOSITY_ERROR, "Package has an empty name");
+        free(manifest);
+        cJSON_Delete(json);
+        return false;
+    }
+
+    if (!cJSON_IsArray(cJSON_GetObjectItem(json, "version")) || cJSON_GetArraySize(cJSON_GetObjectItem(json, "version")) != 3)
+    {
+        kpmIO->log(KPM_VERBOSITY_ERROR, "Package version field is invalid");
+        free(manifest);
+        cJSON_Delete(json);
+        return false;
+    }
+
+    if (
+        cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(json, "version"), 0)) < 0 ||
+        cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(json, "version"), 1)) < 0 ||
+        cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(json, "version"), 2)) < 0
+    )
+    {
+        kpmIO->log(KPM_VERBOSITY_ERROR, "Package version field contains invalid entries");
+        free(manifest);
+        cJSON_Delete(json);
+        return false;
+    }
+
+    kpmIO->log(KPM_VERBOSITY_DEBUG, "Installing item with id: '%s'", id);
 
     char* outPath = asprintf_hd("%s/%s/", kpm->pkgPath, id);
     rmdir_r(outPath); // Just in case it exists
