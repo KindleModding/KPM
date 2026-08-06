@@ -17,35 +17,45 @@ int main(int argc, char* argv[])
     
     KPM kpm = initialise_kpm();
     
+    kpm_io.log(KPM_VERBOSITY_INFO, "Removing default repository");
     KPM_RemoveRepository(&kpm, "kindlemodding");
     size_t repositoryCount;
     assert(KPM_ListRepositories(&kpm, &repositoryCount, NULL) == KPM_OK);
     assert(repositoryCount == 0);
 
     Repository repository;
+    kpm_io.log(KPM_VERBOSITY_INFO, "Adding valid repository");
     assert(KPM_AddRepository(&kpm, valid_repo_url, &repository, &kpm_io) == KPM_OK);
     assert(KPM_ListRepositories(&kpm, &repositoryCount, NULL) == KPM_OK);
     assert(repositoryCount == 1);
 
 
+    kpm_io.log(KPM_VERBOSITY_INFO, "Updating index");
     assert(KPM_UpdateIndex(&kpm, &kpm_io) == KPM_OK);
     InstallTarget target  = {
         .id = "validpackage1",
         .repository = NULL,
         .version = NULL
     };
+    kpm_io.log(KPM_VERBOSITY_INFO, "Installing validpackage1");
     assert(KPM_InstallPackages(&kpm, 1, &target, &kpm_io) == KPM_OK);
+
+    kpm_io.log(KPM_VERBOSITY_INFO, "Installing validpackage2");
     target.id = "validpackage2";
     assert(KPM_InstallPackages(&kpm, 1, &target, &kpm_io) == KPM_OK);
 
+    kpm_io.log(KPM_VERBOSITY_INFO, "Uninstalling both packages");
     char* package_ids[] = {
         "validpackage1",
         "validpackage2"
     };
     assert(KPM_UninstallPackages(&kpm, 2, (const char**) package_ids, &kpm_io) == KPM_OK);
 
+    kpm_io.log(KPM_VERBOSITY_INFO, "Installing invalidpackage1");
     target.id = "invalidpackage1";
     assert(KPM_InstallPackages(&kpm, 1, &target, &kpm_io) != KPM_OK);
+
+    kpm_io.log(KPM_VERBOSITY_INFO, "Installing invalidpackage2");
     target.id = "invalidpackage2";
     assert(KPM_InstallPackages(&kpm, 1, &target, &kpm_io) != KPM_OK);
 
@@ -61,9 +71,13 @@ int main(int argc, char* argv[])
             .version = NULL
         }
     };
+    kpm_io.log(KPM_VERBOSITY_INFO, "Installing both invalidpackage1 and invalidpackage2");
     assert(KPM_InstallPackages(&kpm, 2, targets, &kpm_io) != KPM_OK);
 
+    kpm_io.log(KPM_VERBOSITY_INFO, "Removing repository");
     assert(KPM_RemoveRepository(&kpm, repository.id) == KPM_OK);
+
+    kpm_io.log(KPM_VERBOSITY_INFO, "Listing repositories");
     assert(KPM_ListRepositories(&kpm, &repositoryCount, NULL) == KPM_OK);
     assert(repositoryCount == 0);
     assert(strcmp(repository.id, "testrepo") == 0);
