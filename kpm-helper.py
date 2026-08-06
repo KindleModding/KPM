@@ -171,15 +171,15 @@ class Package:
                 return
 
     def add_supported_platform(self, platform: str):
+        if not platform in valid_supported_platforms:
+            raise RuntimeError(
+                f"Supported platform must be one of: {valid_supported_platforms}"
+            )
         if self.supported_platforms == None:
             self.supported_platforms = []
         self.supported_platforms.add(platform)
 
     def remove_supported_platform(self, platform: str):
-        if not platform in valid_supported_platforms:
-            raise RuntimeError(
-                f"Supported platform must be one of: {valid_supported_platforms}"
-            )
         self.supported_platforms.remove(platform)
 
     def validate(self):
@@ -347,6 +347,10 @@ class Repo:
             except:
                 raise RuntimeError("[ERR] Could not open manifest.json file")
 
+        filename_supported_platforms = "kindleany"
+        if (manifest.get("supported_platforms", None) != None):
+            filename_supported_platforms = '-'.join(manifest["supported_platforms"])
+
         for existing_artifact in self.artifacts:
             if (
                 existing_artifact.supported_platforms != None
@@ -369,7 +373,7 @@ class Repo:
                 and existing_artifact.version == Version.decode(manifest["version"])
             ):
                 raise RuntimeError(
-                    f"Artifact {existing_artifact.id} @ {existing_artifact.version} : {'-'.join(manifest.get('supported_platforms', ['kindleany']))} already exists in repository"
+                    f"Artifact {existing_artifact.id} @ {existing_artifact.version} : {filename_supported_platforms} already exists in repository"
                 )
 
         dependencies = []
@@ -380,7 +384,7 @@ class Repo:
             "packages",
             manifest["id"],
             "artifacts",
-            f"{manifest['id']}_{'.'.join(str(x) for x in manifest['version'])}_{'-'.join(manifest.get('supported_platforms', ['kindleany']))}.kpkg",
+            f"{manifest['id']}_{'.'.join(str(x) for x in manifest['version'])}_{filename_supported_platforms}.kpkg",
         )
 
         full_artifact_path = os.path.join(self.path, artifact_path)
