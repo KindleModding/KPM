@@ -3,6 +3,7 @@
 #include "cjson/cJSON.h"
 #include "kpm/kpm.h"
 #include <assert.h>
+#include <errno.h>
 #include <curl/curl.h>
 #include <curl/multi.h>
 #include <curl/typecheck-gcc.h>
@@ -410,6 +411,7 @@ KPMResult Internal_DownloadGraphItems(KPM* kpm, DependencyGraph* graph, size_t d
         free(path);
         if (fd == -1)
         {
+            kpmIO->log(KPM_VERBOSITY_ERROR, "Could not open file for writing: %s", strerror(errno));
             return KPM_FILE_SYSTEM_ERROR; // @TODO
         }
 
@@ -552,18 +554,20 @@ bool Internal_InstallItem(KPM* kpm, char* repository, char* path, bool installed
     // If so, run it
     if (access(installScriptPath, R_OK) == 0)
     {
+        free(installScriptPath);
         kpmIO->log(KPM_VERBOSITY_DEBUG, "Running install script for [%s]", id);
         // Run install script
         int result = -1;
         char* installCommand;
         if (upgrading)
-            installCommand = asprintf_hd("KPM_VERSION_MAJOR=%i KPM_VERSION_MINOR=%i KPM_VERSION_PATCH=%i KPM_PLATFORM=\"%s\" sh %s upgrade 2>&1", KPM_VERSION_MAJOR, KPM_VERSION_MINOR, KPM_VERSION_PATCH, KPM_PLATFORM, installScriptPath);
+            installCommand = asprintf_hd("KPM_VERSION_MAJOR=%i KPM_VERSION_MINOR=%i KPM_VERSION_PATCH=%i KPM_PLATFORM=\"%s\" sh install.sh upgrade 2>&1", KPM_VERSION_MAJOR, KPM_VERSION_MINOR, KPM_VERSION_PATCH, KPM_PLATFORM);
         else
-            installCommand = asprintf_hd("KPM_VERSION_MAJOR=%i KPM_VERSION_MINOR=%i KPM_VERSION_PATCH=%i KPM_PLATFORM=\"%s\" sh %s 2>&1", KPM_VERSION_MAJOR, KPM_VERSION_MINOR, KPM_VERSION_PATCH, KPM_PLATFORM, installScriptPath);
+            installCommand = asprintf_hd("KPM_VERSION_MAJOR=%i KPM_VERSION_MINOR=%i KPM_VERSION_PATCH=%i KPM_PLATFORM=\"%s\" sh install.sh 2>&1", KPM_VERSION_MAJOR, KPM_VERSION_MINOR, KPM_VERSION_PATCH, KPM_PLATFORM);
 
+        char* old_path = getcwd(NULL, 0);
         chdir(outPath);
-        free(installScriptPath);
         kpmIO->log(KPM_VERBOSITY_INFO, "Running install hooks for %s", id);
+        kpmIO->log(KPM_VERBOSITY_DEBUG, "Running: %s", installCommand);
         FILE* stream = popen(installCommand, "r");
         free(installCommand);
         if (stream != NULL)
@@ -580,13 +584,13 @@ bool Internal_InstallItem(KPM* kpm, char* repository, char* path, bool installed
             kpmIO->log(KPM_VERBOSITY_ERROR, "Could not run script - POPEN FAILURE");
         }
 
-        chdir("/");
+        chdir(old_path);
+        free(old_path);
         if (result != 0)
         {
             // The install hook failed
             kpmIO->log(KPM_VERBOSITY_ERROR, "Could not execute install hook for [%s]", id);
             Internal_RunUninstallHook(outPath, id, false, kpmIO);
-            chdir("/");
             rmdir_r(outPath);
             free(outPath);
             free(manifest);
