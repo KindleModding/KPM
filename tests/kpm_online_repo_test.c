@@ -32,5 +32,7 @@ int main(int argc, char* argv[])
     assert(KPM_AddRepository(&kpm, "https://google.com", NULL, &kpm_io) != KPM_OK);
     assert(KPM_RemoveRepository(&kpm, "thisrepodoesnotexist") == KPM_OK); // @TODO: Should we fail?
 
+    assert(KPM_UpdateIndex(&kpm, &kpm_io) == KPM_OK);
+
     KPM_Cleanup(&kpm);
 }

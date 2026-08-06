@@ -1,4 +1,5 @@
 #include "kpm.h"
+#include <stdlib.h>
 
 KPM initialise_kpm()
 {

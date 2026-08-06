@@ -405,5 +405,7 @@ launch:\n\
 cleanup:
     io_cleanup();
     KPM_Cleanup(&kpm);
+    free(kpm.dbPath);
+    free(kpm.pkgPath);
     return error;
 }
