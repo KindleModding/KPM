@@ -31,8 +31,3 @@ jobs:
       with:
         name: testlog.txt
         path: builddir/meson-logs/testlog.txt
-    - uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: builddir
-        path: builddir
