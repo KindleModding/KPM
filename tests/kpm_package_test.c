@@ -13,8 +13,7 @@ int main(int argc, char* argv[])
     char* actual_path = dirname(realpath(argv[0], NULL));
     fprintf(stderr, "%s\n", actual_path);
 
-    char* valid_repo_url;
-    asprintf(&valid_repo_url, "file://%s/resources/test_repository/manifest.json", actual_path); // We don't need that much portability for our tests
+    char* valid_repo_url = asprintf_hd("file://%s/resources/test_repository/manifest.json", actual_path); // We don't need that much portability for our tests
     
     KPM kpm = initialise_kpm();
     
