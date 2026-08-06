@@ -24,8 +24,10 @@ jobs:
       shell: bash
       run: |
             meson setup --reconfigure --buildtype=release builddir
-            meson test -C builddir
+            cd builddir
+            meson test
     - uses: actions/upload-artifact@v4
+      if: always()
       with:
         name: testlog.txt
         path: builddir/meson-logs/testlog.txt
