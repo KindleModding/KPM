@@ -58,6 +58,28 @@ bool indexDependency(KPM* kpm, char* artifact_repository, char* artifact_id, cha
 
 bool indexArtifact(KPM* kpm, char* repositoryId, char* packageId, cJSON* artifact, KPMIO* kpmIO)
 {
+    if (strlen(cJSON_GetStringValue(cJSON_GetObjectItem(artifact, "url"))) == 0)
+    {
+        kpmIO->log(KPM_VERBOSITY_ERROR, "Artifact has an empty URL field");
+        return false;
+    }
+
+    if (cJSON_GetArraySize(cJSON_GetObjectItem(artifact, "version")) != 3)
+    {
+        kpmIO->log(KPM_VERBOSITY_ERROR, "Artifact version field is invalid");
+        return false;
+    }
+
+    if (
+        cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(artifact, "version"), 0)) < 0 ||
+        cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(artifact, "version"), 1)) < 0 ||
+        cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(artifact, "version"), 2)) < 0
+    )
+    {
+        kpmIO->log(KPM_VERBOSITY_ERROR, "Artifact version field contains invalid entries");
+        return false;
+    }
+
     kpmIO->log(KPM_VERBOSITY_DEBUG, "  indexing artifact %s (%.0f.%.0f.%.0f)", packageId, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(artifact, "version"), 0)), cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(artifact, "version"), 1)), cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(artifact, "version"), 2)));
     const char* zSQL = "INSERT INTO artifacts (url, repository, id, version_major, version_minor, version_patch) VALUES (?, ?, ?, ?, ?, ?);";
     sqlite3_stmt* statement;
@@ -178,6 +200,7 @@ KPMResult KPM_UpdateIndex(KPM *kpm, KPMIO* kpmIO)
         return result;
     }
 
+    bool all_ok = true;
     SimpleGETRequest request;
     for (size_t i=0; i < repositoryCount; i++)
     {
@@ -259,7 +282,10 @@ KPMResult KPM_UpdateIndex(KPM *kpm, KPMIO* kpmIO)
         }
 
         if (!ok)
+        {
+            all_ok = false;
             sqlite3_exec(kpm->db, "ROLLBACK", NULL, NULL, NULL);
+        }
         else
             sqlite3_exec(kpm->db, "COMMIT", NULL, NULL, NULL);
         
@@ -269,5 +295,8 @@ KPMResult KPM_UpdateIndex(KPM *kpm, KPMIO* kpmIO)
 
     KPM_FreeRepositoryList(repositoryCount, repositories);
 
-    return KPM_OK;
+    if (all_ok)
+        return KPM_OK;
+    else
+        return KPM_GENERIC_ERROR;
 }

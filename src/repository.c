@@ -134,16 +134,23 @@ KPMResult KPM_AddRepository(KPM *kpm, const char *url, Repository* repository, K
         return KPM_INVALID_RESPONSE_CONTENT;
     }
 
-    kpm_io->log(KPM_VERBOSITY_DEBUG, "ID: %s", cJSON_GetStringValue(cJSON_GetObjectItem(json, "id")));
+    char* repo_id = cJSON_GetStringValue(cJSON_GetObjectItem(json, "id"));
+    kpm_io->log(KPM_VERBOSITY_DEBUG, "ID: %s", repo_id);
     kpm_io->log(KPM_VERBOSITY_DEBUG, "URL: %s", url);
     kpm_io->log(KPM_VERBOSITY_DEBUG, "NAME: %s", cJSON_GetStringValue(cJSON_GetObjectItem(json, "name")));
     kpm_io->log(KPM_VERBOSITY_DEBUG, "DESC: %s", cJSON_GetStringValue(cJSON_GetObjectItem(json, "description")));
+
+    if (strlen(repo_id) == 0 || repo_id[0] == ' ' || repo_id[strlen(repo_id)-1] == ' ')
+    {
+        kpm_io->log(KPM_VERBOSITY_ERROR, "Repository must have a valid id");
+        return KPM_PARSE_ERROR;
+    }
 
     sqlite3_exec(kpm->db, "BEGIN", NULL, NULL, NULL);
     const char* zSQL = "INSERT INTO repositories (id, url, name, description) VALUES (?, ?, ?, ?);";
     sqlite3_stmt* statement;
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
-    sqlite3_bind_text(statement, 1, cJSON_GetStringValue(cJSON_GetObjectItem(json, "id")), -1, SQLITE_STATIC);
+    sqlite3_bind_text(statement, 1, repo_id, -1, SQLITE_STATIC);
     sqlite3_bind_text(statement, 2, url, -1, SQLITE_STATIC);
     sqlite3_bind_text(statement, 3, cJSON_GetStringValue(cJSON_GetObjectItem(json, "name")), -1, SQLITE_STATIC);
     sqlite3_bind_text(statement, 4, cJSON_GetStringValue(cJSON_GetObjectItem(json, "description")), -1, SQLITE_STATIC);
