@@ -11,9 +11,11 @@ int main(int argc, char* argv[])
     remove("./repo_test.db");
     KPM kpm = initialise_kpm();
     size_t repositoryCount;
-    assert(KPM_ListRepositories(&kpm, &repositoryCount, NULL) == KPM_OK);
-    assert(repositoryCount == 1);
+    assert_hd(KPM_ListRepositories(&kpm, &repositoryCount, NULL) == KPM_OK);
+    assert_hd(repositoryCount == 1);
     KPM_Cleanup(&kpm);
 
-    assert(access("./repo_test.db", R_OK) == 0);
+    assert_hd(access("./repo_test.db", R_OK) == 0);
+
+    return 0;
 }
