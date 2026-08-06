@@ -51,6 +51,8 @@ KPMResult Internal_RunUninstallHook(const char* outPath, const char* packageId, 
             return KPM_GENERIC_ERROR;
         }
     }
+
+    return KPM_OK;
 }
 
 KPMResult Internal_UninstallPackage(KPM* kpm, const char* packageId, bool upgrading, KPMIO* kpm_io)
@@ -126,6 +128,7 @@ KPMResult KPM_UninstallPackages(KPM* kpm, size_t packageCount, const char* packa
     int result = KPM_OK;
     for (int i=0; i < packageCount; i++)
     {
+        kpmIO->log(KPM_VERBOSITY_DEBUG, "Uninstalling %s", packageIds[i]);
         if ((result = Internal_UninstallPackage(kpm, packageIds[i], false, kpmIO)) != KPM_OK)
             break;
     }
