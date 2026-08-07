@@ -3,7 +3,7 @@ url = https://github.com/KindleModding/FBInk.git
 revision = 76557104a55ea163769464e59668e26f6af299ef
 depth = 1
 clone-recursive = true
-patch_directory = fbink/overlay
+patch_directory = fbink
 
 [provide]
 dependency_names = fbink, fbink_input

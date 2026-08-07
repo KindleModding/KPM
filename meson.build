@@ -11,14 +11,14 @@ add_global_arguments('-DKPM_PKG_PATH="' + get_option('pkg_path') + '"', language
 
 kmc_lib_dir = '/var/local/kmc/lib'
 
+subproject('zstd', default_options: ['default_library=static'])
 subproject('liblzma', default_options: ['default_library=static'])
-subproject('zlib', default_options: ['default_library=static', 'tests=disabled'])
 subproject('sqlite3', default_options: ['default_library=static']) # PW2 sqlite3 is unusable it straight up doesn't compile I need to fix this
 subproject('cjson', default_options: ['tests=false', 'default_library=static'])
 subproject('libarchive', default_options: [
   'default_library=static',
   'openssl=disabled',
-  'zlib=enabled',
+  'zlib=disabled',
   'bz2lib=disabled',
   'libb2=disabled',
   'iconv=disabled',
