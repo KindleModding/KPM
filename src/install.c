@@ -1,3 +1,6 @@
+#include "openssl/evp.h"
+#include "openssl/types.h"
+
 #include "archive.h"
 #include "archive_entry.h"
 #include "cjson/cJSON.h"
@@ -291,6 +294,7 @@ struct DownloadData
     long int total_size;
     long int downloaded;
     int reported_progress;
+    EVP_MD_CTX* evp_ctx;
     int fd;
 };
 
@@ -310,6 +314,7 @@ size_t Internal_DownloadWriteCallback(char* ptr, size_t size, size_t nmemb, void
     }
 
     downloadData->downloaded += size * nmemb;
+    EVP_DigestUpdate(downloadData->evp_ctx, ptr, size*nmemb); // Update digest
     return write(downloadData->fd, ptr, size * nmemb);
 }
 
@@ -417,6 +422,7 @@ KPMResult Internal_DownloadGraphItems(KPM* kpm, DependencyGraph* graph, size_t d
 
         CURL* curl = curl_easy_init();
         kpmIO->log(KPM_VERBOSITY_DEBUG, "Downloading url %s", target_url);
+
         struct DownloadData download_data = {
             .kpm_io = kpmIO,
             .total_size = 0,
@@ -424,6 +430,10 @@ KPMResult Internal_DownloadGraphItems(KPM* kpm, DependencyGraph* graph, size_t d
             .reported_progress = 0,
             .fd = fd
         };
+
+        download_data.evp_ctx = EVP_MD_CTX_new();
+        EVP_MD_CTX_init(download_data.evp_ctx);
+        EVP_DigestInit_ex(download_data.evp_ctx, EVP_sha256(), NULL);
         
         curl_easy_setopt(curl, CURLOPT_URL, target_url);
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, Internal_DownloadWriteCallback);
@@ -454,6 +464,17 @@ KPMResult Internal_DownloadGraphItems(KPM* kpm, DependencyGraph* graph, size_t d
                 kpmIO->log(KPM_VERBOSITY_ERROR, "Curl received an invalid response code: %zu", response_code);
                 return KPM_CURL_ERROR;
             }
+        }
+
+        // Check the digest
+        unsigned char md[EVP_MAX_MD_SIZE];
+        unsigned int md_len;
+        EVP_DigestFinal_ex(download_data.evp_ctx, md, &md_len);
+        EVP_MD_CTX_destroy(download_data.evp_ctx);
+        kpmIO->log(KPM_VERBOSITY_DEBUG, "Calculated hash for file:");
+        for (int i = 0; i < md_len; i++)
+        {
+            kpmIO->log(KPM_VERBOSITY_DEBUG, "%x", md[i]);
         }
 
         free(target_url);
@@ -1084,7 +1105,7 @@ KPMResult KPM_InstallPackages(KPM* kpm, size_t targetCount, InstallTarget* targe
     KPMResult result = Internal_DownloadGraphItems(kpm, &graph, deduplicatedPackageCount, deduplicatedPackages, kpm_io);
     if (result != KPM_OK)
     {
-        kpm_io->log(KPM_VERBOSITY_ERROR, "Error: Could not download dependency graph (%i)", result);
+        kpm_io->log(KPM_VERBOSITY_ERROR, "Error: Could not download dependency graph items (%i)", result);
         free(deduplicatedPackages);
         FreeDependencyGraph(&graph);
         free(upgrade);
