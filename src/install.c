@@ -471,11 +471,15 @@ KPMResult Internal_DownloadGraphItems(KPM* kpm, DependencyGraph* graph, size_t d
         unsigned int md_len;
         EVP_DigestFinal_ex(download_data.evp_ctx, md, &md_len);
         EVP_MD_CTX_destroy(download_data.evp_ctx);
-        kpmIO->log(KPM_VERBOSITY_DEBUG, "Calculated hash for file:");
-        for (int i = 0; i < md_len; i++)
+        
+        char* hash_str = malloc(md_len*2 + 1);
+        hash_str[0] = 0;
+        for (int md_i = 0; md_i < md_len; md_i++)
         {
-            kpmIO->log(KPM_VERBOSITY_DEBUG, "%x", md[i]);
+            sprintf(hash_str, "%s%x", hash_str, md[md_i]);
         }
+        kpmIO->log(KPM_VERBOSITY_DEBUG, "Calculated hash for file: %s", hash_str);
+        free(hash_str);
 
         free(target_url);
     }
