@@ -23,7 +23,7 @@ subproject('libarchive', default_options: [
   'libb2=disabled',
   'iconv=disabled',
   'lz4=disabled',
-  'zstd=disabled',
+  'zstd=enabled',
   'lzma=enabled',
   'lzo2=disabled',
   'cng=disabled',
@@ -35,7 +35,7 @@ subproject('libarchive', default_options: [
 
 ])
 subproject('google-brotli', default_options: ['default_library=static']) # Needed for cURL brotli support
-subproject('openssl', default_options: ['default_library=static', 'build_cli=false']) # Needed for cURL HTTPS support
+openssl = subproject('openssl', default_options: ['default_library=static', 'build_cli=false']) # Needed for cURL HTTPS support
 subproject('nghttp2', default_options: ['default_library=static']) # Needed for cURL HTTP/2 support
 curl = subproject('curl', default_options: [
   'tool=disabled',
@@ -85,6 +85,7 @@ sqlite3_dep = dependency('sqlite3', static: true, default_options: [
 curl_dep = curl.get_variable('curl_dep') # Get static libcurl
 libcjson_dep = dependency('libcjson', static: true)
 libarchive_dep = dependency('libarchive', static: true)
+libcrypto_dep = dependency('libcrypto', static: true)
 
 subdir('./stubs')
 subdir('./src')

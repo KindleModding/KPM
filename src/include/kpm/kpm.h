@@ -12,16 +12,15 @@
  */
 
 #include <sqlite3.h>
-#include <stddef.h>
 #include <sys/types.h>
 
 #include "semver.h"
 
-#define KPM_MANIFEST_VERSION 2
+#define KPM_MANIFEST_VERSION 3
 
 #define KPM_VERSION_MAJOR 0
-#define KPM_VERSION_MINOR 2
-#define KPM_VERSION_PATCH 3
+#define KPM_VERSION_MINOR 3
+#define KPM_VERSION_PATCH 0
 
 typedef enum
 {
