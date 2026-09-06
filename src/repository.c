@@ -104,23 +104,22 @@ KPMResult KPM_GetRepository(KPM *kpm, const char *repositoryId, Repository* repo
 
 KPMResult KPM_AddRepository(KPM *kpm, const char *url, Repository* repository, KPMIO* kpm_io)
 {
-    SimpleGETRequest request;
-    SimpleGET_Initialise(&request, url);
-    if (SimpleGET_Perform(&request) != CURLE_OK)
+    SimpleGETRequest* request = SimpleGET_Initialise(url);
+    if (SimpleGET_Perform(request) != CURLE_OK)
     {
-        SimpleGET_Cleanup(&request);
+        SimpleGET_Cleanup(request);
         return KPM_CURL_ERROR;
     }
 
-    if (request.response_code >= 400)
+    if (request->response_code >= 400)
     {
-        SimpleGET_Cleanup(&request);
+        SimpleGET_Cleanup(request);
         return KPM_INVALID_RESPONSE_CODE;
     }
 
 
-    kpm_io->log(KPM_VERBOSITY_DEBUG, "Got JSON:\n%s", request.buffer);
-    cJSON* json = cJSON_Parse(request.buffer);
+    kpm_io->log(KPM_VERBOSITY_DEBUG, "Got JSON:\n%s", request->buffer);
+    cJSON* json = cJSON_Parse((char*) request->buffer);
 
     if (
         !cJSON_IsString(cJSON_GetObjectItem(json, "id")) ||
@@ -130,7 +129,7 @@ KPMResult KPM_AddRepository(KPM *kpm, const char *url, Repository* repository, K
     )
     {
         cJSON_Delete(json);
-        SimpleGET_Cleanup(&request);
+        SimpleGET_Cleanup(request);
         return KPM_INVALID_RESPONSE_CONTENT;
     }
 
@@ -161,7 +160,7 @@ KPMResult KPM_AddRepository(KPM *kpm, const char *url, Repository* repository, K
         kpm_io->log(KPM_VERBOSITY_ERROR, "SQLite error: %i", e);
         sqlite3_finalize(statement);
         cJSON_Delete(json);
-        SimpleGET_Cleanup(&request);
+        SimpleGET_Cleanup(request);
         sqlite3_exec(kpm->db, "ROLLBACK", NULL, NULL, NULL);
         return KPM_SQLITE_ERROR;
     }
@@ -175,7 +174,7 @@ KPMResult KPM_AddRepository(KPM *kpm, const char *url, Repository* repository, K
         repository->url = strdup(url);
     }
     cJSON_Delete(json);
-    SimpleGET_Cleanup(&request);
+    SimpleGET_Cleanup(request);
 
     sqlite3_exec(kpm->db, "COMMIT", NULL, NULL, NULL);
     return KPM_OK;

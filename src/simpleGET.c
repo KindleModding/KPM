@@ -1,15 +1,18 @@
 #include "simpleGET.h"
 #include <curl/curl.h>
 #include <curl/easy.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
-void SimpleGET_Initialise(SimpleGETRequest* request, const char* url)
+SimpleGETRequest* SimpleGET_Initialise(const char* url)
 {
+    SimpleGETRequest* request = malloc(sizeof(SimpleGETRequest));
     request->buffer = NULL;
     request->size = 0;
     request->response_code = 0;
     request->curl = curl_easy_init();
+    request->max_size = SIZE_MAX;
 
     curl_easy_setopt(request->curl, CURLOPT_URL, url);
     curl_easy_setopt(request->curl, CURLOPT_WRITEFUNCTION, SimpleGET_Callback);
@@ -19,12 +22,15 @@ void SimpleGET_Initialise(SimpleGETRequest* request, const char* url)
     curl_easy_setopt(request->curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2TLS);
     curl_easy_setopt(request->curl, CURLOPT_FTP_SKIP_PASV_IP, 1L);
     curl_easy_setopt(request->curl, CURLOPT_TCP_KEEPALIVE, 1L);
+
+    return request;
 }
 
 void SimpleGET_Cleanup(SimpleGETRequest *request)
 {
     free(request->buffer);
     curl_easy_cleanup(request->curl);
+    free(request);
 }
 
 CURLcode SimpleGET_Perform(SimpleGETRequest *request)
@@ -39,7 +45,7 @@ size_t SimpleGET_Callback(char* ptr, size_t size, size_t nmemb, void* userdata)
     size_t realsize = size * nmemb;
     SimpleGETRequest* current = (SimpleGETRequest*) userdata;
 
-    char* newBuffer = (char*) realloc(current->buffer, current->size + realsize + 1);
+    unsigned char* newBuffer = (unsigned char*) realloc(current->buffer, current->size + realsize + 1);
     if (!newBuffer)
     {
         return 0; // OOM
@@ -49,6 +55,9 @@ size_t SimpleGET_Callback(char* ptr, size_t size, size_t nmemb, void* userdata)
     memcpy(&(current->buffer[current->size]), ptr, realsize);
     current->size += realsize;
     current->buffer[current->size] = 0;
+
+    if (current->size > current->max_size)
+        return CURL_WRITEFUNC_ERROR;
 
     return realsize;
 }
