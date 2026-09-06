@@ -1,6 +1,7 @@
 #pragma once
 
 #include "kpm/semver.h"
+#include <stddef.h>
 #include <stdint.h>
 
 #define KPKG_MAGIC "KPKG"
@@ -52,7 +53,7 @@ struct KPKG_File
 {
     char* location; // The URL/path to the file
     void* internal_file; // The memory mapped file or NULL
-    int fd; // If file is local and memory mapped, fd will be present
+    size_t map_size; // If file is local and memory mapped, this will indicate the length
     KPKG_Header* header; // Local storage of header (always present)
     KPKG_DependencyEntry* dependencies;
     KPKG_FileEntry* files;
@@ -68,8 +69,10 @@ typedef struct KPKG_File KPKG_File;
  */
 KPKG_File* KPKG_LoadFile(const char* location);
 
+void KPKG_CloseFile(KPKG_File* file);
+
 /**
- * @brief Validate a KPKG_File object such that none of the pointers are OOB, note: this function assumes that the size of the loaded strings array matches what is specified in the header.
+ * @brief Validate a KPKG_File object such that none of the pointers are OOB, note: this function assumes that the entry and string arrays are not malformed.
  * 
  * @param kpkg_file The file object to validate
  * @return true 
@@ -77,25 +80,6 @@ KPKG_File* KPKG_LoadFile(const char* location);
  */
 bool KPKG_ValidateFile(KPKG_File* kpkg_file);
 
-/**
- * @brief Get a KPKG's metadata from a given URL and header
- * 
- * @param url 
- * @param header 
- * @param dependencies 
- * @param files 
- * @param strings 
- * @return true 
- * @return false 
- */
-bool KPKG_RequestMetadata(const char* url, KPKG_Header* header, KPKG_DependencyEntry** dependencies, KPKG_FileEntry** files, char** strings);
-
-/**
- * @brief Extract a KPKG file entry to a location on the disk
- * 
- * @param location 
- * @param file 
- * @param out 
- * @return KPKG_Result 
- */
-KPKG_Result KPKG_ExtractFile(const char* location, KPKG_File* file, char* out);
+char* KPKG_GetString(KPKG_File* kpkg_file, uint64_t offset);
+KPKG_DependencyEntry* KPKG_GetDependencies(KPKG_File* kpkg_file, size_t* count);
+KPKG_FileEntry* KPKG_GetFileEntries(KPKG_File* kpkg_file, size_t* count);
