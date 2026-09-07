@@ -43,8 +43,8 @@ typedef struct KPKG_DependencyEntry KPKG_DependencyEntry;
 struct KPKG_FileEntry
 {
     uint64_t path; // Pointer in string section
-    uint8_t digest[16];
-    uint8_t file_mode;
+    uint8_t checksum[16];
+    uint32_t file_mode;
     uint64_t offset; // Pointer in file data section
 };
 typedef struct KPKG_FileEntry KPKG_FileEntry;

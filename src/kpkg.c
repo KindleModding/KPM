@@ -17,15 +17,26 @@ KPKG_File* KPKG_LoadFile(const char* location)
     {
         int fd = open(path, O_RDONLY);
         if (!fd)
+        {
+            free(path);
             return NULL;
+        }
 
         struct stat buf;
         fstat(fd, &buf);
 
         KPKG_File* file = malloc(sizeof(KPKG_File));
         file->location = path;
-        file->internal_file = mmap(NULL, buf.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
-        file->fd = fd;
+        file->map_size = buf.st_size;
+        file->internal_file = mmap(NULL, file->map_size, PROT_READ, MAP_SHARED, fd, 0);
+        close(fd);
+        if (!file->internal_file)
+        {
+            free(file);
+            free(path);
+            return NULL;
+        }
+
         file->header = file->internal_file;
         file->dependencies = file->internal_file + sizeof(KPKG_Header);
         file->files = file->internal_file + sizeof(KPKG_Header) +
@@ -117,7 +128,7 @@ KPKG_File* KPKG_LoadFile(const char* location)
         KPKG_File* file = malloc(sizeof(KPKG_File));
         file->location = strdup(location);
         file->internal_file = NULL;
-        file->fd = -1;
+        file->map_size = 0;
         file->header = header;
         file->dependencies = NULL;
         file->files = NULL;
@@ -154,6 +165,23 @@ KPKG_File* KPKG_LoadFile(const char* location)
     }
 }
 
+void KPKG_CloseFile(KPKG_File* file)
+{
+    free(file->location);
+    if (file->internal_file)
+    {
+        munmap(file->internal_file, file->map_size);
+    }
+    else
+    {
+        free(file->header);
+        free(file->dependencies);
+        free(file->files);
+        free(file->strings);
+    }
+    free(file);
+}
+
 bool KPKG_ValidateFile(KPKG_File* kpkg_file)
 {
     if (kpkg_file->strings[kpkg_file->header->strings_size - 1] != 0)
@@ -167,12 +195,9 @@ bool KPKG_ValidateFile(KPKG_File* kpkg_file)
         if (kpkg_file->files[i].path >= kpkg_file->header->strings_size)
             return false; // File path OOB
 
-    if (kpkg_file->fd)
+    if (kpkg_file->internal_file)
     {
-        struct stat buf;
-        fstat(kpkg_file->fd, &buf);
-
-        __off_t file_section_size = buf.st_size - (sizeof(KPKG_Header) +
+        __off_t file_section_size = kpkg_file->map_size - (sizeof(KPKG_Header) +
                                     kpkg_file->header->dependency_count * sizeof(KPKG_DependencyEntry) +
                                     kpkg_file->header->file_count * sizeof(KPKG_FileEntry) +
                                     kpkg_file->header->strings_size);
@@ -183,4 +208,21 @@ bool KPKG_ValidateFile(KPKG_File* kpkg_file)
     }
 
     return true;
+}
+
+char* KPKG_GetString(KPKG_File* kpkg_file, uint64_t offset)
+{
+    return kpkg_file->strings + offset;
+}
+
+KPKG_DependencyEntry* KPKG_GetDependencies(KPKG_File* kpkg_file, size_t* count)
+{
+    *count = kpkg_file->header->dependency_count;
+    return kpkg_file->dependencies;
+}
+
+KPKG_FileEntry* KPKG_GetFileEntries(KPKG_File* kpkg_file, size_t* count)
+{
+    *count = kpkg_file->header->file_count;
+    return kpkg_file->files;
 }
