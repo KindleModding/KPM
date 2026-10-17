@@ -110,14 +110,25 @@ int main(int argc, char* argv[])
         Repository repository;
         for (int i = command_index+1; i < argc; i++)
         {
-            if ((error = KPM_AddRepository(&kpm, argv[i], &repository, &kpm_io)) != KPM_OK)
-                kpm_io.log(KPM_VERBOSITY_ERROR, "Could not add repository '%s' (%i: %s)", argv[i], error, KPM_ErrorToString(error));
+            char* url;
+            char* slash = strchr(argv[i], '/');
+            if (strpbrk(argv[i], ".:") == NULL && slash != NULL)
+            {
+                char* path = strchr(slash+1, '/');
+                int repo_len = path != NULL ? path - argv[i] : strlen(argv[i]);
+                url = asprintf_hd("https://raw.githubusercontent.com/%.*s/HEAD%s.json", repo_len, argv[i], path != NULL ? path : "/manifest");
+            }
+            else
+                url = strdup(argv[i]);
+
+            if ((error = KPM_AddRepository(&kpm, url, &repository, &kpm_io)) != KPM_OK)
+                kpm_io.log(KPM_VERBOSITY_ERROR, "Could not add repository '%s' (%i: %s)", url, error, KPM_ErrorToString(error));
             else
             {
                 kpm_io.log(KPM_VERBOSITY_INFO, "Added repository '%s'", repository.id);
                 KPM_FreeRepository(&repository);
             }
-            
+            free(url);
         }
 
         if (error == KPM_OK)
@@ -380,7 +391,7 @@ kpm_io.log(KPM_VERBOSITY_INFO, "usage: kpm [--help, -h] [--fbink] [-y] {version 
 version:\n\
     Returns the current version of the KPM library and CLI\n\
 add-repo:\n\
-    Add a repository from one or more URLs\n\
+    Add a repository from one or more URLs, or GitHub owner/repo[/path] shorthands (path defaults to manifest, .json is appended)\n\
 remove-repo:\n\
     Remove one or more repositories given one or more IDs\n\
 list-repo:\n\
