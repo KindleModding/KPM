@@ -85,4 +85,14 @@ char* KPKG_GetString(KPKG_File* kpkg_file, uint64_t offset);
 KPKG_DependencyEntry* KPKG_GetDependencies(KPKG_File* kpkg_file, size_t* count);
 KPKG_FileEntry* KPKG_GetFileEntries(KPKG_File* kpkg_file, size_t* count);
 
-KPKG_Result KPKG_ExtractFile(KPKG_File* kpkg_file, KPKG_FileEntry* file_entry, uint64_t size, char* out);
+/**
+ * @brief Extract a memory-mapped compressed file
+ * 
+ * @param ptr The location of the file in memory
+ * @param size The size of the compressed data
+ * @param out_size The size of the output file
+ * @param out The path of the output file
+ * @return KPKG_Result 
+ */
+KPKG_Result KPKG_ExtractData(void* ptr, uint64_t size, uint64_t out_size, char* out_path);
+
