@@ -10,56 +10,57 @@
 
 typedef enum {
     KPKG_OK,
+    KPKG_FS_ERROR,
+    KPKG_MMAP_ERROR,
+    KPKG_ZSTD_ERROR
 } KPKG_Result;
 
 typedef enum {
-    KINDLEANY = 0,
-    KINDLE = 1 << 0,
-    KINDLE5 = 1 << 1,
-    KINDLEPW2 = 1 << 2,
-    KINDLEHF = 1 << 3
+    KINDLEANY = 0, /** Any Kindle */
+    KINDLE = 1 << 0, /**< Legacy pre-K5 devices */
+    KINDLE5 = 1 << 1, /**< Legacy Kindle5 devices */
+    KINDLEPW2 = 1 << 2, /**< The Kindle PW2 and onwards on ARMLF firmware */
+    KINDLEHF = 1 << 3 /**< Kindles running ARMHF firmware */
 } KPKG_SupportedPlatforms;
 
-struct KPKG_Header
+typedef struct
 {
-    char magic[KPKG_MAGIC_LENGTH]; // "KPKG"
-    uint8_t version; // Format version
-    SemVer package_version; // Version of the package
-    uint8_t supported_platforms; // Bitfield of KPKG_SupportedPlatforms
-    uint32_t dependency_count;
-    uint32_t file_count;
-    uint64_t strings_size; // String section size
-};
-typedef struct KPKG_Header KPKG_Header;
+    char magic[KPKG_MAGIC_LENGTH]; /**< "KPKG" */
+    uint8_t version; /**< Format version */
+    SemVer package_version; /**< Version of the package */
+    uint8_t supported_platforms; /**< Bitfield of KPKG_SupportedPlatforms */
+    uint64_t installed_size; /**< Total size of installed package */
+    uint32_t dependency_count; /**< Number of dependencies in package */
+    uint32_t file_count; /**< Number of files in package */
+    uint64_t strings_size; /**< Size of the string section */
+} KPKG_Header;
 
-struct KPKG_DependencyEntry
+typedef struct
 {
-    uint64_t id; // Pointer in string section
-    SemVer min_version;
-    SemVer max_version;
-};
-typedef struct KPKG_DependencyEntry KPKG_DependencyEntry;
+    uint64_t id; /**< Pointer to string section */
+    SemVer min_version; /*<< Minimum dependency version (inclusive) */
+    SemVer max_version; /**< Maximum dependency version (exclusive) */
+} KPKG_DependencyEntry;
 
-struct KPKG_FileEntry
+typedef struct
 {
-    uint64_t path; // Pointer in string section
-    uint8_t checksum[16];
-    uint32_t file_mode;
-    uint64_t offset; // Pointer in file data section
-};
-typedef struct KPKG_FileEntry KPKG_FileEntry;
+    uint64_t path; /**< Pointer in string section to the file's path */
+    uint8_t checksum[16]; /**< The file's compressed checksum (sha256) */
+    uint32_t file_mode; /**< The file mode */
+    uint64_t installed_size; /**< The size of this file once decompressed */
+    uint64_t offset; /**< Pointer to compressed stream in file data section */
+} KPKG_FileEntry;
 
-struct KPKG_File
+typedef struct
 {
-    char* location; // The URL/path to the file
-    void* internal_file; // The memory mapped file or NULL
-    size_t map_size; // If file is local and memory mapped, this will indicate the length
-    KPKG_Header* header; // Local storage of header (always present)
-    KPKG_DependencyEntry* dependencies;
-    KPKG_FileEntry* files;
-    char* strings;
-};
-typedef struct KPKG_File KPKG_File;
+    char* location; /**< The URL/path to the file */
+    void* internal_file; /**< The memory mapped file or NULL */
+    size_t map_size; /**< If file is local and memory mapped, this will indicate the size */
+    KPKG_Header* header; /**< Local storage of header (always present) */
+    KPKG_DependencyEntry* dependencies; /**< The package's dependencies */
+    KPKG_FileEntry* files; /**< The package's files */
+    char* strings; /**< The string section */
+} KPKG_File;
 
 /**
  * @brief Load a KPKG_File from the specified location
@@ -83,3 +84,5 @@ bool KPKG_ValidateFile(KPKG_File* kpkg_file);
 char* KPKG_GetString(KPKG_File* kpkg_file, uint64_t offset);
 KPKG_DependencyEntry* KPKG_GetDependencies(KPKG_File* kpkg_file, size_t* count);
 KPKG_FileEntry* KPKG_GetFileEntries(KPKG_File* kpkg_file, size_t* count);
+
+KPKG_Result KPKG_ExtractFile(KPKG_File* kpkg_file, KPKG_FileEntry* file_entry, uint64_t size, char* out);
