@@ -231,18 +231,14 @@ KPKG_Result KPKG_ExtractData(void* ptr, uint64_t size, uint64_t out_size, char* 
         return KPKG_MMAP_ERROR;
     }
 
-    if (
-        ZSTD_isError(
-            ZSTD_decompress(
-                file, 
-                out_size, 
-                ptr + out_size,
-                size
-            )
-        ),
-        0,
-        KPKG_ZSTD_ERROR
-    )
+    if (ZSTD_isError(
+        ZSTD_decompress(
+            file, 
+            out_size, 
+            ptr + out_size,
+            size
+        )
+    ))
     {
         munmap(file, out_size);
         close(fd);
