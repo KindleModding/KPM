@@ -1,0 +1,14 @@
+{
+  "manifest_version": 2,
+  "id": "",
+  "name": "",
+  "author": "",
+  "description": "",
+  "version": [
+    1,
+    0,
+    0
+  ],
+  "dependencies": [],
+  "supported_platforms": null
+}

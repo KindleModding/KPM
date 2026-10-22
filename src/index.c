@@ -58,6 +58,28 @@ bool indexDependency(KPM* kpm, char* artifact_repository, char* artifact_id, cha
 
 bool indexArtifact(KPM* kpm, char* repositoryId, char* packageId, cJSON* artifact, KPMIO* kpmIO)
 {
+    if (strlen(cJSON_GetStringValue(cJSON_GetObjectItem(artifact, "url"))) == 0)
+    {
+        kpmIO->log(KPM_VERBOSITY_ERROR, "Artifact has an empty URL field");
+        return false;
+    }
+
+    if (!cJSON_IsArray(cJSON_GetObjectItem(artifact, "version")) || cJSON_GetArraySize(cJSON_GetObjectItem(artifact, "version")) != 3)
+    {
+        kpmIO->log(KPM_VERBOSITY_ERROR, "Artifact version field is invalid");
+        return false;
+    }
+
+    if (
+        cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(artifact, "version"), 0)) < 0 ||
+        cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(artifact, "version"), 1)) < 0 ||
+        cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(artifact, "version"), 2)) < 0
+    )
+    {
+        kpmIO->log(KPM_VERBOSITY_ERROR, "Artifact version field contains invalid entries");
+        return false;
+    }
+
     kpmIO->log(KPM_VERBOSITY_DEBUG, "  indexing artifact %s (%.0f.%.0f.%.0f)", packageId, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(artifact, "version"), 0)), cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(artifact, "version"), 1)), cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(artifact, "version"), 2)));
     const char* zSQL = "INSERT INTO artifacts (url, repository, id, version_major, version_minor, version_patch) VALUES (?, ?, ?, ?, ?, ?);";
     sqlite3_stmt* statement;
@@ -178,33 +200,34 @@ KPMResult KPM_UpdateIndex(KPM *kpm, KPMIO* kpmIO)
         return result;
     }
 
-    SimpleGETRequest request;
+    bool all_ok = true;
+    SimpleGETRequest* request;
     for (size_t i=0; i < repositoryCount; i++)
     {
         kpmIO->log(KPM_VERBOSITY_INFO, "Downloading index [%s]", repositories[i].url);
-        SimpleGET_Initialise(&request, repositories[i].url);
-        CURLcode curl_code = SimpleGET_Perform(&request);
+        request = SimpleGET_Initialise(repositories[i].url);
+        CURLcode curl_code = SimpleGET_Perform(request);
         if (curl_code != CURLE_OK)
         {
             kpmIO->log(KPM_VERBOSITY_ERROR, "Could not fetch url [%s] - CURL Error: %i - %s", repositories[i].url, curl_code, curl_easy_strerror(curl_code));
-            SimpleGET_Cleanup(&request);
+            SimpleGET_Cleanup(request);
             continue;
         }
 
-        kpmIO->log(KPM_VERBOSITY_DEBUG, "Got response code: %i", request.response_code);
-        if (request.response_code >= 400 && strncmp(repositories[i].url, "file://", strlen("file://")) != 0)
+        kpmIO->log(KPM_VERBOSITY_DEBUG, "Got response code: %i", request->response_code);
+        if (request->response_code >= 400 && strncmp(repositories[i].url, "file://", strlen("file://")) != 0)
         {
             kpmIO->log(KPM_VERBOSITY_ERROR, "Could not fetch url [%s]", repositories[i].url);
-            SimpleGET_Cleanup(&request);
+            SimpleGET_Cleanup(request);
             continue;
         }
 
-        kpmIO->log(KPM_VERBOSITY_DEBUG, "Got manifest: %s", request.buffer);
-        cJSON* json = cJSON_Parse(request.buffer);
+        kpmIO->log(KPM_VERBOSITY_DEBUG, "Got manifest: %s", request->buffer);
+        cJSON* json = cJSON_Parse((char*) request->buffer);
         if (json == NULL)
         {
             kpmIO->log(KPM_VERBOSITY_ERROR, "Could not parse manifest");
-            SimpleGET_Cleanup(&request);
+            SimpleGET_Cleanup(request);
             cJSON_Delete(json);
             continue; // Move onto next repo
         }
@@ -213,7 +236,7 @@ KPMResult KPM_UpdateIndex(KPM *kpm, KPMIO* kpmIO)
         {
             kpmIO->log(KPM_VERBOSITY_ERROR, "Invalid manifest version, got %.0f, expected %i", cJSON_GetNumberValue(cJSON_GetObjectItem(json, "manifest_version")), KPM_MANIFEST_VERSION);
             kpmIO->log(KPM_VERBOSITY_ERROR, "You may need to update KPM, run: kpm install kpm or kpm upgrade");
-            SimpleGET_Cleanup(&request);
+            SimpleGET_Cleanup(request);
             cJSON_Delete(json);
             continue;
         }
@@ -238,7 +261,7 @@ KPMResult KPM_UpdateIndex(KPM *kpm, KPMIO* kpmIO)
             KPM_FreeRepositoryList(repositoryCount, repositories);
             kpmIO->log(KPM_VERBOSITY_ERROR, "Could not clear packages for %s (%i: %s - %s)", repositories[i].id, status, sqlite3_errstr(status), sqlite3_errmsg(kpm->db));
             cJSON_Delete(json);
-            SimpleGET_Cleanup(&request);
+            SimpleGET_Cleanup(request);
             sqlite3_exec(kpm->db, "ROLLBACK", NULL, NULL, NULL);
             continue; // Move onto next repo
         }
@@ -259,15 +282,21 @@ KPMResult KPM_UpdateIndex(KPM *kpm, KPMIO* kpmIO)
         }
 
         if (!ok)
+        {
+            all_ok = false;
             sqlite3_exec(kpm->db, "ROLLBACK", NULL, NULL, NULL);
+        }
         else
             sqlite3_exec(kpm->db, "COMMIT", NULL, NULL, NULL);
         
         cJSON_Delete(json);
-        SimpleGET_Cleanup(&request);
+        SimpleGET_Cleanup(request);
     }
 
     KPM_FreeRepositoryList(repositoryCount, repositories);
 
-    return KPM_OK;
+    if (all_ok)
+        return KPM_OK;
+    else
+        return KPM_GENERIC_ERROR;
 }

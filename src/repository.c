@@ -104,23 +104,22 @@ KPMResult KPM_GetRepository(KPM *kpm, const char *repositoryId, Repository* repo
 
 KPMResult KPM_AddRepository(KPM *kpm, const char *url, Repository* repository, KPMIO* kpm_io)
 {
-    SimpleGETRequest request;
-    SimpleGET_Initialise(&request, url);
-    if (SimpleGET_Perform(&request) != CURLE_OK)
+    SimpleGETRequest* request = SimpleGET_Initialise(url);
+    if (SimpleGET_Perform(request) != CURLE_OK)
     {
-        SimpleGET_Cleanup(&request);
+        SimpleGET_Cleanup(request);
         return KPM_CURL_ERROR;
     }
 
-    if (request.response_code >= 400)
+    if (request->response_code >= 400)
     {
-        SimpleGET_Cleanup(&request);
+        SimpleGET_Cleanup(request);
         return KPM_INVALID_RESPONSE_CODE;
     }
 
 
-    kpm_io->log(KPM_VERBOSITY_DEBUG, "Got JSON:\n%s", request.buffer);
-    cJSON* json = cJSON_Parse(request.buffer);
+    kpm_io->log(KPM_VERBOSITY_DEBUG, "Got JSON:\n%s", request->buffer);
+    cJSON* json = cJSON_Parse((char*) request->buffer);
 
     if (
         !cJSON_IsString(cJSON_GetObjectItem(json, "id")) ||
@@ -130,20 +129,27 @@ KPMResult KPM_AddRepository(KPM *kpm, const char *url, Repository* repository, K
     )
     {
         cJSON_Delete(json);
-        SimpleGET_Cleanup(&request);
+        SimpleGET_Cleanup(request);
         return KPM_INVALID_RESPONSE_CONTENT;
     }
 
-    kpm_io->log(KPM_VERBOSITY_DEBUG, "ID: %s", cJSON_GetStringValue(cJSON_GetObjectItem(json, "id")));
+    char* repo_id = cJSON_GetStringValue(cJSON_GetObjectItem(json, "id"));
+    kpm_io->log(KPM_VERBOSITY_DEBUG, "ID: %s", repo_id);
     kpm_io->log(KPM_VERBOSITY_DEBUG, "URL: %s", url);
     kpm_io->log(KPM_VERBOSITY_DEBUG, "NAME: %s", cJSON_GetStringValue(cJSON_GetObjectItem(json, "name")));
     kpm_io->log(KPM_VERBOSITY_DEBUG, "DESC: %s", cJSON_GetStringValue(cJSON_GetObjectItem(json, "description")));
+
+    if (strlen(repo_id) == 0 || repo_id[0] == ' ' || repo_id[strlen(repo_id)-1] == ' ')
+    {
+        kpm_io->log(KPM_VERBOSITY_ERROR, "Repository must have a valid id");
+        return KPM_PARSE_ERROR;
+    }
 
     sqlite3_exec(kpm->db, "BEGIN", NULL, NULL, NULL);
     const char* zSQL = "INSERT INTO repositories (id, url, name, description) VALUES (?, ?, ?, ?);";
     sqlite3_stmt* statement;
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
-    sqlite3_bind_text(statement, 1, cJSON_GetStringValue(cJSON_GetObjectItem(json, "id")), -1, SQLITE_STATIC);
+    sqlite3_bind_text(statement, 1, repo_id, -1, SQLITE_STATIC);
     sqlite3_bind_text(statement, 2, url, -1, SQLITE_STATIC);
     sqlite3_bind_text(statement, 3, cJSON_GetStringValue(cJSON_GetObjectItem(json, "name")), -1, SQLITE_STATIC);
     sqlite3_bind_text(statement, 4, cJSON_GetStringValue(cJSON_GetObjectItem(json, "description")), -1, SQLITE_STATIC);
@@ -154,7 +160,7 @@ KPMResult KPM_AddRepository(KPM *kpm, const char *url, Repository* repository, K
         kpm_io->log(KPM_VERBOSITY_ERROR, "SQLite error: %i", e);
         sqlite3_finalize(statement);
         cJSON_Delete(json);
-        SimpleGET_Cleanup(&request);
+        SimpleGET_Cleanup(request);
         sqlite3_exec(kpm->db, "ROLLBACK", NULL, NULL, NULL);
         return KPM_SQLITE_ERROR;
     }
@@ -168,7 +174,7 @@ KPMResult KPM_AddRepository(KPM *kpm, const char *url, Repository* repository, K
         repository->url = strdup(url);
     }
     cJSON_Delete(json);
-    SimpleGET_Cleanup(&request);
+    SimpleGET_Cleanup(request);
 
     sqlite3_exec(kpm->db, "COMMIT", NULL, NULL, NULL);
     return KPM_OK;

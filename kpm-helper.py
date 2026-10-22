@@ -13,7 +13,7 @@ import os
 logging.basicConfig(format="[%(levelname)s] %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-KPM_MANIFEST_VERSION = 2
+KPM_MANIFEST_VERSION = 3
 valid_supported_platforms = [
     "kindle",
     "kindle5",
@@ -103,9 +103,9 @@ class Package:
 
         # @TODO
         if manifest_version != KPM_MANIFEST_VERSION:
-            if manifest_version["manifest_version"] == 1:
+            if manifest_version["manifest_version"] < KPM_MANIFEST_VERSION:
                 logger.warning(
-                    "Manifest v1 is deprecated. Please upgrade to manifest v2."
+                    f"Manifest v{manifest_version['manifest_version']} is deprecated. Please upgrade to manifest v{KPM_MANIFEST_VERSION}."
                 )
             else:
                 logger.error(
@@ -248,6 +248,8 @@ class Package:
             file = tarfile.open(packageFilename, "w:")
         elif self.manifest_version >= 2:
             file = tarfile.open(packageFilename, "w:gz", compresslevel=compression)
+        elif self.manifest_version >= 3:
+            file = tarfile.open(packageFilename, "w:zst", level=compression)
         else:
             file = tarfile.open(
                 packageFilename, "w:xz", preset=compression

@@ -1,8 +1,12 @@
+#include "openssl/evp.h"
+#include "openssl/types.h"
+
 #include "archive.h"
 #include "archive_entry.h"
 #include "cjson/cJSON.h"
 #include "kpm/kpm.h"
 #include <assert.h>
+#include <errno.h>
 #include <curl/curl.h>
 #include <curl/multi.h>
 #include <curl/typecheck-gcc.h>
@@ -290,6 +294,7 @@ struct DownloadData
     long int total_size;
     long int downloaded;
     int reported_progress;
+    EVP_MD_CTX* evp_ctx;
     int fd;
 };
 
@@ -309,6 +314,7 @@ size_t Internal_DownloadWriteCallback(char* ptr, size_t size, size_t nmemb, void
     }
 
     downloadData->downloaded += size * nmemb;
+    EVP_DigestUpdate(downloadData->evp_ctx, ptr, size*nmemb); // Update digest
     return write(downloadData->fd, ptr, size * nmemb);
 }
 
@@ -410,11 +416,13 @@ KPMResult Internal_DownloadGraphItems(KPM* kpm, DependencyGraph* graph, size_t d
         free(path);
         if (fd == -1)
         {
+            kpmIO->log(KPM_VERBOSITY_ERROR, "Could not open file for writing: %s", strerror(errno));
             return KPM_FILE_SYSTEM_ERROR; // @TODO
         }
 
         CURL* curl = curl_easy_init();
         kpmIO->log(KPM_VERBOSITY_DEBUG, "Downloading url %s", target_url);
+
         struct DownloadData download_data = {
             .kpm_io = kpmIO,
             .total_size = 0,
@@ -422,6 +430,10 @@ KPMResult Internal_DownloadGraphItems(KPM* kpm, DependencyGraph* graph, size_t d
             .reported_progress = 0,
             .fd = fd
         };
+
+        download_data.evp_ctx = EVP_MD_CTX_new();
+        EVP_MD_CTX_init(download_data.evp_ctx);
+        EVP_DigestInit_ex(download_data.evp_ctx, EVP_sha256(), NULL);
         
         curl_easy_setopt(curl, CURLOPT_URL, target_url);
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, Internal_DownloadWriteCallback);
@@ -453,6 +465,21 @@ KPMResult Internal_DownloadGraphItems(KPM* kpm, DependencyGraph* graph, size_t d
                 return KPM_CURL_ERROR;
             }
         }
+
+        // Check the digest
+        unsigned char md[EVP_MAX_MD_SIZE];
+        unsigned int md_len;
+        EVP_DigestFinal_ex(download_data.evp_ctx, md, &md_len);
+        EVP_MD_CTX_destroy(download_data.evp_ctx);
+        
+        char* hash_str = malloc(md_len*2 + 1);
+        hash_str[0] = 0;
+        for (int md_i = 0; md_i < md_len; md_i++)
+        {
+            sprintf(hash_str, "%s%x", hash_str, md[md_i]);
+        }
+        kpmIO->log(KPM_VERBOSITY_DEBUG, "Calculated hash for file: %s", hash_str);
+        free(hash_str);
 
         free(target_url);
     }
@@ -537,7 +564,43 @@ bool Internal_InstallItem(KPM* kpm, char* repository, char* path, bool installed
     }
 
     char* id = cJSON_GetStringValue(cJSON_GetObjectItem(json, "id"));
-    kpmIO->log(KPM_VERBOSITY_DEBUG, "Installing item with id: %s", id);
+    if (strlen(id) == 0)
+    {
+        kpmIO->log(KPM_VERBOSITY_ERROR, "Package has an empty id");
+        free(manifest);
+        cJSON_Delete(json);
+        return false;
+    }
+
+    if (strlen(cJSON_GetStringValue(cJSON_GetObjectItem(json, "name"))) == 0)
+    {
+        kpmIO->log(KPM_VERBOSITY_ERROR, "Package has an empty name");
+        free(manifest);
+        cJSON_Delete(json);
+        return false;
+    }
+
+    if (!cJSON_IsArray(cJSON_GetObjectItem(json, "version")) || cJSON_GetArraySize(cJSON_GetObjectItem(json, "version")) != 3)
+    {
+        kpmIO->log(KPM_VERBOSITY_ERROR, "Package version field is invalid");
+        free(manifest);
+        cJSON_Delete(json);
+        return false;
+    }
+
+    if (
+        cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(json, "version"), 0)) < 0 ||
+        cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(json, "version"), 1)) < 0 ||
+        cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(json, "version"), 2)) < 0
+    )
+    {
+        kpmIO->log(KPM_VERBOSITY_ERROR, "Package version field contains invalid entries");
+        free(manifest);
+        cJSON_Delete(json);
+        return false;
+    }
+
+    kpmIO->log(KPM_VERBOSITY_DEBUG, "Installing item with id: '%s'", id);
 
     char* outPath = asprintf_hd("%s/%s/", kpm->pkgPath, id);
     rmdir_r(outPath); // Just in case it exists
@@ -552,18 +615,20 @@ bool Internal_InstallItem(KPM* kpm, char* repository, char* path, bool installed
     // If so, run it
     if (access(installScriptPath, R_OK) == 0)
     {
+        free(installScriptPath);
         kpmIO->log(KPM_VERBOSITY_DEBUG, "Running install script for [%s]", id);
         // Run install script
         int result = -1;
         char* installCommand;
         if (upgrading)
-            installCommand = asprintf_hd("KPM_VERSION_MAJOR=%i KPM_VERSION_MINOR=%i KPM_VERSION_PATCH=%i KPM_PLATFORM=\"%s\" sh %s upgrade 2>&1", KPM_VERSION_MAJOR, KPM_VERSION_MINOR, KPM_VERSION_PATCH, KPM_PLATFORM, installScriptPath);
+            installCommand = asprintf_hd("KPM_VERSION_MAJOR=%i KPM_VERSION_MINOR=%i KPM_VERSION_PATCH=%i KPM_PLATFORM=\"%s\" sh install.sh upgrade 2>&1", KPM_VERSION_MAJOR, KPM_VERSION_MINOR, KPM_VERSION_PATCH, KPM_PLATFORM);
         else
-            installCommand = asprintf_hd("KPM_VERSION_MAJOR=%i KPM_VERSION_MINOR=%i KPM_VERSION_PATCH=%i KPM_PLATFORM=\"%s\" sh %s 2>&1", KPM_VERSION_MAJOR, KPM_VERSION_MINOR, KPM_VERSION_PATCH, KPM_PLATFORM, installScriptPath);
+            installCommand = asprintf_hd("KPM_VERSION_MAJOR=%i KPM_VERSION_MINOR=%i KPM_VERSION_PATCH=%i KPM_PLATFORM=\"%s\" sh install.sh 2>&1", KPM_VERSION_MAJOR, KPM_VERSION_MINOR, KPM_VERSION_PATCH, KPM_PLATFORM);
 
+        char* old_path = getcwd(NULL, 0);
         chdir(outPath);
-        free(installScriptPath);
         kpmIO->log(KPM_VERBOSITY_INFO, "Running install hooks for %s", id);
+        kpmIO->log(KPM_VERBOSITY_DEBUG, "Running: %s", installCommand);
         FILE* stream = popen(installCommand, "r");
         free(installCommand);
         if (stream != NULL)
@@ -580,13 +645,13 @@ bool Internal_InstallItem(KPM* kpm, char* repository, char* path, bool installed
             kpmIO->log(KPM_VERBOSITY_ERROR, "Could not run script - POPEN FAILURE");
         }
 
-        chdir("/");
+        chdir(old_path);
+        free(old_path);
         if (result != 0)
         {
             // The install hook failed
             kpmIO->log(KPM_VERBOSITY_ERROR, "Could not execute install hook for [%s]", id);
             Internal_RunUninstallHook(outPath, id, false, kpmIO);
-            chdir("/");
             rmdir_r(outPath);
             free(outPath);
             free(manifest);
@@ -1044,7 +1109,7 @@ KPMResult KPM_InstallPackages(KPM* kpm, size_t targetCount, InstallTarget* targe
     KPMResult result = Internal_DownloadGraphItems(kpm, &graph, deduplicatedPackageCount, deduplicatedPackages, kpm_io);
     if (result != KPM_OK)
     {
-        kpm_io->log(KPM_VERBOSITY_ERROR, "Error: Could not download dependency graph (%i)", result);
+        kpm_io->log(KPM_VERBOSITY_ERROR, "Error: Could not download dependency graph items (%i)", result);
         free(deduplicatedPackages);
         FreeDependencyGraph(&graph);
         free(upgrade);

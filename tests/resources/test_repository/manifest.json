@@ -1,0 +1,76 @@
+{
+    "manifest_version": 2,
+    "id": "testrepo",
+    "name": "Test Repo",
+    "description": "Repo only used for tests",
+    "packages": {
+        "validpackage1": {
+            "name": "Valid Package 1",
+            "author": "Hackerdude",
+            "description": "",
+            "artifacts": [
+                {
+                    "url": "packages/validpackage1/artifacts/validpackage1_1.0.0_kindleany.kpkg",
+                    "version": [
+                        1,
+                        0,
+                        0
+                    ],
+                    "dependencies": [],
+                    "supported_platforms": null
+                }
+            ]
+        },
+        "validpackage2": {
+            "name": "Valid Package 2",
+            "author": "Hackerdude",
+            "description": "",
+            "artifacts": [
+                {
+                    "url": "packages/validpackage2/artifacts/validpackage2_1.0.0_kindleany.kpkg",
+                    "version": [
+                        1,
+                        0,
+                        0
+                    ],
+                    "dependencies": [],
+                    "supported_platforms": null
+                }
+            ]
+        },
+        "invalidpackage1": {
+            "name": "Invalid Package 1",
+            "author": "Hackerdude",
+            "description": "",
+            "artifacts": [
+                {
+                    "url": "packages/invalid_package_1.kpkg",
+                    "version": [
+                        1,
+                        0,
+                        0
+                    ],
+                    "dependencies": [],
+                    "supported_platforms": null
+                }
+            ]
+        },
+        "invalidpackage2": {
+            "name": "Invalid Package 2",
+            "author": "Hackerdude",
+            "description": "",
+            "artifacts": [
+                {
+                    "url": "packages/invalid_package_2.kpkg",
+                    "version": [
+                        1,
+                        0,
+                        0
+                    ],
+                    "dependencies": [],
+                    "supported_platforms": null
+                }
+            ]
+        }
+    }
+}

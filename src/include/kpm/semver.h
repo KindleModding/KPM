@@ -1,15 +1,16 @@
 #pragma once
 
 #include <limits.h>
+#include <stdint.h>
 
 #define VERSION_MAX UINT_MAX
 #define SEMVER_MAX { .major = UINT_MAX, .minor = UINT_MAX, .patch = UINT_MAX }
 
 struct SemVer
 {
-    unsigned int major;
-    unsigned int minor;
-    unsigned int patch;
+    uint32_t major;
+    uint32_t minor;
+    uint32_t patch;
 };
 typedef struct SemVer SemVer;
 

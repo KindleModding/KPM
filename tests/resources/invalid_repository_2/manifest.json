@@ -1,0 +1,42 @@
+{
+    "manifest_version": 2,
+    "id": "invalidrepo2",
+    "name": "Invalid Repo",
+    "description": "Repo only used for tests",
+    "packages": {
+        "validpackage1": {
+            "name": "Valid Package 1",
+            "author": "Hackerdude",
+            "description": "",
+            "artifacts": [
+                {
+                    "url": "packages/validpackage1/artifacts/validpackage1_1.0.0_kindleany.kpkg",
+                    "version": [
+                        1,
+                        0,
+                        0
+                    ],
+                    "dependencies": [],
+                    "supported_platforms": null
+                }
+            ]
+        },
+        "validpackage1": {
+            "name": "Valid Package 1",
+            "author": "Hackerdude",
+            "description": "",
+            "artifacts": [
+                {
+                    "url": "packages/validpackage1/artifacts/validpackage1_1.0.0_kindleany.kpkg",
+                    "version": [
+                        1,
+                        0,
+                        0
+                    ],
+                    "dependencies": [],
+                    "supported_platforms": null
+                }
+            ]
+        }
+    }
+}

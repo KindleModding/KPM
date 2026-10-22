@@ -12,18 +12,19 @@ KPMResult Internal_RunUninstallHook(const char* outPath, const char* packageId, 
 
     if (access(uninstallScriptPath, R_OK) == 0)
     {
+        free(uninstallScriptPath);
         kpm_io->log(KPM_VERBOSITY_DEBUG, "Running uninstall script for [%s]", packageId);
         // Run uninstall script
         int result = -1;
 
         char* uninstallCommand;
         if (upgrading)
-            uninstallCommand = asprintf_hd("KPM_VERSION_MAJOR=%i KPM_VERSION_MINOR=%i KPM_VERSION_PATCH=%i KPM_PLATFORM=\"%s\" sh %s upgrade 2>&1", KPM_VERSION_MAJOR, KPM_VERSION_MINOR, KPM_VERSION_PATCH, KPM_PLATFORM, uninstallScriptPath);
+            uninstallCommand = asprintf_hd("KPM_VERSION_MAJOR=%i KPM_VERSION_MINOR=%i KPM_VERSION_PATCH=%i KPM_PLATFORM=\"%s\" sh uninstall.sh upgrade 2>&1", KPM_VERSION_MAJOR, KPM_VERSION_MINOR, KPM_VERSION_PATCH, KPM_PLATFORM);
         else
-            uninstallCommand = asprintf_hd("KPM_VERSION_MAJOR=%i KPM_VERSION_MINOR=%i KPM_VERSION_PATCH=%i KPM_PLATFORM=\"%s\" sh %s 2>&1", KPM_VERSION_MAJOR, KPM_VERSION_MINOR, KPM_VERSION_PATCH, KPM_PLATFORM, uninstallScriptPath);
+            uninstallCommand = asprintf_hd("KPM_VERSION_MAJOR=%i KPM_VERSION_MINOR=%i KPM_VERSION_PATCH=%i KPM_PLATFORM=\"%s\" sh uninstall.sh 2>&1", KPM_VERSION_MAJOR, KPM_VERSION_MINOR, KPM_VERSION_PATCH, KPM_PLATFORM);
 
+        char* old_path = getcwd(NULL, 0);
         chdir(outPath);
-        free(uninstallScriptPath);
         kpm_io->log(KPM_VERBOSITY_INFO, "Running uninstall hooks for %s", packageId);
         FILE* stream = popen(uninstallCommand, "r");
         free(uninstallCommand);
@@ -41,7 +42,8 @@ KPMResult Internal_RunUninstallHook(const char* outPath, const char* packageId, 
             kpm_io->log(KPM_VERBOSITY_ERROR, "Could not run script - POPEN FAILURE");
         }
 
-        chdir("/");
+        chdir(old_path);
+        free(old_path);
         if (result != 0)
         {
             // The uninstall hook failed
@@ -49,6 +51,8 @@ KPMResult Internal_RunUninstallHook(const char* outPath, const char* packageId, 
             return KPM_GENERIC_ERROR;
         }
     }
+
+    return KPM_OK;
 }
 
 KPMResult Internal_UninstallPackage(KPM* kpm, const char* packageId, bool upgrading, KPMIO* kpm_io)
@@ -124,6 +128,7 @@ KPMResult KPM_UninstallPackages(KPM* kpm, size_t packageCount, const char* packa
     int result = KPM_OK;
     for (int i=0; i < packageCount; i++)
     {
+        kpmIO->log(KPM_VERBOSITY_DEBUG, "Uninstalling %s", packageIds[i]);
         if ((result = Internal_UninstallPackage(kpm, packageIds[i], false, kpmIO)) != KPM_OK)
             break;
     }

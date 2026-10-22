@@ -1,0 +1,14 @@
+{
+  "manifest_version": 1,
+  "id": "validpackage2",
+  "name": "Valid Package 2",
+  "author": "Hackerdude",
+  "description": "",
+  "version": [
+    1,
+    0,
+    0
+  ],
+  "dependencies": [],
+  "supported_platforms": null
+}
