@@ -218,14 +218,20 @@ KPKG_Result KPKG_ExtractData(void* ptr, uint64_t size, uint64_t out_size, char* 
 {
     int fd = open(out_path, O_WRONLY);
     AssertOrReturn(fd != 0, 0, KPKG_FS_ERROR);
-    AssertOrReturn(
-        ftruncate(fd, out_size),
-        0,
-        KPKG_FS_ERROR
-    )
+    if (!ftruncate(fd, out_size))
+    {
+        close(fd);
+        return KPKG_FS_ERROR;
+    }
+
     void* file = mmap(NULL, out_size, PROT_WRITE, MAP_PRIVATE, fd, 0);
-    AssertOrReturn(file != NULL, 0, KPKG_MMAP_ERROR);
-    AssertOrReturn(
+    if (file == NULL)
+    {
+        close(fd);
+        return KPKG_MMAP_ERROR;
+    }
+
+    if (
         ZSTD_isError(
             ZSTD_decompress(
                 file, 
@@ -236,7 +242,14 @@ KPKG_Result KPKG_ExtractData(void* ptr, uint64_t size, uint64_t out_size, char* 
         ),
         0,
         KPKG_ZSTD_ERROR
-    );
-    AssertOrReturn(munmap(file, out_size), 0, KPKG_MMAP_ERROR);
+    )
+    {
+        munmap(file, out_size);
+        close(fd);
+        return KPKG_MMAP_ERROR;
+    }
+
+    munmap(file, out_size);
+    close(fd);
     return KPKG_OK;
 }
