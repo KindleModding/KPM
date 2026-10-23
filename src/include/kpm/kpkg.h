@@ -1,5 +1,13 @@
 #pragma once
 
+/**
+ * @file kpkg.h
+ * @author Hackerdude (hackerdude@hackerdude.tech)
+ * 
+ * @copyright Copyright (c) 2026
+ * 
+ */
+
 #include "kpm/semver.h"
 #include <stddef.h>
 #include <stdint.h>
@@ -29,7 +37,6 @@ typedef struct
     uint8_t version; /**< Format version */
     SemVer package_version; /**< Version of the package */
     uint8_t supported_platforms; /**< Bitfield of KPKG_SupportedPlatforms */
-    uint64_t installed_size; /**< Total size of installed package */
     uint32_t dependency_count; /**< Number of dependencies in package */
     uint32_t file_count; /**< Number of files in package */
     uint64_t strings_size; /**< Size of the string section */
@@ -95,4 +102,3 @@ KPKG_FileEntry* KPKG_GetFileEntries(KPKG_File* kpkg_file, size_t* count);
  * @return KPKG_Result 
  */
 KPKG_Result KPKG_ExtractData(void* ptr, uint64_t size, uint64_t out_size, char* out_path);
-

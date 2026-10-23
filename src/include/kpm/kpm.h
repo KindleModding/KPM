@@ -3,11 +3,8 @@
 /**
  * @file kpm.h
  * @author Hackerdude (hackerdude@hackerdude.tech)
- * @brief The main KPM header
- * @version 0.1
- * @date 2025-08-08
  * 
- * @copyright Copyright (c) 2025
+ * @copyright Copyright (c) 2026
  * 
  */
 
@@ -42,48 +39,45 @@ const char* KPM_ErrorToString(KPMResult error);
 * @brief A repository that KPM is using
 * 
 */
-struct Repository
+typedef struct
 {
     char* id; /**< The repository's ID */
     char* url; /**< The url of the repository */
     char* name; /**< The repository's name */
     char* description; /**< The repository's description */
-};
-typedef struct Repository Repository;
+} Repository;
 
 /**
 * @brief A package that KPM has indexed
 * 
 */
-struct IndexedPackage
+typedef struct
 {
     char* repository; /**< The repository ID */
     char* id; /**< The package ID */
     char* name; /**< The name of the package */
     char* author; /**< The author of the package */
     char* description; /**< The description of the package */
-};
-typedef struct IndexedPackage IndexedPackage;
+} IndexedPackage;
 
 /**
 * @brief An artifact KPM has indexed
 * 
 */
-struct IndexedArtifact
+typedef struct
 {
     char* repository; /**< The repository ID */
     char* id; /**< The package ID */
     char* url; /**< URL of the artifact - primary key */
     SemVer version; /**< The version of this artifact */
-};
-typedef struct IndexedArtifact IndexedArtifact;
+} IndexedArtifact;
 
 
 /**
 * @brief A dependency object
 * 
 */
-struct ArtifactDependency
+typedef struct
 {
     char* artifact_repository; /**< Repository of the artifact */
     char* artifact_id; /**< ID of the artifact */
@@ -91,15 +85,14 @@ struct ArtifactDependency
     char* id; /**< The package ID */
     SemVer min_version; /**< The min version of the dependency (inclusive) */
     SemVer max_version; /**< The max version of the dependency (exclusive) */
-};
-typedef struct ArtifactDependency ArtifactDependency;
+} ArtifactDependency;
 
 
 /**
 * @brief A package KPM has installed
 * 
 */
-struct InstalledPackage
+typedef struct
 {
     char* id; /**< The package ID */
     char* repository; /**< The repository this was installed from - may be NULL */
@@ -108,40 +101,36 @@ struct InstalledPackage
     char* description; /**< The package description */
     SemVer version; /**< The package version */
     bool installed_as_dependency; /**< Whether or not this package was installed as a dependency of another package */
-};
-typedef struct InstalledPackage InstalledPackage;
+} InstalledPackage;
 
 
 /**
 * @brief A dependency of a package KPM has installed
 * 
 */
-struct InstalledDependency
+typedef struct
 {
     char* dependent; /**< ID of installed package */
     char* dependency_id; /**< ID of the dependency */
     SemVer min_version; /**< The min version of the dependency (inclusive) */
     SemVer max_version; /**< The max version of the dependency (exclusive) */
-};
-typedef struct InstalledDependency InstalledDependency;
+} InstalledDependency;
 
 
-struct InstallTarget
+typedef struct
 {
     char* repository; /**< The repository to look for the package in (or NULL) */
     char* id; /**< The id of the package to install */
     SemVer* version; /**< Note: may be NULL if version doesn't matter */
-};
-typedef struct InstallTarget InstallTarget;
+} InstallTarget;
 
-struct KPM
+typedef struct
 {
     sqlite3* db; /**< The sqlite db object */
     char* dbPath; /**< The path to KPM's database */
     char* pkgPath; /**< The path to KPM packages */
     int maxConnections; /**< Maximum number of parallel connections to hold when downloading stuff */
-};
-typedef struct KPM KPM;
+} KPM;
 
 typedef enum
 {
@@ -156,14 +145,13 @@ typedef void KPMLog(KPMVerbosity, const char* format, ...) __attribute__((format
 typedef void KPMLogProgress(unsigned int progress, const char* format, ...) __attribute__((format(printf, 2, 3)));
 typedef bool KPMGetInput(const char* format, ...) __attribute__((format(printf, 1, 2)));
 
-struct KPMIO
+typedef struct
 {
     KPMLog* log;
     KPMStream* stream;
     KPMLogProgress* logProgress;
     KPMGetInput* getInput;
-};
-typedef struct KPMIO KPMIO;
+} KPMIO;
 
 /**
  * @brief Initialise the KPM object

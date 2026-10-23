@@ -6,13 +6,25 @@
 #define VERSION_MAX UINT_MAX
 #define SEMVER_MAX { .major = UINT_MAX, .minor = UINT_MAX, .patch = UINT_MAX }
 
-struct SemVer
+/**
+ * @file semver.h
+ * @author Hackerdude (hackerdude@hackerdude.tech)
+ * 
+ * @copyright Copyright (c) 2026
+ * 
+ */
+
+
+ /**
+  * @brief Represent a semantic version
+  * 
+  */
+typedef struct
 {
-    uint32_t major;
-    uint32_t minor;
-    uint32_t patch;
-};
-typedef struct SemVer SemVer;
+    uint32_t major; /**< Major version */
+    uint32_t minor; /**< Minor version */
+    uint32_t patch; /**< Patch version */
+} SemVer;
 
 /**
  * @brief If a > b it returns a number > 0, if a < b it returns a number < 0, if a == b it returns 0

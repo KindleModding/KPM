@@ -11,7 +11,7 @@ typedef enum
     NODE_ARTIFACT /**< Node that declares a specific artifact at a version */
 } NodeType;
 
-struct DependencyNode
+typedef struct
 {
     NodeType type; /**< The type of node this is */
     NodeIndex_t* connected; /**< Dependencies of this node */
@@ -21,16 +21,14 @@ struct DependencyNode
     char* url; /**< Artifact url */
     SemVer min_version;
     SemVer max_version;
-};
-typedef struct DependencyNode DependencyNode;
+} DependencyNode;
 
-struct DependencyGraph
+typedef struct
 {
     DependencyNode* nodes; /**< Nodes in this graph */
     size_t allocated; /**< The maximum storable nodes of this graph */
     size_t nodeCount; /**< The number of nodes currently in this graph */
-};
-typedef struct DependencyGraph DependencyGraph;
+} DependencyGraph;
 
 void CreateDependencyGraph(DependencyGraph* graph, int count);
 void ExtendDependencyGraph(DependencyGraph* graph, int allocate);
