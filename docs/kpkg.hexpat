@@ -1,3 +1,8 @@
+// imhex pattern for parsing kpkg files
+// Created by Hackerdude
+//
+// kpkg v3
+
 #define SemVerSize (4 + 4 + 4)
 #define KPKG_DependencyEntrySize (8 + (4 + 4 + 4) + (4 + 4 + 4))
 #define KPKG_FileEntrySize (8 + 32 + 4 + 8 + 32 + 8)

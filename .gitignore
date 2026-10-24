@@ -1,5 +1,6 @@
 builddir/
-docs/
+docs/html
+docs/latex
 subprojects/*
 !subprojects/*.wrap
 !subprojects/packagefiles
