@@ -19,8 +19,7 @@ logger = logging.getLogger(__name__)
 COMPRESS_CHUNK_SIZE = (1024 ** 2) * 64
 
 KPKG_VERSION = 3
-supported_platforms = {
-    "kindleany": 0,
+SUPPORTED_PLATFORMS = {
     "kindle": 1 << 0,
     "kindle5": 1 << 1,
     "kindlepw2": 1 << 2,
@@ -34,6 +33,7 @@ valid_supported_platforms = [
 
 @dataclass
 class Version:
+    SIZE = 4 * 3
     """Class that represents a semantic version"""
     major: int
     minor: int
@@ -43,7 +43,7 @@ class Version:
         return struct.pack("<III", self.major, self.minor, self.patch)
 
     def decode(buffer: BytesIO):
-        return Version(*struct.unpack("<III", buffer))
+        return Version(*struct.unpack("<III", buffer.read(Version.SIZE)))
 
     def encode_obj(self):
             return [ self.major, self.minor, self.patch ]
@@ -54,6 +54,7 @@ class Version:
 
 @dataclass
 class Dependency:
+    SIZE = Version.SIZE * 2
     """Class that represents a dependency"""
     min_version: Version|None
     max_version: Version|None
@@ -72,17 +73,18 @@ class Dependency:
 
 @dataclass
 class BinaryDependency:
+    SIZE = 8 + Version.SIZE*2
     """Class that represents a dependency"""
-    id: int
+    id_ptr: int
     min_version: Version
     max_version: Version
 
     def encode(self):
-        return struct.pack("<Q", self.id) + self.min_version.encode() + self.max_version.encode()
+        return struct.pack("<Q", self.id_ptr) + self.min_version.encode() + self.max_version.encode()
 
     def decode(buffer: BytesIO):
             dep = BinaryDependency(None, None, None)
-            dep.id = struct.unpack("<Q", buffer)
+            dep.id_ptr, = struct.unpack("<Q", buffer.read(8))
             dep.min_version = Version.decode(buffer)
             dep.max_version = Version.decode(buffer)
             return dep
@@ -91,7 +93,7 @@ class BinaryDependency:
 class BinaryFileEntry:
     SIZE = 8 + 32 + 4 + 8 + 32 + 8
     """Class that represents a file entry"""
-    path: int
+    path_ptr: int
     checksum: bytes
     file_mode: int
     installed_size: int
@@ -99,10 +101,10 @@ class BinaryFileEntry:
     offset: int
 
     def decode(buffer: BytesIO):
-        return BinaryFileEntry(**struct.unpack("<Q32sIQ32sQ", buffer))
+        return BinaryFileEntry(*struct.unpack("<Q32sIQ32sQ", buffer.read(BinaryFileEntry.SIZE)))
 
     def encode(self):
-        return struct.pack("<Q32sIQ32sQ", self.path, self.checksum, self.file_mode, self.installed_size, self.installed_checksum, self.offset)
+        return struct.pack("<Q32sIQ32sQ", self.path_ptr, self.checksum, self.file_mode, self.installed_size, self.installed_checksum, self.offset)
 
 
 @dataclass
@@ -116,8 +118,8 @@ class Package:
     dependencies: dict[str, Dependency]
     supported_platforms: list[str]|None
 
-    def write_manifest(self, path: str):
-        with open(os.path.join(path, "manifest.json"), 'w') as file:
+    def write_manifest(self, package_path: str):
+        with open(os.path.join(package_path, "manifest.json"), 'w') as file:
             manifest = {
                 "manifest_version": KPKG_VERSION,
                 "id": self.id,
@@ -125,14 +127,14 @@ class Package:
                 "author": self.author,
                 "description": self.description,
                 "version": self.version.encode_obj(),
-                "dependencies": [ dep.encode_obj() for dep in self.dependencies ]
+                "dependencies": { dep_id: self.dependencies[dep_id].encode_obj() for dep_id in self.dependencies }
             }
             if self.supported_platforms:
                 manifest["supported_platforms"] = self.supported_platforms
-            file.write(json.dumps(manifest))
+            file.write(json.dumps(manifest, indent=2))
 
-    def read_manifest(path: str):
-        with open(os.path.join(path, "manifest.json"), 'r') as file:
+    def read_manifest(package_path: str):
+        with open(os.path.join(package_path, "manifest.json"), 'r') as file:
             raw_manifest: dict = json.loads(file.read())
 
         return Package(
@@ -185,7 +187,7 @@ class Package:
         out_file.write(self.version.encode())
         support_bitfield = 0 # All platforms
         if not self.supported_platforms is None:
-            for i in [ supported_platforms[plat] for plat in self.supported_platforms ]:
+            for i in [ SUPPORTED_PLATFORMS[plat] for plat in self.supported_platforms ]:
                 support_bitfield |= i
         out_file.write(struct.pack("<HIIQ", support_bitfield, len(self.dependencies), len(walked_files), len(string_section)))
 
@@ -241,7 +243,81 @@ class Package:
         out_file.seek(FILE_SEC_OFF)
         for entry in file_entries:
             out_file.write(entry.encode())
+
+    def __read_str(buf: bytes, off: int) -> bytes:
+        return buf[off:buf.find(b'\0', off)]
+
+    def __bitmap_to_supported(bitmap: int) -> list[str]:
+        supported = []
+        for key in SUPPORTED_PLATFORMS:
+            if (bitmap & SUPPORTED_PLATFORMS[key]) == SUPPORTED_PLATFORMS[key]:
+                supported.append(key)
+        return supported
+
+    def unpack(in_file: BytesIO, out_path: str):
+        if in_file.read(4) != b'KPKG':
+            raise Exception("File is not a KPKG file")
+
+        kpkg_version, = struct.unpack("<B", in_file.read(1))
+        if kpkg_version != KPKG_VERSION:
+            raise Exception(f"Expected KPKG version {KPKG_VERSION}, got {kpkg_version}")
+
+        package_version: Version = Version.decode(in_file)
+        supported_bitmap, dependency_count, file_count, string_section_size = struct.unpack("<HIIQ", in_file.read(2 + 4 + 4 + 8))
+
+        binary_deps: list[BinaryDependency] = []
+        for i in range(dependency_count):
+            binary_deps.append(BinaryDependency.decode(in_file))
+
+        file_entries: list[BinaryFileEntry] = []
+        for i in range(file_count):
+            file_entries.append(BinaryFileEntry.decode(in_file))
+
+        string_buf = in_file.read(string_section_size)
+
+        dependencies: dict[str, Dependency] = {}
+        for dep in binary_deps:
+            dependencies[Package.__read_str(string_buf, dep.id_ptr).decode()] = Dependency( dep.min_version, dep.max_version )
+
+        for i in range(file_count):
+            file_entry = file_entries[i]
+            size = -1
+            if i < file_count-1:
+                size = file_entries[i+1] - file_entry.offset
+            filepath = os.path.join(out_path, Package.__read_str(string_buf, file_entry.path_ptr).decode())
+            logging.info(f"Unpacking '{filepath}' ({file_entry.installed_checksum.hex()})")
+            os.makedirs(os.path.dirname(filepath), exist_ok=True)
+
+            current = 0
+            in_file.seek(file_entry.offset)
+            with open(filepath, 'wb') as file:
+                d = zstd.ZstdDecompressor()
+                while True:
+                    chunk_size = COMPRESS_CHUNK_SIZE
+                    if current+chunk_size > size:
+                        chunk_size = size - current
+
+                    file.write(d.decompress(in_file.read(chunk_size)))
+                    current += chunk_size
+
+                    if current == size:
+                        break
+
+        id: bytes = Package.__read_str(string_buf, 0)
+        name: bytes = Package.__read_str(string_buf, len(id) + 1)
+        author: bytes = Package.__read_str(string_buf, len(name) + 1)
+        description: bytes = Package.__read_str(string_buf, len(author) + 1)
+        Package(
+            id.decode(),
+            name.decode(),
+            author.decode(),
+            description.decode(),
+            package_version,
+            dependencies,
+            Package.__bitmap_to_supported(supported_bitmap)
+        ).write_manifest(out_path)
                 
+            
 
 
 if __name__ == "__main__":
@@ -349,6 +425,23 @@ if __name__ == "__main__":
         default=5,
     )
     package_pack_parser.set_defaults(func=pack_package)
+
+    # unpack
+    def unpack_package(args):
+        assert os.path.isfile(args.kpkg_path)
+        with open(args.kpkg_path, 'rb') as file:
+            Package.unpack(file, args.output_path)
+
+    package_unpack_parser = pack_subparsers.add_parser(
+        "unpack", help="Extract a package"
+    )
+    package_unpack_parser.add_argument(
+        "kpkg_path", help="The path to the package", type=pathlib.Path
+    )
+    package_unpack_parser.add_argument(
+        "output_path", help="The path to extract to", type=pathlib.Path
+    )
+    package_unpack_parser.set_defaults(func=unpack_package)
 
     # add dependency
     def package_add_dependency(args):
