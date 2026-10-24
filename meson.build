@@ -34,7 +34,6 @@ subproject('libarchive', default_options: [
   'acl=disabled',
 
 ])
-subproject('google-brotli', default_options: ['default_library=static']) # Needed for cURL brotli support
 subproject('openssl', default_options: ['default_library=static', 'build_cli=false']) # Needed for cURL HTTPS support
 subproject('nghttp2', default_options: ['default_library=static']) # Needed for cURL HTTP/2 support
 curl = subproject('curl', default_options: [
