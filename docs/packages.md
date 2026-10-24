@@ -6,6 +6,7 @@ This package format is supported from KPM `v2.0.0` and above.
 ### v3
 - Switch to zstd compression format
 - Switch to custom packing format
+- Make `supported_platforms` mandatory
 
 ### v2
 - Switch to gzip compression format
@@ -38,10 +39,10 @@ The following file/folder names are reserved at the top-level of the archive and
 - `install.sh`
 - `uninstall.sh`
 - `launch.sh`
+- `startup.sh`
 ### Misc
 - `icon.png` - Should be a 256x256 png image under 1MB - An *optional* icon to represent the package in GUIs
-### Reserved for future functionality
-- `startup.sh`
+### Special Folders
 - `rootfs/`
 
 ## Package Manifest Format
@@ -74,7 +75,7 @@ The package manifest is a JSON file containing a single object with the followin
 | `description` | The human-readable description of the package, must not be `null` |
 | `version` | The KPM version array representing the version of this package, must not be `null` |
 | `dependencies` | An object describing the dependencies of a package, must not be `null`, may be empty |
-| `supported_platforms` | A list of supported platform strings, optional, may be `null` or not present |
+| `supported_platforms` | A list of supported platform strings, must not be empty or `null` |
 
 ### Version Arrays
 KPM packages use version arrays to describe their version.  
@@ -116,6 +117,10 @@ The platform defines the device and OS architecture of whatever is running KPM. 
 
 `supported_platforms` is optional, and when present must be an array containing one or more strings with values from the above table.
 
+## Package Installation
+Packages are installed by unpacking the contents of their `kpkg` file to `/mnt/us/kmc/kpm/packages/<packageid>/`.  
+This unpacked data remains there for as long as the package is installed, it is deleted on uninstallation.
+
 ## Hooks
 Hooks are used to define package behaviour, they are top-level files in the package archive with a specific name.  
 All hooks are optional, however packages should provide a `launch.sh` hook.
@@ -125,6 +130,7 @@ All hooks are optional, however packages should provide a `launch.sh` hook.
 | `install.sh` | Installation hook |
 | `uninstall.sh` | Uninstallation hook |
 | `launch.sh` | Launch hook |
+| `startup.sh` | Startup hook |
 
 ### Hook Execution
 Hooks are executed by `sh`.  
@@ -134,14 +140,21 @@ Hooks are executed by `sh`.
 | `install.sh` | Executed when installing the package after the package is unpacked |
 | `uninstall.sh` | Executed when uninstalling the package before the package files are deleted |
 | `launch.sh` | Executed by a launcher or scriptlet to launch the package |
+| `startup.sh` | Executed when the device boots |
 
-When upgrading packages:
-- The `uninstall.sh` hook is run
+### Upgrades
+When a package is upgraded, the following actions are performed:
+- The `uninstall.sh` hook is run with the `upgrade` flag (ie: `sh uninstall.sh upgrade`)
 - The package's files are deleted
 - The new package's files are unpacked
-- The `install.sh` hook is run
+- The `install.sh` hook is run is run with the `upgrade` flag (ie: `sh install.sh upgrade`)
 
 Note that KPM handles file deletion for the unpacked package, the `uninstall.sh` hook should only delete files that are not part of the unpacked package itself.
+
+### Persistent Data
+If packages want to store data between upgrades, they **must not** store it in their unpacked package folder as it will be deleted during upgrades. It is recommended to store configuration and other such data under `/mnt/us/config/<packageid>/`.
+
+`uninstall.sh` **must** delete this configuration data if it is run without the `upgrade` argument.
 
 ### Arguments
 The `install.sh` and `uninstall.sh` hooks will be executed with an `upgrade` argument (accessible via `$1`) when the following operation is part of a package upgrade.
@@ -173,15 +186,33 @@ The `uninstall.sh` hook should check the scriptlet's hash against the package's 
 
 An example of this logic is available in the [reference package](https://github.com/KindleModding/example_kpm_package)
 
-# KPM Repository Format
-## Signed Packages
-As of repository version 3, all packages must be signed.
+## Rootfs Overlays
+The `rootfs` folder in the root of a package is used to build the `overlayfs`.
 
-Package artifacts must provide a `.sig` file which contains a signed sha256 digest of the artifact's content.
+This is the only supported method of altering rootfs, packages **must** use the `rootfs` folder.
 
-For example, an artifact at `packages/foobar/foobar.kpkg` must provide a `packages/foogbar/foobar.kpkg.sig`.
+### Capabilities
+The `rootfs` overlay system supports modifying the following folders:
+```txt
+/app
+/bin
+/data
+/etc
+/keys
+/lib
+/lost+found
+/opt
+/sbin
+/system
+/tts
+/usr
+```
 
-### Signed Package Validation
-When the `kpkg` file is downloaded, the `sig` file is also downloaded alongside it.
+On non-MTP devices, `rootfs` overlay files will have `0777` flags.
+On MTP devices, they will have whatever flags the overlaying file has.
 
-The `kpkg` file's contents are hashed and compared to the signed hash in the `sig` file.
+### Example
+If the file `/rootfs/usr/bin/otav3` exists created in the package, when the Kindle boots, the file at `/usr/bin/otav3` will be replaced with it.  
+This means when the Kindle accesses `/usr/bin/otav3`, it will actually be accessing `/rootfs/usr/bin/otav3` in the KPM package.
+
+Note that overlays **do not** modify the underlying file, this makes it an incredibly safe method for modifying the rootfs.
