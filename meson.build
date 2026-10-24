@@ -50,6 +50,7 @@ subproject('libarchive', default_options: [
 openssl = subproject('openssl', default_options: ['default_library=static', 'build_cli=false']) # Needed for cURL HTTPS support
 subproject('nghttp2', default_options: ['default_library=static']) # Needed for cURL HTTP/2 support
 curl = subproject('curl', default_options: [
+  'brotli=disabled',
   'tool=disabled',
   'tests=disabled',
   'unittests=disabled',
