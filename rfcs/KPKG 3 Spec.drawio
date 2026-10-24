@@ -1,6 +1,6 @@
 <mxfile host="app.diagrams.net">
   <diagram name="Page-1" id="9rtM6annv6j0TtzBnsRT">
-    <mxGraphModel dx="1977" dy="710" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+    <mxGraphModel dx="1510" dy="416" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -14,22 +14,22 @@
           <mxGeometry height="30" width="200" x="440" y="585" as="geometry" />
         </mxCell>
         <mxCell id="N2nTVU4Ex5qT0vqb23A_-17" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;rounded=0;" value="String Section&lt;div&gt;- variable length&lt;/div&gt;&lt;div&gt;- contains null-terminated strings&lt;/div&gt;&lt;div&gt;- first four strings contain package info&lt;/div&gt;" vertex="1">
-          <mxGeometry height="120" width="240" x="-80" y="740" as="geometry" />
+          <mxGeometry height="120" width="240" x="-80" y="700" as="geometry" />
         </mxCell>
         <mxCell id="N2nTVU4Ex5qT0vqb23A_-19" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="File Entry format" vertex="1">
           <mxGeometry height="30" width="120" x="880" y="721.25" as="geometry" />
         </mxCell>
         <mxCell id="N2nTVU4Ex5qT0vqb23A_-20" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="file path" vertex="1">
-          <mxGeometry height="40" width="120" x="880" y="760" as="geometry" />
-        </mxCell>
-        <mxCell id="N2nTVU4Ex5qT0vqb23A_-21" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;rounded=0;" value="pointer to filepath in string section indexed from start of string section" vertex="1">
-          <mxGeometry height="40" width="370" x="1020" y="760" as="geometry" />
-        </mxCell>
-        <mxCell id="N2nTVU4Ex5qT0vqb23A_-22" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="file mode" vertex="1">
           <mxGeometry height="40" width="120" x="880" y="840" as="geometry" />
         </mxCell>
+        <mxCell id="N2nTVU4Ex5qT0vqb23A_-21" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;rounded=0;" value="pointer to filepath in string section indexed from start of string section" vertex="1">
+          <mxGeometry height="40" width="370" x="1020" y="840" as="geometry" />
+        </mxCell>
+        <mxCell id="N2nTVU4Ex5qT0vqb23A_-22" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="file mode" vertex="1">
+          <mxGeometry height="40" width="120" x="880" y="960" as="geometry" />
+        </mxCell>
         <mxCell id="N2nTVU4Ex5qT0vqb23A_-23" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;rounded=0;" value="u32" vertex="1">
-          <mxGeometry height="40" width="120" x="1020" y="840" as="geometry" />
+          <mxGeometry height="40" width="120" x="1020" y="960" as="geometry" />
         </mxCell>
         <mxCell id="N2nTVU4Ex5qT0vqb23A_-24" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="file offset" vertex="1">
           <mxGeometry height="40" width="120" x="880" y="920" as="geometry" />
@@ -47,9 +47,9 @@
           <mxGeometry height="40" width="280" x="1020" y="800" as="geometry" />
         </mxCell>
         <mxCell id="N2nTVU4Ex5qT0vqb23A_-39" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;" value="" vertex="1">
-          <mxGeometry height="240" width="10" x="190" y="680" as="geometry" />
+          <mxGeometry height="240" width="10" x="190" y="640" as="geometry" />
         </mxCell>
-        <mxCell id="N2nTVU4Ex5qT0vqb23A_-40" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;rounded=0;" value="individual entries that are zstd compressed, variable length&lt;div&gt;&lt;b&gt;file data must be in the same order as in the file entry array and without any padding&lt;/b&gt;&lt;/div&gt;" vertex="1">
+        <mxCell id="N2nTVU4Ex5qT0vqb23A_-40" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;rounded=0;" value="individual entries that are zstd compressed, variable length&lt;div&gt;&lt;b&gt;file data must be in the same order as in the file entry array and should not be padded&lt;/b&gt;&lt;/div&gt;" vertex="1">
           <mxGeometry height="80" width="280" x="440" y="880" as="geometry" />
         </mxCell>
         <mxCell id="N2nTVU4Ex5qT0vqb23A_-43" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="id" vertex="1">
@@ -182,13 +182,19 @@
           <mxGeometry height="30" width="200" x="440" y="685" as="geometry" />
         </mxCell>
         <mxCell id="06cu8ERaoBd7S3RhmO1_-1" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="size of compressed data stream is calculaed by next file entry offset - this offset" vertex="1">
-          <mxGeometry height="30" width="260" x="960" y="980" as="geometry" />
+          <mxGeometry height="30" width="260" x="960" y="1020" as="geometry" />
         </mxCell>
         <mxCell id="vYpSIP4w1dWDiAoOe37w-3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="installed size" vertex="1">
           <mxGeometry height="40" width="120" x="880" y="880" as="geometry" />
         </mxCell>
-        <mxCell id="vYpSIP4w1dWDiAoOe37w-4" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;rounded=0;" value="u64, size of decompressed file" vertex="1">
+        <mxCell id="vYpSIP4w1dWDiAoOe37w-4" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;rounded=0;" value="u64 size of decompressed file" vertex="1">
           <mxGeometry height="40" width="185" x="1020" y="880" as="geometry" />
+        </mxCell>
+        <mxCell id="g2oBlLo2v8AOwEowNzme-2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="installed checksum" vertex="1">
+          <mxGeometry height="40" width="120" x="880" y="760" as="geometry" />
+        </mxCell>
+        <mxCell id="g2oBlLo2v8AOwEowNzme-3" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;rounded=0;" value="256-bit checksum of decompressed data" vertex="1">
+          <mxGeometry height="40" width="280" x="1020" y="760" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>

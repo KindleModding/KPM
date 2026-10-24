@@ -1,0 +1,50 @@
+#define SemVerSize (4 + 4 + 4)
+#define KPKG_DependencyEntrySize (8 + (4 + 4 + 4) + (4 + 4 + 4))
+#define KPKG_FileEntrySize (8 + 32 + 4 + 8 + 32 + 8)
+
+struct SemVer
+{
+    u32 major;
+    u32 minor;
+    u32 patch;
+};
+
+struct KPKG_Dependency
+{
+    u64 id_ptr;
+    char id[] @ id_ptr + addressof(parent.strings_size) + sizeof(parent.strings_size) + KPKG_DependencyEntrySize*parent.dependency_count + KPKG_FileEntrySize*parent.file_count;
+    SemVer min_version;
+    SemVer max_version;
+};
+
+
+struct KPKG_FileEntry
+{
+    u64 path_ptr;
+    char path[] @ path_ptr + addressof(parent.strings_size) + sizeof(parent.strings_size) + KPKG_DependencyEntrySize*parent.dependency_count + KPKG_FileEntrySize*parent.file_count;
+    char checksum[32];
+    u32 file_mode;
+    u64 installed_size;
+    char installed_checksum[32];
+    u64 file_offset;
+};
+
+struct KPKG_Header
+{
+    char KPKG[4]; // "KPKG"
+    u8 format_version; // 3
+    SemVer package_version;
+    u16 supported_platforms;
+    u32 dependency_count;
+    u32 file_count;
+    u64 strings_size;
+    KPKG_Dependency dependencies[dependency_count];
+    KPKG_FileEntry files[file_count];
+    char strings[strings_size];
+    char id[] @ addressof(strings);
+    char name[] @ addressof(id) + sizeof(id);
+    char author[] @ addressof(name) + sizeof(name);
+    char description[] @ addressof(author) + sizeof(author);
+};
+
+KPKG_Header header @ 0x00;
