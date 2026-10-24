@@ -31,7 +31,7 @@ typedef enum {
     KINDLEHF = 1 << 3 /**< Kindles running ARMHF firmware */
 } KPKG_SupportedPlatforms;
 
-typedef struct
+typedef struct __attribute__ ((packed))
 {
     char magic[KPKG_MAGIC_LENGTH]; /**< "KPKG" */
     uint8_t version; /**< Format version */
@@ -42,19 +42,20 @@ typedef struct
     uint64_t strings_size; /**< Size of the string section */
 } KPKG_Header;
 
-typedef struct
+typedef struct __attribute__ ((packed))
 {
     uint64_t id; /**< Pointer to string section */
     SemVer min_version; /*<< Minimum dependency version (inclusive) */
     SemVer max_version; /**< Maximum dependency version (exclusive) */
 } KPKG_DependencyEntry;
 
-typedef struct
+typedef struct __attribute__ ((packed))
 {
     uint64_t path; /**< Pointer in string section to the file's path */
-    uint8_t checksum[16]; /**< The file's compressed checksum (sha256) */
+    uint8_t checksum[32]; /**< The file's compressed checksum (sha256) */
     uint32_t file_mode; /**< The file mode */
     uint64_t installed_size; /**< The size of this file once decompressed */
+    uint8_t installed_checksum[32]; /**< The file's decompressed checksum (sha256) */
     uint64_t offset; /**< Pointer to compressed stream in file data section */
 } KPKG_FileEntry;
 

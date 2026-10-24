@@ -2,490 +2,262 @@
 # The contents of this file are licensed under the `CC0` license.
 ###
 
+from dataclasses import dataclass
+from io import BytesIO
+import json
 import logging
 import argparse
 import pathlib
-import shutil
-import tarfile
-import json
 import os
+import struct
+from compression import zstd
+import hashlib
 
 logging.basicConfig(format="[%(levelname)s] %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-KPM_MANIFEST_VERSION = 3
+COMPRESS_CHUNK_SIZE = (1024 ** 2) * 64
+
+KPKG_VERSION = 3
+supported_platforms = {
+    "kindleany": 0,
+    "kindle": 1 << 0,
+    "kindle5": 1 << 1,
+    "kindlepw2": 1 << 2,
+    "kindlehf": 1 << 3
+}
+
 valid_supported_platforms = [
-    "kindle",
-    "kindle5",
-    "kindlepw2",
-    "kindlehf",
+    "kindle", "kindle5", "kindlepw2", "kindlehf"
 ]
 
 
+@dataclass
 class Version:
-    def __init__(self, major: int, minor: int, patch: int):
-        self.major = major
-        self.minor = minor
-        self.patch = patch
+    """Class that represents a semantic version"""
+    major: int
+    minor: int
+    patch: int
 
     def encode(self):
-        return [self.major, self.minor, self.patch]
+        return struct.pack("<III", self.major, self.minor, self.patch)
 
-    def decode(encoded: list):
-        assert len(encoded) == 3
-        return Version(int(encoded[0]), int(encoded[1]), int(encoded[2]))
+    def decode(buffer: BytesIO):
+        return Version(*struct.unpack("<III", buffer))
 
-    def __str__(self):
-        return f"{self.major}.{self.minor}.{self.patch}"
-
-    def __repr__(self):
-        return self.__str__()
-
-    def __eq__(self, other):
-        if type(other) != type(self):
-            return False
-
-        return (
-            self.major == other.major
-            and self.minor == other.minor
-            and self.patch == other.patch
-        )
+    def encode_obj(self):
+            return [ self.major, self.minor, self.patch ]
+    
+    def decode_obj(obj: list):
+        return Version(obj[0], obj[1], obj[2])
 
 
+@dataclass
 class Dependency:
-    def __init__(self, id: str, min: Version = None, max: Version = None):
-        self.id = id
-        self.min = min
-        self.max = max
+    """Class that represents a dependency"""
+    min_version: Version|None
+    max_version: Version|None
 
-    def encode(self):
-        encoded = {"id": self.id}
-        if self.min:
-            encoded["min"] = self.min.encode()
-        if self.max:
-            encoded["max"] = self.max.encode()
-        return encoded
+    def encode_obj(self):
+        return {
+            "min": self.min_version.encode_obj(),
+            "max": self.max_version.encode_obj()
+        }
 
-    def decode(encoded: dict):
+    def decode_obj(obj: dict):
         return Dependency(
-            encoded["id"],
-            (
-                Version.decode(encoded.get("min", None))
-                if encoded.get("min", None)
-                else None
-            ),
-            (
-                Version.decode(encoded.get("max", None))
-                if encoded.get("max", None)
-                else None
-            ),
+            Version.decode_obj(obj["min"]) if not obj["min"] is None else None,
+            Version.decode_obj(obj["max"]) if not obj["max"] is None else None
         )
 
+@dataclass
+class BinaryDependency:
+    """Class that represents a dependency"""
+    id: int
+    min_version: Version
+    max_version: Version
 
+    def encode(self):
+        return struct.pack("<Q", self.id) + self.min_version.encode() + self.max_version.encode()
+
+    def decode(buffer: BytesIO):
+            dep = BinaryDependency(None, None, None)
+            dep.id = struct.unpack("<Q", buffer)
+            dep.min_version = Version.decode(buffer)
+            dep.max_version = Version.decode(buffer)
+            return dep
+
+@dataclass
+class BinaryFileEntry:
+    SIZE = 8 + 32 + 4 + 8 + 32 + 8
+    """Class that represents a file entry"""
+    path: int
+    checksum: bytes
+    file_mode: int
+    installed_size: int
+    installed_checksum: bytes
+    offset: int
+
+    def decode(buffer: BytesIO):
+        return BinaryFileEntry(**struct.unpack("<Q32sIQ32sQ", buffer))
+
+    def encode(self):
+        return struct.pack("<Q32sIQ32sQ", self.path, self.checksum, self.file_mode, self.installed_size, self.installed_checksum, self.offset)
+
+
+@dataclass
 class Package:
-    RESERVED_FILEPATHS = ["rootfs", "startup.sh"]
+    """Class that represents a package"""
+    id: str
+    name: str
+    author: str
+    description: str
+    version: Version
+    dependencies: dict[str, Dependency]
+    supported_platforms: list[str]|None
 
-    def __init__(
-        self,
-        path: str,
-        id: str = None,
-        name: str = None,
-        author: str = None,
-        description: str = None,
-        version: Version = None,
-        dependencies: list[Dependency] = [],
-        supported_platforms: list[str] = None,
-        manifest_version: int = KPM_MANIFEST_VERSION,
-    ):
-        self.path = path
-        self.manifest_path = os.path.join(path, "manifest.json")
-        self.manifest_version = manifest_version
-
-        # @TODO
-        if manifest_version != KPM_MANIFEST_VERSION:
-            if manifest_version["manifest_version"] < KPM_MANIFEST_VERSION:
-                logger.warning(
-                    f"Manifest v{manifest_version['manifest_version']} is deprecated. Please upgrade to manifest v{KPM_MANIFEST_VERSION}."
-                )
-            else:
-                logger.error(
-                    f"Expected manifest version {KPM_MANIFEST_VERSION}, got {manifest_version}"
-                )
-                exit(1)
-
-        # Try to read the manifest
-        if os.path.exists(self.manifest_path) and id == None:
-            with open(self.manifest_path, "r") as file:
-                manifest = json.loads(file.read())
-                self.manifest_version = manifest["manifest_version"]
-
-                self.id = manifest["id"]
-                self.name = manifest["name"]
-                self.author = manifest["author"]
-                self.description = manifest["description"]
-                self.version = Version.decode(manifest["version"])
-
-                self.dependencies = []
-                for dependency in manifest["dependencies"]:
-                    self.dependencies.append(Dependency.decode(dependency))
-
-                self.supported_platforms = manifest["supported_platforms"]
-        else:
-            self.id = id
-            self.name = name
-            self.author = author
-            self.description = description
-            self.version = version
-            self.dependencies = dependencies
-            self.supported_platforms = supported_platforms
-        self.validate()
-
-    def set_id(self, id: str):
-        self.id = id
-
-    def set_name(self, name: str):
-        self.name = name
-
-    def set_author(self, author: str):
-        self.author = author
-
-    def set_description(self, description: str):
-        self.description = description
-
-    def set_version(self, version: Version):
-        self.version = version
-
-    def add_dependency(self, dependency: Dependency):
-        for existing_dependency in self.dependencies:
-            if existing_dependency.id == dependency.id:
-                raise RuntimeError(
-                    f"Dependency {dependency.id} already exists in package"
-                )
-
-        self.dependencies.append(dependency)
-
-    def remove_dependency(self, id: str):
-        for dependency in self.dependencies:
-            if dependency.id == id:
-                self.dependencies.remove(dependency)
-                return
-
-    def add_supported_platform(self, platform: str):
-        if not platform in valid_supported_platforms:
-            raise RuntimeError(
-                f"Supported platform must be one of: {valid_supported_platforms}"
-            )
-        if self.supported_platforms == None:
-            self.supported_platforms = []
-        self.supported_platforms.add(platform)
-
-    def remove_supported_platform(self, platform: str):
-        self.supported_platforms.remove(platform)
-
-    def validate(self):
-        invalid_id = False
-        for letter in self.id:
-            if letter.isspace() or letter.isupper():
-                invalid_id = True
-            if not (letter.isascii() or letter in ["-", "_"]):
-                invalid_id = True
-
-        if invalid_id:
-            raise RuntimeError(
-                "id must only contain alphanumeric characters, or _ and -"
-            )
-
-        if self.supported_platforms != None:
-            for supported_platform in self.supported_platforms:
-                if not supported_platform in valid_supported_platforms:
-                    raise RuntimeError(
-                        f"Supported platform must be one of: {valid_supported_platforms}"
-                    )
-
-        if len(self.name.strip()) == 0:
-            raise RuntimeError("Package must have a non-empty name")
-
-    def write_manifest(self):
-        with open(self.manifest_path, "w") as file:
+    def write_manifest(self, path: str):
+        with open(os.path.join(path, "manifest.json"), 'w') as file:
             manifest = {
-                "manifest_version": self.manifest_version,
+                "manifest_version": KPKG_VERSION,
                 "id": self.id,
                 "name": self.name,
                 "author": self.author,
                 "description": self.description,
-                "version": self.version.encode(),
-                "dependencies": [],
+                "version": self.version.encode_obj(),
+                "dependencies": [ dep.encode_obj() for dep in self.dependencies ]
             }
-
-            for dependency in self.dependencies:
-                manifest["dependencies"].append(dependency.encode())
-
-            if self.supported_platforms != None:
-                manifest["supported_platforms"] = list(self.supported_platforms)
-            else:
+            if self.supported_platforms:
                 manifest["supported_platforms"] = self.supported_platforms
+            file.write(json.dumps(manifest))
 
-            file.write(json.dumps(manifest, indent=2))
+    def read_manifest(path: str):
+        with open(os.path.join(path, "manifest.json"), 'r') as file:
+            raw_manifest: dict = json.loads(file.read())
 
-    def pack(self, output_path: str, compression: int = 5):
-        self.write_manifest()
-        logger.info(f"ID: {self.id}")
-        logger.info(f"Name: {self.name}")
-        logger.info(f"Author: {self.author}")
-        logger.info(
-            f"Supported Platforms: {'-'.join(self.supported_platforms if self.supported_platforms else ["kindleany"])}"
-        )
-        logger.info("Packing...")
-
-        packageFilename = output_path
-        if os.path.isdir(packageFilename):
-            packageFilename = os.path.join(
-                output_path,
-                f"{self.id}_{self.version}_{'-'.join(self.supported_platforms if self.supported_platforms else ["kindleany"])}.kpkg",
-            )
-
-        if compression == 0:
-            file = tarfile.open(packageFilename, "w:")
-        elif self.manifest_version >= 2:
-            file = tarfile.open(packageFilename, "w:gz", compresslevel=compression)
-        elif self.manifest_version >= 3:
-            file = tarfile.open(packageFilename, "w:zst", level=compression)
-        else:
-            file = tarfile.open(
-                packageFilename, "w:xz", preset=compression
-            )  # For deprecated V1 packages
-
-        with file:
-            for source_item_name in os.listdir(self.path):
-                if source_item_name in self.RESERVED_FILEPATHS:
-                    raise RuntimeError(
-                        f"[ERR] A file or folder with the name '{source_item_name}' was detected in the package - This is currently reserved for future use"
-                    )
-
-                logger.debug(f"- {source_item_name}")
-                file.add(
-                    os.path.join(self.path, source_item_name),
-                    arcname=source_item_name,
-                )
-
-        logger.info("Done!")
-        logger.info(f"Saved as {packageFilename}")
-
-
-class Artifact:
-    def __init__(
-        self,
-        id: str,
-        name: str,
-        author: str,
-        description: str,
-        url: str,
-        version: Version,
-        dependencies: list[Dependency],
-        supported_platforms: list[str] | None,
-    ):
-        self.id = id
-        self.name = name
-        self.author = author
-        self.description = description
-        self.url = url
-        self.version = version
-        self.dependencies = dependencies
-        self.supported_platforms = supported_platforms
-
-
-class Repo:
-    def __init__(
-        self,
-        manifest_path: str,
-        id: str = None,
-        name: str = None,
-        description: str = None,
-        artifacts: list[Artifact] = None,
-        manifest_version: int = KPM_MANIFEST_VERSION,
-    ):
-        self.manifest_path = manifest_path
-        self.path = os.path.dirname(self.manifest_path)
-        self.manifest_version = manifest_version
-
-        if os.path.exists(self.manifest_path):
-            with open(self.manifest_path, "r") as file:
-                manifest = json.loads(file.read())
-            self.id = manifest["id"]
-            self.name = manifest["name"]
-            self.description = manifest["description"]
-            self.manifest_version = manifest["manifest_version"]
-            self.artifacts = []
-            for package_id in manifest["packages"]:
-                package = manifest["packages"][package_id]
-                for artifact in package["artifacts"]:
-                    artifact_obj = Artifact(
-                        package_id,
-                        package["name"],
-                        package["author"],
-                        package["description"],
-                        artifact["url"],
-                        Version.decode(artifact["version"]),
-                        [],
-                        artifact["supported_platforms"],
-                    )
-                    for dependency in artifact["dependencies"]:
-                        artifact_obj.dependencies.append(Dependency.decode(dependency))
-                    self.artifacts.append(artifact_obj)
-        else:
-            self.id = id
-            self.name = name
-            self.description = description
-            self.artifacts = artifacts
-
-    def add_artifact(self, path: str):
-        if not os.path.exists(path):
-            raise RuntimeError(f"Artifact at {path} does not exist")
-
-        with tarfile.open(path, "r") as file:
-            try:
-                with file.extractfile(file.getmember("manifest.json")) as manifestFile:
-                    manifest: dict = json.loads(manifestFile.read())
-            except:
-                raise RuntimeError("[ERR] Could not open manifest.json file")
-
-        filename_supported_platforms = "kindleany"
-        if (manifest.get("supported_platforms", None) != None):
-            filename_supported_platforms = '-'.join(manifest["supported_platforms"])
-
-        for existing_artifact in self.artifacts:
-            if (
-                existing_artifact.supported_platforms != None
-                and manifest["supported_platforms"] != None
-            ):
-                existing_platforms = list(existing_artifact.supported_platforms)
-                platforms = list(manifest["supported_platforms"])
-                platforms_overlap = len(set(existing_platforms + platforms)) != len(
-                    existing_platforms
-                ) + len(platforms)
-            else:
-                platforms_overlap = (
-                    existing_artifact.supported_platforms
-                    == manifest["supported_platforms"]
-                )
-
-            if (
-                platforms_overlap
-                and existing_artifact.id == manifest["id"]
-                and existing_artifact.version == Version.decode(manifest["version"])
-            ):
-                raise RuntimeError(
-                    f"Artifact {existing_artifact.id} @ {existing_artifact.version} : {filename_supported_platforms} already exists in repository"
-                )
-
-        dependencies = []
-        for dependency in manifest["dependencies"]:
-            dependencies.append(Dependency.decode(dependency))
-
-        artifact_path = os.path.join(
-            "packages",
-            manifest["id"],
-            "artifacts",
-            f"{manifest['id']}_{'.'.join(str(x) for x in manifest['version'])}_{filename_supported_platforms}.kpkg",
+        return Package(
+            raw_manifest["id"],
+            raw_manifest["name"],
+            raw_manifest["author"],
+            raw_manifest["description"],
+            Version.decode_obj(raw_manifest["version"]),
+            { dep_id: Dependency.decode_obj(raw_manifest["dependencies"][dep_id]) for dep_id in raw_manifest["dependencies"] },
+            raw_manifest.get("supported_platforms")
         )
 
-        full_artifact_path = os.path.join(self.path, artifact_path)
-        os.makedirs(os.path.dirname(full_artifact_path), exist_ok=True)
-        shutil.copy(path, full_artifact_path)
+    def pack(self, compression: int, in_path: str, out_file: BytesIO):
+        strings: list[str] = []
+        strings.extend([self.id, self.name, self.author, self.description])
 
-        self.artifacts.append(
-            Artifact(
-                manifest["id"],
-                manifest["name"],
-                manifest["author"],
-                manifest["description"],
-                artifact_path,
-                Version.decode(manifest["version"]),
-                dependencies,
-                manifest["supported_platforms"],
-            )
-        )
+        logging.debug("Walking package files")
+        old_path = os.getcwd()
+        os.chdir(in_path)
+        walked_files: list[str] = []
+        for root, dirs, files in os.walk("."):
+            for file in files:
+                logging.debug(f"- {file}")
+                if file == "manifest.json":
+                    continue
+                walked_files.append(os.path.join(root, file).replace('./', ''))
+        os.chdir(old_path)
 
-    def remove_artifact(
-        self, id: str, version: Version = None, supported_platforms: list[str] = None
-    ):
-        to_remove: list[Artifact] = []
-        for artifact in self.artifacts:
-            if artifact.id == id and (version == None or artifact.version == version):
-                platforms_match = True
+        dependencies: list[BinaryDependency] = []
+        str_off = len(b'\x00'.join([ string.encode() for string in strings ])) + 1
+        for dep_id in self.dependencies:
+            strings.append(dep_id)
+            dependencies.append(BinaryDependency(
+                str_off,
+                self.dependencies[dep_id].min_version,
+                self.dependencies[dep_id].max_version
+            ))
+            str_off += len(dep_id.encode()) + 1
 
-                if supported_platforms != None:
-                    for platform in supported_platforms:
-                        if not platform in artifact.supported_platforms:
-                            platforms_match = False
-                            break
+        strings.extend(walked_files)
 
-                if platforms_match:
-                    to_remove.append(artifact)
+        string_section = b""
+        for string in strings:
+            if string == walked_files[0]:
+                FILE_STR_OFF = len(string_section)
+            string_section += string.encode() + b'\x00'
 
-        logger.info(f"Found {len(to_remove)} artifact(s) to remove")
-        for artifact in to_remove:
-            logger.info(
-                f"Removing artifact {artifact.name} @ {artifact.version} ({','.join(artifact.supported_platforms)})"
-            )
-            try:
-                os.remove(os.path.join(self.path, artifact.url))
-            except:
-                logger.warning(f"Could not delete artifact file at {artifact.url}")
-            self.artifacts.remove(artifact)
+        out_file.write(b"KPKG")
+        out_file.write(struct.pack("<B", KPKG_VERSION))
+        out_file.write(self.version.encode())
+        support_bitfield = 0 # All platforms
+        if not self.supported_platforms is None:
+            for i in [ supported_platforms[plat] for plat in self.supported_platforms ]:
+                support_bitfield |= i
+        out_file.write(struct.pack("<HIIQ", support_bitfield, len(self.dependencies), len(walked_files), len(string_section)))
 
-    def write_manifest(self):
-        encoded = {
-            "manifest_version": self.manifest_version,
-            "id": self.id,
-            "name": self.name,
-            "description": self.description,
-            "packages": {},
-        }
-        for artifact in self.artifacts:
-            if not artifact.id in encoded["packages"]:
-                encoded["packages"][artifact.id] = {
-                    "name": artifact.name,
-                    "author": artifact.author,
-                    "description": artifact.description,
-                    "artifacts": [],
-                }
+        for dep in dependencies:
+            out_file.write(dep.encode())
 
-            encoded_artifact = {
-                "url": artifact.url,
-                "version": Version.encode(artifact.version),
-                "dependencies": [],
-                "supported_platforms": (
-                    list(artifact.supported_platforms)
-                    if artifact.supported_platforms
-                    else None
-                ),
-            }
-            for dependency in artifact.dependencies:
-                encoded_artifact["dependencies"].append(Dependency.encode(dependency))
+        FILE_SEC_OFF = out_file.tell()
+        out_file.seek(BinaryFileEntry.SIZE * len(walked_files), os.SEEK_CUR) # Skip to write our string data
 
-            encoded["packages"][artifact.id]["artifacts"].append(encoded_artifact)
+        out_file.write(string_section)
+        del string_section
 
-        with open(self.manifest_path, "w") as file:
-            file.write(json.dumps(encoded))
+        file_entries: list[BinaryFileEntry] = []
+        file_entry_string_off = FILE_STR_OFF
+        for i in range(len(walked_files)):
+            file_off = out_file.tell()
+            filename = walked_files[i]
+            filepath = os.path.join(in_path, filename)
+
+            compressed_size = 0
+            m = hashlib.sha256()
+            n = hashlib.sha256()
+            with open(filepath, 'rb') as in_file:
+                cmp = zstd.ZstdCompressor(compression)
+                data = in_file.read(COMPRESS_CHUNK_SIZE)
+                while True:
+                    n.update(data)
+                    if len(data) > 0:
+                        out = cmp.compress(data)
+                    else:
+                        out = cmp.flush()
+                        
+                    compressed_size += len(out)
+                    m.update(out)
+                    out_file.write(out)
+
+                    if len(data) == 0:
+                        break
+
+                    data = in_file.read(COMPRESS_CHUNK_SIZE)
+
+            file_entries.append(BinaryFileEntry(
+                file_entry_string_off,
+                m.digest(),
+                os.stat(filepath).st_mode,
+                os.stat(filepath).st_size,
+                n.digest(),
+                file_off
+            ))
+            file_entry_string_off += len(filename.encode()) + 1
+
+        # Finally write file entries
+        out_file.seek(FILE_SEC_OFF)
+        for entry in file_entries:
+            out_file.write(entry.encode())
+                
 
 
 if __name__ == "__main__":
-
     def get_id(prompt: str = "Enter id: "):
-        id = input(prompt).strip()
-        invalid = False
-        for letter in id:
-            if letter.isspace() or letter.isupper():
-                invalid = True
-            if not (letter.isascii() or letter in ["-", "_"]):
-                invalid = True
-
-        if invalid:
-            raise RuntimeError(
-                "id must only contain alphanumeric characters, or _ and -"
-            )
-        return id
+        while True:
+            id = input(prompt).strip()
+            invalid = False
+            for letter in id:
+                if letter.isspace() or letter.isupper():
+                    invalid = True
+                if not (letter.isascii() or letter in ["-", "_"]):
+                    invalid = True
+            if invalid:
+                logger.warning("id must only contain alphanumeric characters, or _ and -")
+                continue
+            return id
 
     def get_version(prompt: str = "Enter version: "):
         while True:
@@ -494,7 +266,7 @@ if __name__ == "__main__":
                 if len(version_str) == 0:
                     return None
                 else:
-                    return Version.decode(version_str.split("."))
+                    return Version.decode_obj([ int(v) for v in version_str.split(".") ])
             except Exception as e:
                 if (type(e) is KeyboardInterrupt or type(e) is InterruptedError):
                     return
@@ -503,7 +275,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         prog="KPM Helper",
         description="Kindle Package Manager Helper is used for a ton of stuff",
-        epilog="Created by Hackerdude (https://ko-fi.com/hackerdude)",
+        epilog="v3.0.0 - Created by Hackerdude (https://hackerdude.tech)",
     )
     subparsers = parser.add_subparsers(title="command", required=True)
 
@@ -514,20 +286,19 @@ if __name__ == "__main__":
     pack_subparsers = package_parser.add_subparsers(title="subcommand", required=True)
 
     # init
-    def create_package(args):
+    def init_package(args):
+        id = get_id("Enter package id: ")
+
         while True:
-            id = get_id("Enter package id: ")
-
             name = input("Enter package name: ").strip()
-            if len(name) == 0:
-                raise RuntimeError("Package must have a non-empty name")
+            if len(name) != 0:
+                break
+            logger.warning("Package name must not be empty.")
 
-            author = input("Enter package author: ").strip()
-            description = input("Enter package description: ").strip()
-            break
+        author = input("Enter package author: ").strip()
+        description = input("Enter package description: ").strip()
 
         package = Package(
-            args.path,
             id,
             name,
             author,
@@ -536,8 +307,8 @@ if __name__ == "__main__":
             [],
             args.supported_platform if len(args.supported_platform) > 0 else None,
         )
-        package.validate()
-        package.write_manifest()
+        os.makedirs(args.path, exist_ok=True)
+        package.write_manifest(args.path)
 
     package_init_parser = pack_subparsers.add_parser(
         "init",
@@ -553,13 +324,14 @@ if __name__ == "__main__":
         default=[],
         choices=valid_supported_platforms,
     )
-    package_init_parser.set_defaults(func=create_package)
+    package_init_parser.set_defaults(func=init_package)
 
     # pack
     def pack_package(args):
         assert os.path.isdir(args.pkg_path)
-        package = Package(args.pkg_path)
-        package.pack(args.output_path, args.compression)
+        package: Package = Package.read_manifest(args.pkg_path) # @TODO: Output path stuff
+        with open(args.output_path, 'wb') as file:
+            package.pack(args.compression, args.pkg_path, file)
 
     package_pack_parser = pack_subparsers.add_parser(
         "pack", help="Pack a package folder into a kpkg file"
@@ -568,7 +340,7 @@ if __name__ == "__main__":
         "pkg_path", help="The path to the package folder", type=pathlib.Path
     )
     package_pack_parser.add_argument(
-        "output_path", help="The folder to put the kpkg file in", type=pathlib.Path
+        "output_path", help="The path to the output kpkg file", type=pathlib.Path
     )
     package_pack_parser.add_argument(
         "--compression",
@@ -581,9 +353,9 @@ if __name__ == "__main__":
     # add dependency
     def package_add_dependency(args):
         assert os.path.isdir(args.pkg_path)
-        package = Package(args.pkg_path)
+        package: Package = Package.read_manifest(args.pkg_path)
 
-        package.add_dependency(
+        package.dependencies.append(
             Dependency(
                 get_id("Enter dependency id: "),
                 get_version("Enter minimum version (inclusive): "),
@@ -591,13 +363,13 @@ if __name__ == "__main__":
             )
         )
 
-        package.write_manifest()
+        package.write_manifest(args.pkg_path)
 
     package_add_dependency_parser = pack_subparsers.add_parser(
         "add_dependency", help="Pack a package folder into a kpkg file"
     )
     package_add_dependency_parser.add_argument(
-        "pkg_path", help="The path to the package folder", type=pathlib.Path
+        "pkg_path", help="The path to the package folder", type=pathlib.Path, default='./'
     )
     package_add_dependency_parser.set_defaults(func=package_add_dependency)
 
@@ -607,14 +379,15 @@ if __name__ == "__main__":
         assert os.path.isdir(args.pkg_path)
         package = Package(args.pkg_path)
 
-        package.remove_dependency(get_id("Enter dependency id: "))
-        package.write_manifest()
+        target_id = get_id("Enter dependency id: ")
+        package.dependencies.remove(next([dep for dep in package.dependencies if dep.id == target_id]))
+        package.write_manifest(args.pkg_path)
 
     package_remove_dependency_parser = pack_subparsers.add_parser(
         "remove_dependency", help="Pack a package folder into a kpkg file"
     )
     package_remove_dependency_parser.add_argument(
-        "pkg_path", help="The path to the package folder", type=pathlib.Path
+        "pkg_path", help="The path to the package folder", type=pathlib.Path, default='./'
     )
     package_remove_dependency_parser.set_defaults(func=package_remove_dependency)
 
