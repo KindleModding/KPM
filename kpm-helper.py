@@ -60,10 +60,12 @@ class Dependency:
     max_version: Version|None
 
     def encode_obj(self):
-        return {
-            "min": self.min_version.encode_obj(),
-            "max": self.max_version.encode_obj()
-        }
+        dep = {}
+        if self.min_version:
+            dep["min"] = self.min_version.encode_obj()
+        if self.max_version:
+            dep["max"] = self.max_version.encode_obj()
+        return dep
 
     def decode_obj(obj: dict):
         return Dependency(
@@ -80,7 +82,15 @@ class BinaryDependency:
     max_version: Version
 
     def encode(self):
-        return struct.pack("<Q", self.id_ptr) + self.min_version.encode() + self.max_version.encode()
+        min_version = self.min_version
+        max_version = self.max_version
+
+        if min_version is None:
+            min_version = Version(0, 0, 0)
+        if max_version is None:
+            max_version = Version(4294967295, 4294967295, 4294967295)
+
+        return struct.pack("<Q", self.id_ptr) + min_version.encode() + max_version.encode()
 
     def decode(buffer: BytesIO):
             dep = BinaryDependency(None, None, None)
@@ -91,20 +101,20 @@ class BinaryDependency:
 
 @dataclass
 class BinaryFileEntry:
-    SIZE = 8 + 32 + 4 + 8 + 32 + 8
+    SIZE = 8 + 32 + 8 + 32 + 4 + 8
     """Class that represents a file entry"""
     path_ptr: int
+    installed_checksum: bytes
+    installed_size: int
     checksum: bytes
     file_mode: int
-    installed_size: int
-    installed_checksum: bytes
     offset: int
 
     def decode(buffer: BytesIO):
-        return BinaryFileEntry(*struct.unpack("<Q32sIQ32sQ", buffer.read(BinaryFileEntry.SIZE)))
+        return BinaryFileEntry(*struct.unpack("<Q32sQ32sIQ", buffer.read(BinaryFileEntry.SIZE)))
 
     def encode(self):
-        return struct.pack("<Q32sIQ32sQ", self.path_ptr, self.checksum, self.file_mode, self.installed_size, self.installed_checksum, self.offset)
+        return struct.pack("<Q32sQ32sIQ", self.path_ptr, self.installed_checksum, self.installed_size, self.checksum, self.file_mode, self.offset)
 
 
 @dataclass
@@ -133,7 +143,7 @@ class Package:
                 manifest["supported_platforms"] = self.supported_platforms
             file.write(json.dumps(manifest, indent=2))
 
-    def read_manifest(package_path: str):
+    def read_manifest(package_path: str) -> Package:
         with open(os.path.join(package_path, "manifest.json"), 'r') as file:
             raw_manifest: dict = json.loads(file.read())
 
@@ -325,7 +335,25 @@ class Package:
                         break
 
         package.write_manifest(out_path)
-                
+
+@dataclass
+class RepoPackage:
+    name: str
+    author: str
+    description: str
+    icon: str
+    artifacts: str
+
+
+@dataclass
+class Repo:
+    """ Repository class """
+    id: str
+    name: str
+    description: str
+    pubkey: str|None
+    signature: str|None
+    packages: dict[str, RepoPackage]
             
 
 
@@ -457,12 +485,9 @@ if __name__ == "__main__":
         assert os.path.isdir(args.pkg_path)
         package: Package = Package.read_manifest(args.pkg_path)
 
-        package.dependencies.append(
-            Dependency(
-                get_id("Enter dependency id: "),
-                get_version("Enter minimum version (inclusive): "),
-                get_version("Enter maximum version (exclusive): "),
-            )
+        package.dependencies[get_id("Enter dependency id: ")] = Dependency(
+            get_version("Enter minimum version (inclusive) or leave blank: "),
+            get_version("Enter maximum version (exclusive) or leave blank: ")
         )
 
         package.write_manifest(args.pkg_path)

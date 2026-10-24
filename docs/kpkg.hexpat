@@ -5,7 +5,7 @@
 
 #define SemVerSize (4 + 4 + 4)
 #define KPKG_DependencyEntrySize (8 + (4 + 4 + 4) + (4 + 4 + 4))
-#define KPKG_FileEntrySize (8 + 32 + 4 + 8 + 32 + 8)
+#define KPKG_FileEntrySize (8 + 32 + 8 + 32 + 4 + 8)
 
 struct SemVer
 {
@@ -27,10 +27,10 @@ struct KPKG_FileEntry
 {
     u64 path_ptr;
     char path[] @ path_ptr + addressof(parent.strings_size) + sizeof(parent.strings_size) + KPKG_DependencyEntrySize*parent.dependency_count + KPKG_FileEntrySize*parent.file_count;
+    char installed_checksum[32];
+    u64 installed_size;
     char checksum[32];
     u32 file_mode;
-    u64 installed_size;
-    char installed_checksum[32];
     u64 file_offset;
 };
 

@@ -52,10 +52,10 @@ typedef struct __attribute__ ((packed))
 typedef struct __attribute__ ((packed))
 {
     uint64_t path; /**< Pointer in string section to the file's path */
+    uint8_t installed_checksum[32]; /**< The file's decompressed checksum (sha256) */
+    uint64_t installed_size; /**< The size of this file once decompressed */
     uint8_t checksum[32]; /**< The file's compressed checksum (sha256) */
     uint32_t file_mode; /**< The file mode */
-    uint64_t installed_size; /**< The size of this file once decompressed */
-    uint8_t installed_checksum[32]; /**< The file's decompressed checksum (sha256) */
     uint64_t offset; /**< Pointer to compressed stream in file data section */
 } KPKG_FileEntry;
 
