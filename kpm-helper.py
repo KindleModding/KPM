@@ -254,7 +254,7 @@ class Package:
                 supported.append(key)
         return supported
 
-    def unpack(in_file: BytesIO, out_path: str):
+    def read_header(in_file: BytesIO) -> tuple[Package, list[BinaryFileEntry], bytes]:
         if in_file.read(4) != b'KPKG':
             raise Exception("File is not a KPKG file")
 
@@ -279,10 +279,31 @@ class Package:
         for dep in binary_deps:
             dependencies[Package.__read_str(string_buf, dep.id_ptr).decode()] = Dependency( dep.min_version, dep.max_version )
 
-        for i in range(file_count):
+        id: bytes = Package.__read_str(string_buf, 0)
+        name: bytes = Package.__read_str(string_buf, len(id) + 1)
+        author: bytes = Package.__read_str(string_buf, len(name) + 1)
+        description: bytes = Package.__read_str(string_buf, len(author) + 1)
+        return (
+            Package(
+                id.decode(),
+                name.decode(),
+                author.decode(),
+                description.decode(),
+                package_version,
+                dependencies,
+                Package.__bitmap_to_supported(supported_bitmap)
+            ),
+            file_entries,
+            string_buf
+        )
+
+    def unpack(in_file: BytesIO, out_path: str):
+        package, file_entries, string_buf = Package.read_header(in_file)
+
+        for i in range(len(file_entries)):
             file_entry = file_entries[i]
             size = -1
-            if i < file_count-1:
+            if i < len(file_entries)-1:
                 size = file_entries[i+1] - file_entry.offset
             filepath = os.path.join(out_path, Package.__read_str(string_buf, file_entry.path_ptr).decode())
             logging.info(f"Unpacking '{filepath}' ({file_entry.installed_checksum.hex()})")
@@ -303,19 +324,7 @@ class Package:
                     if current == size:
                         break
 
-        id: bytes = Package.__read_str(string_buf, 0)
-        name: bytes = Package.__read_str(string_buf, len(id) + 1)
-        author: bytes = Package.__read_str(string_buf, len(name) + 1)
-        description: bytes = Package.__read_str(string_buf, len(author) + 1)
-        Package(
-            id.decode(),
-            name.decode(),
-            author.decode(),
-            description.decode(),
-            package_version,
-            dependencies,
-            Package.__bitmap_to_supported(supported_bitmap)
-        ).write_manifest(out_path)
+        package.write_manifest(out_path)
                 
             
 
@@ -473,7 +482,10 @@ if __name__ == "__main__":
         package = Package(args.pkg_path)
 
         target_id = get_id("Enter dependency id: ")
-        package.dependencies.remove(next([dep for dep in package.dependencies if dep.id == target_id]))
+        if not target_id in package.dependencies:
+            logging.info(f"Dependency '{target_id}' not found in package!")
+            return
+        del package.dependencies[target_id]
         package.write_manifest(args.pkg_path)
 
     package_remove_dependency_parser = pack_subparsers.add_parser(
