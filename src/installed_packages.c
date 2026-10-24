@@ -32,6 +32,7 @@ KPMResult KPM_GetInstalledPackage(KPM* kpm, const char* packageId, InstalledPack
     if (package != NULL)
     {
         package->id = NULL;
+        package->repository = NULL;
         package->name = NULL;
         package->author = NULL;
         package->description = NULL;
