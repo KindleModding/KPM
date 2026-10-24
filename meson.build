@@ -36,7 +36,7 @@ subproject('libarchive', default_options: [
   'libb2=disabled',
   'iconv=disabled',
   'lz4=disabled',
-  'zstd=enabled',
+  'zstd=disabled',
   'lzma=enabled',
   'lzo2=disabled',
   'cng=disabled',
@@ -45,7 +45,6 @@ subproject('libarchive', default_options: [
   'regex=disabled',
   'xattr=disabled',
   'acl=disabled',
-
 ])
 openssl = subproject('openssl', default_options: ['default_library=static', 'build_cli=false']) # Needed for cURL HTTPS support
 subproject('nghttp2', default_options: ['default_library=static']) # Needed for cURL HTTP/2 support
