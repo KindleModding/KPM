@@ -222,7 +222,7 @@ int main(int argc, char* argv[])
         // Update index automatically
         KPM_UpdateIndex(&kpm, &kpm_io);
 
-        InstallTarget* targets = malloc((argc - (command_index+1)) * sizeof(struct InstallTarget));
+        InstallTarget* targets = malloc((argc - (command_index+1)) * sizeof(InstallTarget));
         for (int i=0; i < argc - (command_index+1); i++)
         {
             targets[i].repository = NULL;
@@ -268,7 +268,7 @@ int main(int argc, char* argv[])
         KPM_ListInstalledPackages(&kpm, &installed_package_count, &installed_packages);
 
         size_t target_count = 0;
-        InstallTarget* targets = malloc(installed_package_count * sizeof(struct InstallTarget));
+        InstallTarget* targets = malloc(installed_package_count * sizeof(InstallTarget));
         for (int i=0; i < installed_package_count; i++)
         {
             if (installed_packages[i].repository == NULL)
