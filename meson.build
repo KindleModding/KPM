@@ -31,7 +31,7 @@ subproject('cjson', default_options: ['tests=false', 'default_library=static'])
 subproject('libarchive', default_options: [
   'default_library=static',
   'openssl=disabled',
-  'zlib=disabled',
+  'zlib=enabled',
   'bz2lib=disabled',
   'libb2=disabled',
   'iconv=disabled',
