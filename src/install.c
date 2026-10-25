@@ -1153,7 +1153,7 @@ KPMResult KPM_InstallPackages(KPM* kpm, size_t targetCount, InstallTarget* targe
             remove(kpkg_path);
             free(kpkg_path);
             retval = KPM_GENERIC_ERROR;
-            continue;
+            break;
         }
 
         remove(kpkg_path);
