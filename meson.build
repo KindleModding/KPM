@@ -38,6 +38,7 @@ subproject('openssl', default_options: ['default_library=static', 'build_cli=fal
 subproject('nghttp2', default_options: ['default_library=static']) # Needed for cURL HTTP/2 support
 curl = subproject('curl', default_options: [
   'tool=disabled',
+  'brotli=disabled',
   'tests=disabled',
   'unittests=disabled',
   'default_library=static',

@@ -41,7 +41,7 @@ make_immutable() {
 
 make_mutable /var/local/kmc
 echo "Copying KPM files..."
-cp -rf ./kmc/* /var/local/kmc
+cp -rf ./kmc/* /var/local/kmc/
 for PLATFORM in kindlepw2 kindlehf
 do
     chmod +x /var/local/kmc/${PLATFORM}/bin/kpm
