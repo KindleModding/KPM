@@ -1,13 +1,17 @@
-#include "simpleGET.h"
 #include <curl/curl.h>
 #include <curl/easy.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "simpleGET.h"
+#include "curl_helpers.h"
+
 SimpleGETRequest* SimpleGET_Initialise(const char* url)
 {
     SimpleGETRequest* request = malloc(sizeof(SimpleGETRequest));
+    request->callback = NULL;
+    request->ptr = NULL;
     request->buffer = NULL;
     request->size = 0;
     request->response_code = 0;
@@ -17,13 +21,19 @@ SimpleGETRequest* SimpleGET_Initialise(const char* url)
     curl_easy_setopt(request->curl, CURLOPT_URL, url);
     curl_easy_setopt(request->curl, CURLOPT_WRITEFUNCTION, SimpleGET_Callback);
     curl_easy_setopt(request->curl, CURLOPT_WRITEDATA, (void *)request); // This _should_ work
-    curl_easy_setopt(request->curl, CURLOPT_FOLLOWLOCATION, 1L); //@TODO: Wth?
-    curl_easy_setopt(request->curl, CURLOPT_USERAGENT, "kpm/1.0.0");
-    curl_easy_setopt(request->curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2TLS);
-    curl_easy_setopt(request->curl, CURLOPT_FTP_SKIP_PASV_IP, 1L);
-    curl_easy_setopt(request->curl, CURLOPT_TCP_KEEPALIVE, 1L);
+    KPM_SET_CURL_OPTIONS(request->curl);
 
     return request;
+}
+
+void SimpleGET_SetMaxSize(SimpleGETRequest* request, size_t max_size)
+{
+    request->max_size = max_size;
+}
+
+void SimpleGET_SetCallback(SimpleGETRequest* request, size_t (*callback)(void* ptr, size_t size, unsigned char* buffer))
+{
+    request->callback = callback;
 }
 
 void SimpleGET_Cleanup(SimpleGETRequest *request)
@@ -47,9 +57,7 @@ size_t SimpleGET_Callback(char* ptr, size_t size, size_t nmemb, void* userdata)
 
     unsigned char* newBuffer = (unsigned char*) realloc(current->buffer, current->size + realsize + 1);
     if (!newBuffer)
-    {
-        return 0; // OOM
-    }
+        return CURL_WRITEFUNC_ERROR; // OOM
 
     current->buffer = newBuffer;
     memcpy(&(current->buffer[current->size]), ptr, realsize);
@@ -58,6 +66,9 @@ size_t SimpleGET_Callback(char* ptr, size_t size, size_t nmemb, void* userdata)
 
     if (current->size > current->max_size)
         return CURL_WRITEFUNC_ERROR;
+
+    if (current->callback)
+        return current->callback(current->ptr, current->size, current->buffer);
 
     return realsize;
 }
