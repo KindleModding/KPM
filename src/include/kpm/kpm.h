@@ -21,7 +21,7 @@
 
 #define KPM_VERSION_MAJOR 0
 #define KPM_VERSION_MINOR 2
-#define KPM_VERSION_PATCH 3
+#define KPM_VERSION_PATCH 4
 
 typedef enum
 {
