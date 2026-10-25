@@ -244,7 +244,7 @@ int main(int argc, char* argv[])
         }
         else
         {
-            kpm_io.log(KPM_VERBOSITY_INFO, "Installed %i package(s) succesfully.", argc - (command_index+1));
+            kpm_io.log(KPM_VERBOSITY_INFO, "Installed %i package(s) successfully.", argc - (command_index+1));
         }
         free(targets);
     }
@@ -256,7 +256,7 @@ int main(int argc, char* argv[])
         }
         else
         {
-            kpm_io.log(KPM_VERBOSITY_INFO, "Uninstalled %i packages succesfully.", argc - (command_index+1));
+            kpm_io.log(KPM_VERBOSITY_INFO, "Uninstalled %i packages successfully.", argc - (command_index+1));
         }
     }
     else if (strcmp(argv[command_index], "upgrade") == 0)
@@ -314,7 +314,7 @@ int main(int argc, char* argv[])
         if ((error = KPM_InstallPackages(&kpm, target_count, targets, &kpm_io)) != KPM_OK)
             kpm_io.log(KPM_VERBOSITY_ERROR, "Failed to upgrade packages (%i: %s)", error, KPM_ErrorToString(error));
         else
-            kpm_io.log(KPM_VERBOSITY_INFO, "Upgraded %i package(s) succesfully.", installed_package_count);
+            kpm_io.log(KPM_VERBOSITY_INFO, "Upgraded %i package(s) successfully.", installed_package_count);
         KPM_FreeInstalledPackageList(installed_package_count, installed_packages);
         KPM_FreeInstallTargetList(target_count, targets);
     }
