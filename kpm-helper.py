@@ -236,20 +236,20 @@ class Package:
             filepath = os.path.join(in_path, filename)
 
             compressed_size = 0
-            m = hashlib.sha256()
-            n = hashlib.sha256()
+            compressed_digest = hashlib.sha256()
+            og_digest = hashlib.sha256()
             with open(filepath, 'rb') as in_file:
                 cmp = zstd.ZstdCompressor(compression)
                 data = in_file.read(COMPRESS_CHUNK_SIZE)
                 while True:
-                    n.update(data)
+                    og_digest.update(data)
                     if len(data) > 0:
                         out = cmp.compress(data)
                     else:
                         out = cmp.flush()
                         
                     compressed_size += len(out)
-                    m.update(out)
+                    compressed_digest.update(out)
                     out_file.write(out)
 
                     if len(data) == 0:
@@ -259,10 +259,10 @@ class Package:
 
             file_entries.append(BinaryFileEntry(
                 file_entry_string_off,
-                m.digest(),
-                os.stat(filepath).st_mode,
+                og_digest.digest(),
                 os.stat(filepath).st_size,
-                n.digest(),
+                compressed_digest.digest(),
+                os.stat(filepath).st_mode,
                 file_off
             ))
             file_entry_string_off += len(filename.encode()) + 1
