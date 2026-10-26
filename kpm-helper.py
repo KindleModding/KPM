@@ -26,8 +26,10 @@ SUPPORTED_PLATFORMS = {
     "kindlehf": 1 << 3
 }
 
-valid_supported_platforms = [
-    "kindle", "kindle5", "kindlepw2", "kindlehf"
+BLOCKED_IDS = [
+    "juno",             # Kindle firmware
+    "libbluetooth",     # 
+    "btfd"              #
 ]
 
 
@@ -158,6 +160,22 @@ class Package:
         )
 
     def pack(self, compression: int, in_path: str, out_file: BytesIO):
+        if (self.id in BLOCKED_IDS):
+            logging.error(f"ID must not be f{self.id} (reserved)")
+            exit(1)
+        if (len(self.id) < 2):
+            logging.error("ID must contain at least 2 characters")
+            exit(1)
+        if (not any( [ c.isalpha() for c in self.id ] )):
+            logging.error("ID must contain at least one letter")
+            exit(1)
+        if (not all( [ c.isalnum() or c == '-' or c == '_' for c in self.id ] )):
+            logging.error(f"ID must only contain characters that are alphanumeric, '-', or '_' ")
+            exit(1)
+        if (not self.id.islower()):
+            logging.error(f"ID must be lowercase")
+            exit(1)
+
         strings: list[str] = []
         strings.extend([self.id, self.name, self.author, self.description])
 
@@ -361,14 +379,20 @@ if __name__ == "__main__":
     def get_id(prompt: str = "Enter id: "):
         while True:
             id = input(prompt).strip()
-            invalid = False
-            for letter in id:
-                if letter.isspace() or letter.isupper():
-                    invalid = True
-                if not (letter.isascii() or letter in ["-", "_"]):
-                    invalid = True
-            if invalid:
-                logger.warning("id must only contain alphanumeric characters, or _ and -")
+            if (id in BLOCKED_IDS):
+                logging.warning(f"ID must not be f{id} (reserved)")
+                continue
+            if (len(id) < 2):
+                logging.warning("ID must contain at least 2 characters")
+                continue
+            if (not any( [ c.isalpha() for c in id ] )):
+                logging.warning("ID must contain at least one letter")
+                continue
+            if (not all( [ c.isalnum() or c == '-' or c == '_' for c in id ] )):
+                logging.warning(f"ID must only contain characters that are alphanumeric, '-', or '_' ")
+                continue
+            if (not id.islower()):
+                logging.warning(f"ID must be lowercase")
                 continue
             return id
 
@@ -435,7 +459,7 @@ if __name__ == "__main__":
         help="Add a supported platform to the manifest",
         action="append",
         default=[],
-        choices=valid_supported_platforms,
+        choices=list(SUPPORTED_PLATFORMS.keys()),
     )
     package_init_parser.set_defaults(func=init_package)
 
@@ -606,7 +630,7 @@ if __name__ == "__main__":
         help="The supported platform of the artifact to remove",
         action="append",
         default=[],
-        choices=valid_supported_platforms,
+        choices=list(SUPPORTED_PLATFORMS.keys()),
     )
     repo_remove_parser.set_defaults(func=repo_remove)
 
