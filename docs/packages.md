@@ -105,6 +105,17 @@ For example, the following dependency object defines a dependency on `foobar` wh
 }
 ```
 
+### Built-In Dependencies
+The following dependencies represent system components rather than actual packages.  
+They can be used to gate package by Kindle firmware version or whether a given firmware component is present or not.  
+```json
+| Key            | Description                              | Version                                                       |
+|----------------|------------------------------------------|---------------------------------------------------------------|
+| `juno`         | The Kindle's firmware                    | Matches the Kindle firmware version's first 3 version numbers |
+| `libbluetooth` | Present if the Kindle has `libbluetooth` | N/A                                                           |
+| `btfd`         | Present if the Kindle has `btfd`         | N/A                                                           |
+```
+
 ### Supported Platforms
 The platform defines the device and OS architecture of whatever is running KPM. The following platforms are valid:  
 
@@ -150,6 +161,11 @@ When a package is upgraded, the following actions are performed:
 - The `install.sh` hook is run is run with the `upgrade` flag (ie: `sh install.sh upgrade`)
 
 Note that KPM handles file deletion for the unpacked package, the `uninstall.sh` hook should only delete files that are not part of the unpacked package itself.
+
+### Failure Modes
+`install.sh` and `uninstall.sh` **must** return 0 on succesful completion, otherwise the package deems the operation to be a failure.  
+
+When `install.sh` fails, `uninstall.sh` is run with the `install_fail` flag (ie: `sh uninstall.sh install_fail`)
 
 ### Persistent Data
 If packages want to store data between upgrades, they **must not** store it in their unpacked package folder as it will be deleted during upgrades. It is recommended to store configuration and other such data under `/mnt/us/config/<packageid>/`.
@@ -216,3 +232,7 @@ If the file `/rootfs/usr/bin/otav3` exists created in the package, when the Kind
 This means when the Kindle accesses `/usr/bin/otav3`, it will actually be accessing `/rootfs/usr/bin/otav3` in the KPM package.
 
 Note that overlays **do not** modify the underlying file, this makes it an incredibly safe method for modifying the rootfs.
+
+## Restrictions
+Alongside the above restrictions, packages **must**:
+- Contain at least 1 file when packed (at least one file besides `manifest.json` when unpacked)
