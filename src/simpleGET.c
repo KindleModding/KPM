@@ -10,7 +10,6 @@
 SimpleGETRequest* SimpleGET_Initialise(const char* url)
 {
     SimpleGETRequest* request = malloc(sizeof(SimpleGETRequest));
-    request->callback = NULL;
     request->ptr = NULL;
     request->buffer = NULL;
     request->size = 0;
@@ -29,11 +28,6 @@ SimpleGETRequest* SimpleGET_Initialise(const char* url)
 void SimpleGET_SetMaxSize(SimpleGETRequest* request, size_t max_size)
 {
     request->max_size = max_size;
-}
-
-void SimpleGET_SetCallback(SimpleGETRequest* request, size_t (*callback)(void* ptr, size_t size, unsigned char* buffer))
-{
-    request->callback = callback;
 }
 
 void SimpleGET_Cleanup(SimpleGETRequest *request)
@@ -66,9 +60,6 @@ size_t SimpleGET_Callback(char* ptr, size_t size, size_t nmemb, void* userdata)
 
     if (current->size > current->max_size)
         return CURL_WRITEFUNC_ERROR;
-
-    if (current->callback)
-        return current->callback(current->ptr, current->size, current->buffer);
-
+    
     return realsize;
 }
