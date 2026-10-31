@@ -92,29 +92,7 @@ char* asprintf_hd(const char* format, ...)
     return result;
 }
 
-/**
- * @brief Returns null if the location specified is a URL, otherwise returns the realpath of the specified path
- * 
- * @param location 
- * @return char* 
- */
-char* get_realpath(const char* location)
+bool is_path(const char* location)
 {
-    char* path = NULL;
-    if (strncmp(location, "file://", strlen("file://")) == 0)
-    {
-        path = malloc(strlen(location) - strlen("file://") + 1);
-        memcpy(path, location+strlen("file://"), strlen(location) - strlen("file://"));
-        path[strlen(location) - strlen("file://")] = 0;
-    } else
-    {
-        // @TODO: More robust path checking
-    }
-
-    if (path == NULL)
-        return NULL;
-
-    char* abspath = realpath(path, NULL);
-    free(path);
-    return abspath;
+    return location[0] == '/' || location[0] == '.';
 }

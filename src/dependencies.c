@@ -244,7 +244,7 @@ bool FindDependencyNode(DependencyGraph* graph, char* id, SemVer min_version, Se
  */
 KPMResult Internal_GetArtifactDependencies(KPM* kpm, IndexedArtifact* target, size_t* targetDependencyCount, ArtifactDependency** targetDependencies, KPMIO* kpm_io)
 {
-    if (target->url != NULL && strlen(target->url) >= strlen("file://") && strncmp(target->url, "file://", strlen("file://")) == 0)
+    if (target->url != NULL && target->repository == NULL)
     {
         char* manifestData;
         KPMResult result = Internal_GetManifest(target->url+strlen("file://"), &manifestData, NULL);
