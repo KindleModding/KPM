@@ -321,11 +321,6 @@ KPKG_Result KPKG3_LoadFile(KPKG_File** file, const char* location, int fd)
     return KPKG_OK;
 }
 
-size_t KPKG_CURLCallback(char* ptr, size_t size, size_t nmemb, void* userdata)
-{
-    KPKG_File* payload = (KPKG3_Payload*) ptr;
-}
-
 KPKG_Result KPKG_LoadFile(KPKG_File** file, const char* location)
 {
     *file = NULL;
@@ -343,7 +338,7 @@ KPKG_Result KPKG_LoadFile(KPKG_File** file, const char* location)
         }
 
         lseek(fd, 0, SEEK_SET);
-        if (strncmp(miniheader, "KPKG", 4)) // This is most likely a legacy file!
+        if (memcmp(miniheader, "KPKG", 4)) // This is most likely a legacy file!
         {
             int res = KPKG1_LoadFile(file, location, fd);
             close(fd);
@@ -363,8 +358,6 @@ KPKG_Result KPKG_LoadFile(KPKG_File** file, const char* location)
     }
 
     *file = malloc(sizeof(KPKG_File));
-
-    // @TODO: Curl path
 
     return KPKG_OK;
 }
