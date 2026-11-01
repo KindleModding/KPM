@@ -592,7 +592,7 @@ if __name__ == "__main__":
         package.write_manifest()
 
     package_add_dependency_parser = pack_subparsers.add_parser(
-        "add_dependency", help="Pack a package folder into a kpkg file"
+        "add_dependency", help="Add a dependency to a package"
     )
     package_add_dependency_parser.add_argument(
         "pkg_path", help="The path to the package folder", type=pathlib.Path
@@ -609,7 +609,7 @@ if __name__ == "__main__":
         package.write_manifest()
 
     package_remove_dependency_parser = pack_subparsers.add_parser(
-        "remove_dependency", help="Pack a package folder into a kpkg file"
+        "remove_dependency", help="Remove a dependency from a package"
     )
     package_remove_dependency_parser.add_argument(
         "pkg_path", help="The path to the package folder", type=pathlib.Path
