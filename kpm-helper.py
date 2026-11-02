@@ -222,16 +222,17 @@ class Package:
         for dep in dependencies:
             out_file.write(dep.encode())
 
-        FILE_SEC_OFF = out_file.tell()
+        FILE_F_ENTRIES_OFF = out_file.tell()
         out_file.seek(BinaryFileEntry.SIZE * len(walked_files), os.SEEK_CUR) # Skip to write our string data
 
         out_file.write(string_section)
         del string_section
 
+        FILE_F_SEC_OFF = out_file.tell()
         file_entries: list[BinaryFileEntry] = []
         file_entry_string_off = FILE_STR_OFF
         for i in range(len(walked_files)):
-            file_off = out_file.tell()
+            file_off = out_file.tell() - FILE_F_SEC_OFF
             filename = walked_files[i]
             filepath = os.path.join(in_path, filename)
 
@@ -268,7 +269,7 @@ class Package:
             file_entry_string_off += len(filename.encode()) + 1
 
         # Finally write file entries
-        out_file.seek(FILE_SEC_OFF)
+        out_file.seek(FILE_F_ENTRIES_OFF)
         for entry in file_entries:
             out_file.write(entry.encode())
 
