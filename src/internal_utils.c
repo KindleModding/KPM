@@ -9,6 +9,8 @@
 #define __USE_XOPEN_EXTENDED   /* See feature_test_macros(7) */
 #include <ftw.h>
 
+#include "internal_utils.h"
+
 /**
  * @brief Recursively create a folder and its parents
  * 

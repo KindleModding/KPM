@@ -19,12 +19,17 @@
 
 typedef enum {
     KPKG_OK,
+    KPKG_GENERIC_ERROR,
     KPKG_UNKNOWN_FORMAT,
     KPKG_VALIDATION_ERROR,
     KPKG_IO_ERROR,
     KPKG_MMAP_ERROR,
     KPKG_ZSTD_ERROR,
-    KPKG_VERSION_OUT_OF_RANGE
+    KPKG_VERSION_OUT_OF_RANGE,
+    KPKG_EARLY_EOF,
+    KPKG_CURL_ERROR,
+    KPKG_LIBARCHIVE_ERROR,
+    KPKG_FILESYSTEM_ERROR
 } KPKG_Result;
 
 // Global types
@@ -104,20 +109,13 @@ typedef struct
     };
 } KPKG_File;
 
-typedef struct
-{
-    int kpkg_version;
-    unsigned char* buf;
-    size_t buf_size;
-    KPKG_File* file;
-} KPKG_CURLData;
-
 //// General functions
-KPKG_Result KPKG_LoadFile(KPKG_File** file, const char* location);
+char* KPKG_ResultStr(KPKG_Result result);
+KPKG_Result KPKG_LoadFile(KPKG_File** file, const char* location, const char* out_path);
 void KPKG_CloseFile(KPKG_File* file);
 
 //// KPKG1-specific functions
-KPKG_Result KPKG1_ExtractTo(char* out_path, KPMIO* kpmio);
+KPKG_Result KPKG1_ExtractTo(KPKG_File* file, char* out_path, KPMIO* kpmio);
 
 //// KPKG3-specific functions
 
