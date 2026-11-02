@@ -392,6 +392,8 @@ bool KPKG3_ValidateFile(KPKG_File* file, int file_size)
     for (int i=0; i < file->kpkg3_payload.header->file_count; last_offset = file->kpkg3_payload.files[i].offset, i++)
         if (file->kpkg3_payload.files[i].offset >= file_section_size || file->kpkg3_payload.files[i].offset <= last_offset)
             return false; // File content OOB, or offsets invalid
+
+    return true;
 }
 
 KPKG_Result KPKG3_LoadFile(KPKG_File** kpkg_file, const char* location, FILE* in_file)
