@@ -433,28 +433,6 @@ void RenderGraph(DependencyGraph* graph, char** output)
     Internal_RenderGraph(graph, *output, false);
 }
 
-/**
- * @brief Alters the current dependency to be restricted so that the targetDependency is ALSO met (if possible)
- * 
- * @param currentDependency 
- * @param targetDependency 
- * @return KPMResult 
- */
-bool Internal_NarrowDependency(ArtifactDependency* currentDependency, ArtifactDependency* targetDependency)
-{
-    if (SemVerCmp(currentDependency->min_version, targetDependency->min_version) > 0 ||
-        SemVerCmp(currentDependency->max_version, targetDependency->max_version) <= 0)
-    {
-        return false;
-    }
-    else
-    {
-        currentDependency->min_version = targetDependency->min_version;
-        currentDependency->max_version = targetDependency->max_version;
-        return true;
-    }
-}
-
 int Internal_ConstructGraphFromArtifact(KPM* kpm, DependencyGraph* graph, IndexedArtifact* artifact, KPMIO* kpm_io)
 {
     kpm_io->log(KPM_VERBOSITY_DEBUG, "Constructing graph from %i", artifact->id);
@@ -590,19 +568,6 @@ int Internal_ConstructGraphFromArtifact(KPM* kpm, DependencyGraph* graph, Indexe
 
     KPM_FreeArtifactDependencyList(dependencyCount, dependencies);
     return root;
-}
-
-bool CheckIdInDependencyList(char* id, NodeIndex_t* needleIndex, size_t haystackSize, DependencyNode* haystack)
-{
-    for (*needleIndex = 0; *needleIndex < haystackSize; (*needleIndex)++)
-    {
-        if (strcmp(id, haystack[*needleIndex].id) == 0)
-        {
-            return true;
-        }
-    }
-
-    return false;
 }
 
 void Internal_ArrayAddNode(size_t* traversedNodeCount, NodeIndex_t** traversedNodes, NodeIndex_t node)
