@@ -73,7 +73,7 @@ char* KPKG1_GetManifest(FILE* file)
     return NULL;
 }
 
-KPKG_Result KPKG1_LoadFile(KPKG_File** kpkg_file, const char* location, FILE* in_file)
+KPKG_Result KPKG1_LoadFile(KPKG_File* kpkg_file, const char* location, FILE* in_file)
 {
     char* raw_manifest = KPKG1_GetManifest(in_file);
     if (!raw_manifest)
@@ -115,8 +115,7 @@ KPKG_Result KPKG1_LoadFile(KPKG_File** kpkg_file, const char* location, FILE* in
         return KPKG_VALIDATION_ERROR;
     }
 
-    *kpkg_file = malloc(sizeof(KPKG_File));
-    **kpkg_file = (KPKG_File) {
+    *kpkg_file = (KPKG_File) {
         .location = strdup(location),
         .kpkg_version = manifest_version,
         .kpkg1_payload = {
@@ -124,6 +123,11 @@ KPKG_Result KPKG1_LoadFile(KPKG_File** kpkg_file, const char* location, FILE* in
             .name = strdup(cJSON_GetStringValue(cJSON_GetObjectItem(json, "name"))),
             .author = strdup(cJSON_GetStringValue(cJSON_GetObjectItem(json, "author"))),
             .description = strdup(cJSON_GetStringValue(cJSON_GetObjectItem(json, "description"))),
+            .package_version = {
+                .major = cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(json, "version"), 0)),
+                .minor = cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(json, "version"), 1)),
+                .patch = cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(json, "version"), 2))
+            },
             .dependency_count = cJSON_GetArraySize(cJSON_GetObjectItem(json, "dependencies")),
             .dependencies = NULL,
             .supported_platforms = 0
@@ -137,33 +141,31 @@ KPKG_Result KPKG1_LoadFile(KPKG_File** kpkg_file, const char* location, FILE* in
         {
             free(raw_manifest);
             cJSON_Delete(json);
-            KPKG_CloseFile(*kpkg_file);
-            *kpkg_file = NULL;
+            KPKG_CloseFile(kpkg_file);
             return KPKG_VALIDATION_ERROR;
         }
 
         char* platform_str = cJSON_GetStringValue(platform);
         if (!strcmp(platform_str, "kindle"))
-            (**kpkg_file).kpkg1_payload.supported_platforms |= PLATFORM_KINDLE;
+            (*kpkg_file).kpkg1_payload.supported_platforms |= PLATFORM_KINDLE;
         else if (!strcmp(platform_str, "kindle5"))
-            (**kpkg_file).kpkg1_payload.supported_platforms |= PLATFORM_KINDLE5;
+            (*kpkg_file).kpkg1_payload.supported_platforms |= PLATFORM_KINDLE5;
         else if (!strcmp(platform_str, "kindlepw2"))
-            (**kpkg_file).kpkg1_payload.supported_platforms |= PLATFORM_KINDLEPW2;
+            (*kpkg_file).kpkg1_payload.supported_platforms |= PLATFORM_KINDLEPW2;
         else if (!strcmp(platform_str, "kindlehf"))
-            (**kpkg_file).kpkg1_payload.supported_platforms |= PLATFORM_KINDLEHF;
+            (*kpkg_file).kpkg1_payload.supported_platforms |= PLATFORM_KINDLEHF;
         else
         {
             free(raw_manifest);
             cJSON_Delete(json);
-            KPKG_CloseFile(*kpkg_file);
-            *kpkg_file = NULL;
+            KPKG_CloseFile(kpkg_file);
             return KPKG_VALIDATION_ERROR;
         }
     }
 
-    (**kpkg_file).kpkg1_payload.dependencies = malloc(sizeof(KPKG3_DependencyEntry) * (**kpkg_file).kpkg1_payload.dependency_count);
+    (*kpkg_file).kpkg1_payload.dependencies = malloc(sizeof(KPKG3_DependencyEntry) * (*kpkg_file).kpkg1_payload.dependency_count);
 
-    for (int i=0; i < (**kpkg_file).kpkg1_payload.dependency_count; i++)
+    for (int i=0; i < (*kpkg_file).kpkg1_payload.dependency_count; i++)
     {
         cJSON* el = cJSON_GetArrayItem(cJSON_GetObjectItem(json, "dependencies"), i);
         cJSON* min = cJSON_GetObjectItem(el, "min");
@@ -194,39 +196,38 @@ KPKG_Result KPKG1_LoadFile(KPKG_File** kpkg_file, const char* location, FILE* in
         {
             free(raw_manifest);
             cJSON_Delete(json);
-            KPKG_CloseFile(*kpkg_file);
-            *kpkg_file = NULL;
+            KPKG_CloseFile(kpkg_file);
             return KPKG_VALIDATION_ERROR;
         }
     }
 
-    for (int i=0; i < (**kpkg_file).kpkg1_payload.dependency_count; i++)
+    for (int i=0; i < (*kpkg_file).kpkg1_payload.dependency_count; i++)
     {
         cJSON* el = cJSON_GetArrayItem(cJSON_GetObjectItem(json, "dependencies"), i);
         cJSON* min = cJSON_GetObjectItem(el, "min");
         cJSON* max = cJSON_GetObjectItem(el, "max");
-        (**kpkg_file).kpkg1_payload.dependencies[i].id = strdup(cJSON_GetStringValue(cJSON_GetObjectItem(el, "id")));
+        (*kpkg_file).kpkg1_payload.dependencies[i].id = strdup(cJSON_GetStringValue(cJSON_GetObjectItem(el, "id")));
         if (!min)
-            (**kpkg_file).kpkg1_payload.dependencies[i].min_version = (SemVer) {
+            (*kpkg_file).kpkg1_payload.dependencies[i].min_version = (SemVer) {
                 .major = 0,
                 .minor = 0,
                 .patch = 0
             };
         else
-            (**kpkg_file).kpkg1_payload.dependencies[i].min_version = (SemVer) {
+            (*kpkg_file).kpkg1_payload.dependencies[i].min_version = (SemVer) {
                 .major = cJSON_GetNumberValue(cJSON_GetArrayItem(min, 0)),
                 .minor = cJSON_GetNumberValue(cJSON_GetArrayItem(min, 1)),
                 .patch = cJSON_GetNumberValue(cJSON_GetArrayItem(min, 2))
             };
         
         if (!max)
-            (**kpkg_file).kpkg1_payload.dependencies[i].max_version = (SemVer) {
+            (*kpkg_file).kpkg1_payload.dependencies[i].max_version = (SemVer) {
                 .major = UINT32_MAX,
                 .minor = UINT32_MAX,
                 .patch = UINT32_MAX
             };
         else
-            (**kpkg_file).kpkg1_payload.dependencies[i].max_version = (SemVer) {
+            (*kpkg_file).kpkg1_payload.dependencies[i].max_version = (SemVer) {
                 .major = cJSON_GetNumberValue(cJSON_GetArrayItem(max, 0)),
                 .minor = cJSON_GetNumberValue(cJSON_GetArrayItem(max, 1)),
                 .patch = cJSON_GetNumberValue(cJSON_GetArrayItem(max, 2))
@@ -396,13 +397,12 @@ bool KPKG3_ValidateFile(KPKG_File* file, int file_size)
     return true;
 }
 
-KPKG_Result KPKG3_LoadFile(KPKG_File** kpkg_file, const char* location, FILE* in_file)
+KPKG_Result KPKG3_LoadFile(KPKG_File* kpkg_file, const char* location, FILE* in_file)
 {
     struct stat stats;
     fstat(fileno(in_file), &stats);
 
-    *kpkg_file = malloc(sizeof(KPKG_File));
-    **kpkg_file = (KPKG_File) {
+    *kpkg_file = (KPKG_File) {
         .location = strdup(location),
         .kpkg3_payload = {
             .map_size = stats.st_size,
@@ -415,26 +415,24 @@ KPKG_Result KPKG3_LoadFile(KPKG_File** kpkg_file, const char* location, FILE* in
     };
     
     fclose(in_file);
-    if (!(*kpkg_file)->kpkg3_payload.internal_file)
+    if (!kpkg_file->kpkg3_payload.internal_file)
     {
-        KPKG_CloseFile(*kpkg_file);
-        *kpkg_file = NULL;
+        KPKG_CloseFile(kpkg_file);
         return KPKG_IO_ERROR;
     }
 
-    (*kpkg_file)->kpkg3_payload.header = (*kpkg_file)->kpkg3_payload.internal_file;
-    (*kpkg_file)->kpkg3_payload.dependencies = (*kpkg_file)->kpkg3_payload.internal_file + sizeof(KPKG3_Header);
-    (*kpkg_file)->kpkg3_payload.files = (*kpkg_file)->kpkg3_payload.internal_file + sizeof(KPKG3_Header) +
-                                    (sizeof(KPKG3_DependencyEntry) * (*kpkg_file)->kpkg3_payload.header->dependency_count);
-    (*kpkg_file)->kpkg3_payload.strings = (*kpkg_file)->kpkg3_payload.internal_file + sizeof(KPKG3_Header) +
-                                    (sizeof(KPKG3_DependencyEntry) * (*kpkg_file)->kpkg3_payload.header->dependency_count) +
-                                    (sizeof(KPKG3_FileEntry) * (*kpkg_file)->kpkg3_payload.header->file_count);
+    kpkg_file->kpkg3_payload.header = kpkg_file->kpkg3_payload.internal_file;
+    kpkg_file->kpkg3_payload.dependencies = kpkg_file->kpkg3_payload.internal_file + sizeof(KPKG3_Header);
+    kpkg_file->kpkg3_payload.files = kpkg_file->kpkg3_payload.internal_file + sizeof(KPKG3_Header) +
+                                    (sizeof(KPKG3_DependencyEntry) * kpkg_file->kpkg3_payload.header->dependency_count);
+    kpkg_file->kpkg3_payload.strings = kpkg_file->kpkg3_payload.internal_file + sizeof(KPKG3_Header) +
+                                    (sizeof(KPKG3_DependencyEntry) * kpkg_file->kpkg3_payload.header->dependency_count) +
+                                    (sizeof(KPKG3_FileEntry) * kpkg_file->kpkg3_payload.header->file_count);
 
     // Validate dependency, file and string sections do not OOB
-    if (!KPKG3_ValidateFile(*kpkg_file, stats.st_size))
+    if (!KPKG3_ValidateFile(kpkg_file, stats.st_size))
     {
-        KPKG_CloseFile(*kpkg_file);
-        *kpkg_file = NULL;
+        KPKG_CloseFile(kpkg_file);
         return KPKG_VALIDATION_ERROR;
     }
 
@@ -630,7 +628,8 @@ KPKG_Result KPKG_LoadFile(KPKG_File** kpkg_file, const char* location, const cha
         fseek(in_file, 0, SEEK_SET);
         if (memcmp(miniheader, "KPKG", 4)) // This is most likely a legacy file!
         {
-            int res = KPKG1_LoadFile(kpkg_file, location, in_file);
+            *kpkg_file = malloc(sizeof(KPKG_File));
+            int res = KPKG1_LoadFile(*kpkg_file, location, in_file);
             fclose(in_file);
             return res;
         }
@@ -642,7 +641,8 @@ KPKG_Result KPKG_LoadFile(KPKG_File** kpkg_file, const char* location, const cha
             return KPKG_VERSION_OUT_OF_RANGE;
         }
 
-        int res = KPKG3_LoadFile(kpkg_file, location, in_file);
+        *kpkg_file = malloc(sizeof(KPKG_File));
+        int res = KPKG3_LoadFile(*kpkg_file, location, in_file);
         fclose(in_file);
         return res;
     }
@@ -687,7 +687,7 @@ KPKG_Result KPKG_LoadFile(KPKG_File** kpkg_file, const char* location, const cha
 
     if (curl_data->type == KPKG_CURLTypeKPKG1)
     {
-        int res = KPKG1_LoadFile(kpkg_file, curl_data->out_path, curl_data->out_file);
+        int res = KPKG1_LoadFile(*kpkg_file, curl_data->out_path, curl_data->out_file);
         KPKG_FreeCURLData(&curl_data);
         return res;
     }
@@ -696,7 +696,6 @@ KPKG_Result KPKG_LoadFile(KPKG_File** kpkg_file, const char* location, const cha
     if (!KPKG3_ValidateFile(*kpkg_file, curl_data->downloaded))
     {
         KPKG_FreeCURLData(&curl_data); // Will also free the file
-        *kpkg_file = NULL;
         return KPKG_VALIDATION_ERROR;
     }
     curl_data->file = NULL; // Ensure it doesn't get freed
@@ -704,12 +703,78 @@ KPKG_Result KPKG_LoadFile(KPKG_File** kpkg_file, const char* location, const cha
     return KPKG_OK;
 }
 
+char* KPKG3_GetString(KPKG3_Payload* payload, uint64_t offset)
+{
+    return payload->strings + offset;
+}
+
+char* KPKG_GetId(KPKG_File* file)
+{
+    if (file->kpkg_version == KPKG_VERSION_1 || file->kpkg_version == KPKG_VERSION_2)
+        return file->kpkg1_payload.id;
+    else
+        return file->kpkg3_payload.strings;
+}
+
+char* KPKG_GetName(KPKG_File* file)
+{
+    if (file->kpkg_version == KPKG_VERSION_1 || file->kpkg_version == KPKG_VERSION_2)
+    {
+        return file->kpkg1_payload.name;
+    } else
+    {
+        int offset = 0;
+        for (int i = 0; i < 1; i++)
+            while (file->kpkg3_payload.strings[offset++] != '\0') {}
+        return file->kpkg3_payload.strings + offset + 1;
+    }
+}
+
+char* KPKG_GetAuthor(KPKG_File* file)
+{
+    if (file->kpkg_version == KPKG_VERSION_1 || file->kpkg_version == KPKG_VERSION_2)
+    {
+        return file->kpkg1_payload.author;
+    } else
+    {
+        int offset = 0;
+        for (int i = 0; i < 2; i++)
+            while (file->kpkg3_payload.strings[offset++] != '\0') {}
+        return file->kpkg3_payload.strings + offset + 1;
+    }
+}
+
+char* KPKG_GetDescription(KPKG_File* file)
+{
+    if (file->kpkg_version == KPKG_VERSION_1 || file->kpkg_version == KPKG_VERSION_2)
+    {
+        return file->kpkg1_payload.description;
+    } else
+    {
+        int offset = 0;
+        for (int i = 0; i < 3; i++)
+            while (file->kpkg3_payload.strings[offset++] != '\0') {}
+        return file->kpkg3_payload.strings + offset + 1;
+    }
+}
+
+SemVer KPKG_GetVersion(KPKG_File* file)
+{
+    if (file->kpkg_version == KPKG_VERSION_1 || file->kpkg_version == KPKG_VERSION_2)
+    {
+        return file->kpkg1_payload.package_version;
+    } else
+    {
+        return file->kpkg3_payload.header->package_version;
+    }
+}
+
 void KPKG_CloseFile(KPKG_File* file)
 {
     if (file == NULL)
         return;
     
-    if (file->kpkg_version >= 2)
+    if (file->kpkg_version >= KPKG_VERSION_3)
     {
         if (file->kpkg3_payload.internal_file)
         {
@@ -728,7 +793,7 @@ void KPKG_CloseFile(KPKG_File* file)
             file->kpkg3_payload.strings = NULL;
         }
     }
-    else
+    else if (file->kpkg_version == KPKG_VERSION_1 || file->kpkg_version == KPKG_VERSION_2)
     {
         free(file->kpkg1_payload.id);
         free(file->kpkg1_payload.name);
@@ -743,11 +808,6 @@ void KPKG_CloseFile(KPKG_File* file)
     }
     free(file->location);
     free(file);
-}
-
-char* KPKG3_GetString(KPKG3_Payload* payload, uint64_t offset)
-{
-    return payload->strings + offset;
 }
 
 KPKG3_DependencyEntry* KPKG3_GetDependencies(KPKG3_Payload* payload, size_t* count)

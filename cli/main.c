@@ -1,3 +1,4 @@
+#include "kpkg.h"
 #include "kpm.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,6 +28,11 @@ struct CLIState cli_state = {
     .debug = true
 #endif
 };
+
+bool is_path(const char* location) // @TODO: Move this into a shared file
+{
+    return location[0] == '/' || location[0] == '.';
+}
 
 void init_header()
 {
@@ -221,13 +227,28 @@ int main(int argc, char* argv[])
     {
         // Update index automatically
         KPM_UpdateIndex(&kpm, &kpm_io);
-
+        
         InstallTarget* targets = malloc((argc - (command_index+1)) * sizeof(InstallTarget));
         for (int i=0; i < argc - (command_index+1); i++)
         {
-            targets[i].repository = NULL;
-            targets[i].version = NULL;
-            targets[i].id = argv[command_index+1 + i];
+            if (is_path(argv[command_index+1 + i]))
+            {
+                targets[i].type = INSTALL_FILE;
+                int r;
+                if ((r = KPKG_LoadFile(&targets[i].file, argv[command_index+1 + i], NULL)) != KPKG_OK)
+                {
+                    free(targets);
+                    kpm_io.log(KPM_VERBOSITY_ERROR, "Could not load path %s as file (%s)", argv[command_index+1 + i], KPKG_ResultStr(r));
+                    error = KPM_GENERIC_ERROR;
+                    goto cleanup;
+                }
+            }
+            else
+            {
+                targets[i].repository = NULL;
+                targets[i].version = NULL;
+                targets[i].id = strdup(argv[command_index+1 + i]);
+            }
         }
 
         if (argc - (command_index+1) == 0)

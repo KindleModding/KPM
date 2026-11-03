@@ -1,4 +1,5 @@
 #include "curl_helpers.h"
+#include "kpm/kpkg.h"
 #include "openssl/evp.h"
 #include "openssl/types.h"
 
@@ -504,7 +505,13 @@ KPMResult KPM_InstallPackages(KPM* kpm, size_t targetCount, InstallTarget* targe
         bool installing = false;
         for (size_t j=0; j < targetCount; j++)
         {
-            if (strcmp(installedPackages[i].id, targets[j].id) == 0)
+            char* id = targets[j].id;
+            if (targets[j].type == INSTALL_FILE)
+            {
+                id = strdup(KPKG_GetId(targets[j].file));
+            }
+
+            if (strcmp(installedPackages[i].id, id) == 0)
             {
                 installing = true;
                 break;
@@ -555,43 +562,31 @@ KPMResult KPM_InstallPackages(KPM* kpm, size_t targetCount, InstallTarget* targe
     for (int i=0; i < targetCount; i++)
     {
         InstallTarget target = targets[i];
-        if (target.repository == NULL)
-        {
-            if (target.version == NULL)
-                kpm_io->log(KPM_VERBOSITY_INFO, "Preparing to install %s", target.id);
+
+        if (target.type == INSTALL_FILE)
+            kpm_io->log(KPM_VERBOSITY_INFO, "Preparing to install LOCAL/%s (%u.%u.%u)", KPKG_GetId(target.file), KPKG_GetVersion(target.file).major, KPKG_GetVersion(target.file).minor, KPKG_GetVersion(target.file).patch);
+        else // Installed from internet
+            if (target.repository == NULL)
+                if (target.version == NULL)
+                    kpm_io->log(KPM_VERBOSITY_INFO, "Preparing to install %s", target.id);
+                else
+                    kpm_io->log(KPM_VERBOSITY_INFO, "Preparing to install %s (%u.%u.%u)", target.id, target.version->major, target.version->minor, target.version->patch);
             else
-                kpm_io->log(KPM_VERBOSITY_INFO, "Preparing to install %s (%u.%u.%u)", target.id, target.version->major, target.version->minor, target.version->patch);
-        }
-        else
-        {
-            if (target.version == NULL)
-                kpm_io->log(KPM_VERBOSITY_INFO, "Preparing to install %s/%s", target.repository, target.id);
-            else
-                kpm_io->log(KPM_VERBOSITY_INFO, "Preparing to install %s/%s (%u.%u.%u)", target.repository, target.id, target.version->major, target.version->minor, target.version->patch);
-        }
+                if (target.version == NULL)
+                    kpm_io->log(KPM_VERBOSITY_INFO, "Preparing to install %s/%s", target.repository, target.id);
+                else
+                    kpm_io->log(KPM_VERBOSITY_INFO, "Preparing to install %s/%s (%u.%u.%u)", target.repository, target.id, target.version->major, target.version->minor, target.version->patch);
 
         IndexedArtifact artifact;
-        if (strncmp(target.id, "file://", strlen("file://")) == 0)
+        if (target.type == INSTALL_FILE)
         {
-            char* outBuffer = NULL;
-            int status;
-            if ((status = Internal_GetManifest(target.id + strlen("file://"), &outBuffer, kpm_io)) != KPM_OK)
-            {
-                FreeDependencyGraph(&graph);
-                free(outBuffer);
-                free(traversedNodes);
-                KPM_FreeInstalledPackageList(installedPackageCount, installedPackages);
-                return status;
-            }
-            cJSON* manifest = cJSON_Parse(outBuffer);
-            artifact.id = strdup(cJSON_GetStringValue(cJSON_GetObjectItem(manifest, "id")));
+            // @TODO: We should probably take something other than "indexed artifact" here
+            artifact.id = strdup(KPKG_GetId(target.file));
             artifact.repository = NULL;
-            artifact.url = strdup(target.id);
-            artifact.version.major = cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(manifest, "version"), 0));
-            artifact.version.minor = cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(manifest, "version"), 1));
-            artifact.version.patch = cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(manifest, "version"), 2));
-            cJSON_Delete(manifest);
-            free(outBuffer);
+            artifact.url = strdup(KPKG_GetId(target.file));
+            artifact.version.major = KPKG_GetVersion(target.file).major;
+            artifact.version.minor = KPKG_GetVersion(target.file).minor;
+            artifact.version.patch = KPKG_GetVersion(target.file).patch;
         }
         else
         {
@@ -649,7 +644,7 @@ KPMResult KPM_InstallPackages(KPM* kpm, size_t targetCount, InstallTarget* targe
         int depId = AddNode(&graph, depNode);
         AddEdge(&graph, rootId, depId);
         
-        NodeIndex_t constructedId = Internal_ConstructGraphFromArtifact(kpm, &graph, &artifact, kpm_io);
+        NodeIndex_t constructedId = Internal_ConstructGraphFromArtifact(kpm, &graph, &artifact, kpm_io); // @TODO: Better local file handling
         if (constructedId == -1)
         {
             kpm_io->log(KPM_VERBOSITY_ERROR, "Could not construct graph for %s", artifact.id);
@@ -730,8 +725,8 @@ KPMResult KPM_InstallPackages(KPM* kpm, size_t targetCount, InstallTarget* targe
         {
             if (
                 strcmp(graph.nodes[traversedNodes[i]].id, targets[j].id) == 0 &&
-                (targets[j].repository == NULL || strcmp(graph.nodes[traversedNodes[i]].repository, targets[j].repository) == 0) &&
-                (targets[j].version == NULL || SemVerCmp(graph.nodes[traversedNodes[i]].min_version, *targets[j].version) == 0)
+                (targets[j].type == INSTALL_FILE || targets[j].repository == NULL || strcmp(graph.nodes[traversedNodes[i]].repository, targets[j].repository) == 0) &&
+                (targets[j].type == INSTALL_FILE || targets[j].version == NULL || SemVerCmp(graph.nodes[traversedNodes[i]].min_version, *targets[j].version) == 0)
             )
             {
                 explicit_target = true;

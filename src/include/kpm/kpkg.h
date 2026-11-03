@@ -18,6 +18,12 @@
 #define KPKG_VERSION 3
 
 typedef enum {
+    KPKG_VERSION_1 = 1,
+    KPKG_VERSION_2 = 2,
+    KPKG_VERSION_3 = 3
+} KPKG_Version;
+
+typedef enum {
     KPKG_OK,
     KPKG_GENERIC_ERROR,
     KPKG_UNKNOWN_FORMAT,
@@ -54,6 +60,7 @@ typedef struct
     char* name; /**< The package name */
     char* author; /**< The package author */
     char* description; /**< The package description */
+    SemVer package_version; /**< The package version */
     uint8_t supported_platforms; /** Platforms this package supports */
     size_t dependency_count; /**< Number of package dependencies */
     KPKG_DependencyEntry* dependencies; /**< A list of package dependencies */
@@ -112,6 +119,11 @@ typedef struct
 //// General functions
 char* KPKG_ResultStr(KPKG_Result result);
 KPKG_Result KPKG_LoadFile(KPKG_File** file, const char* location, const char* out_path);
+char* KPKG_GetId(KPKG_File* file);
+char* KPKG_GetName(KPKG_File* file);
+char* KPKG_GetAuthor(KPKG_File* file);
+char* KPKG_GetDescription(KPKG_File* file);
+SemVer KPKG_GetVersion(KPKG_File* file);
 void KPKG_CloseFile(KPKG_File* file);
 
 //// KPKG1-specific functions

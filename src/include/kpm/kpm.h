@@ -11,6 +11,7 @@
 #include <sqlite3.h>
 #include <sys/types.h>
 
+#include "kpkg.h"
 #include "semver.h"
 #include "kpmio.h"
 
@@ -117,12 +118,26 @@ typedef struct
     SemVer max_version; /**< The max version of the dependency (exclusive) */
 } InstalledDependency;
 
+typedef enum {
+    INSTALL_REMOTE,
+    INSTALL_FILE
+} InstallTargetSource;
 
+/**
+ * @brief Represent an installation target
+ * 
+ */
 typedef struct
 {
-    char* repository; /**< The repository to look for the package in (or NULL) */
-    char* id; /**< The id of the package to install */
-    SemVer* version; /**< Note: may be NULL if version doesn't matter */
+    InstallTargetSource type; /**< The source of this target */
+    union {
+        struct {
+            char* repository; /**< The repository to look for the package in (or NULL) */
+            char* id; /**< The id of the package to install */
+            SemVer* version; /**< Note: may be NULL if version doesn't matter */
+        };
+        KPKG_File* file; /**< The local file for the package, if applicable */
+    };
 } InstallTarget;
 
 typedef struct

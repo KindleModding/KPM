@@ -1,3 +1,4 @@
+#include "kpm/kpkg.h"
 #include "kpm/kpm.h"
 #include <limits.h>
 #include <stdlib.h>
@@ -6,10 +7,20 @@
 
 void KPM_FreeInstallTarget(InstallTarget* target)
 {
-    free(target->id);
-    free(target->repository);
-    target->id = NULL;
-    target->repository = NULL;
+    if (target->type == INSTALL_FILE)
+    {
+        KPKG_CloseFile(target->file);
+        target->file = NULL;
+    }
+    else
+    {
+        free(target->repository);
+        free(target->id);
+        free(target->version);
+        target->repository = NULL;
+        target->id = NULL;
+        target->version = NULL;
+    }
 }
 
 void KPM_FreeInstallTargetList(size_t targetCount, InstallTarget* targets)
