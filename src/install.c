@@ -273,107 +273,7 @@ KPMResult Internal_DownloadGraphItems(KPM* kpm, DependencyGraph* graph, size_t d
  */
 bool Internal_InstallItem(KPM* kpm, char* repository, char* path, bool installed_as_dependency, bool upgrading, KPMIO* kpmIO)
 {
-    char* manifest;
-    kpmIO->log(KPM_VERBOSITY_DEBUG, "Reading manifest from %s", path);
-
-    KPMResult result;
-    if ((result = Internal_GetManifest(path, &manifest, kpmIO)) != KPM_OK)
-    {
-        kpmIO->log(KPM_VERBOSITY_ERROR, "Could not load manifest from %s (%i: %s)", path, result, KPM_ErrorToString(result));
-        return false;
-    }
-
-    if (manifest == NULL)
-    {
-        kpmIO->log(KPM_VERBOSITY_ERROR, "Could not load manifest from %s", path);
-        return false;
-    }
-
-    kpmIO->log(KPM_VERBOSITY_DEBUG, "%s", manifest);
-    cJSON* json = cJSON_Parse(manifest);
-    if (json == NULL)
-    {
-        kpmIO->log(KPM_VERBOSITY_ERROR, "Could not parse manifest from %s", path);
-        return false;
-    }
-
-    if (cJSON_IsNull(cJSON_GetObjectItem(json, "manifest_version")) || cJSON_GetObjectItem(json, "manifest_version") == NULL)
-    {
-        kpmIO->log(KPM_VERBOSITY_ERROR, "Could not get manifest version.");
-        free(manifest);
-        cJSON_Delete(json);
-        return false;
-    }
-
-    if (cJSON_GetNumberValue(cJSON_GetObjectItem(json, "manifest_version")) > KPM_MANIFEST_VERSION)
-    {
-        kpmIO->log(KPM_VERBOSITY_ERROR, "Invalid manifest version, got %.0f, expected %i", cJSON_GetNumberValue(cJSON_GetObjectItem(json, "manifest_version")), KPM_MANIFEST_VERSION);
-        free(manifest);
-        cJSON_Delete(json);
-        return false;
-    }
-
-    // V1 - Requires no special logic, only difference is packages are lzma compressed, not gzip
-
-    // Check the platforms
-    if (cJSON_IsArray(cJSON_GetObjectItem(json, "supported_platforms")))
-    {
-        bool supported=false;
-        cJSON* supported_platform;
-        cJSON_ArrayForEach(supported_platform, cJSON_GetObjectItem(json, "supported_platforms"))
-        {
-            if (strcmp(supported_platform->valuestring, KPM_PLATFORM) == 0)
-            {
-                supported = true;
-                break;
-            }
-        }
-
-        if (!supported)
-        {
-            kpmIO->log(KPM_VERBOSITY_ERROR, "Package does not support platform %s", KPM_PLATFORM);
-            free(manifest);
-            cJSON_Delete(json);
-            return false;
-        }
-    }
-
-    char* id = cJSON_GetStringValue(cJSON_GetObjectItem(json, "id"));
-    if (strlen(id) == 0)
-    {
-        kpmIO->log(KPM_VERBOSITY_ERROR, "Package has an empty id");
-        free(manifest);
-        cJSON_Delete(json);
-        return false;
-    }
-
-    if (strlen(cJSON_GetStringValue(cJSON_GetObjectItem(json, "name"))) == 0)
-    {
-        kpmIO->log(KPM_VERBOSITY_ERROR, "Package has an empty name");
-        free(manifest);
-        cJSON_Delete(json);
-        return false;
-    }
-
-    if (!cJSON_IsArray(cJSON_GetObjectItem(json, "version")) || cJSON_GetArraySize(cJSON_GetObjectItem(json, "version")) != 3)
-    {
-        kpmIO->log(KPM_VERBOSITY_ERROR, "Package version field is invalid");
-        free(manifest);
-        cJSON_Delete(json);
-        return false;
-    }
-
-    if (
-        cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(json, "version"), 0)) < 0 ||
-        cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(json, "version"), 1)) < 0 ||
-        cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(json, "version"), 2)) < 0
-    )
-    {
-        kpmIO->log(KPM_VERBOSITY_ERROR, "Package version field contains invalid entries");
-        free(manifest);
-        cJSON_Delete(json);
-        return false;
-    }
+    char* id = "";
 
     kpmIO->log(KPM_VERBOSITY_DEBUG, "Installing item with id: '%s'", id);
 
@@ -382,7 +282,7 @@ bool Internal_InstallItem(KPM* kpm, char* repository, char* path, bool installed
 
     // First unpack the .kpkg file
     kpmIO->log(KPM_VERBOSITY_INFO, "Extracting archive");
-    Internal_ExtractArchive(path, outPath, kpmIO);
+    //Internal_ExtractArchive(path, outPath, kpmIO);
 
     char* installScriptPath = asprintf_hd( "%sinstall.sh", outPath);
 
@@ -429,15 +329,13 @@ bool Internal_InstallItem(KPM* kpm, char* repository, char* path, bool installed
             Internal_RunUninstallHook(outPath, id, false, kpmIO);
             rmdir_r(outPath);
             free(outPath);
-            free(manifest);
-            cJSON_Delete(json);
             return false;
         }
         free(outPath);
     }
 
     // Add installed item to the database
-    sqlite3_stmt* statement;
+    /*sqlite3_stmt* statement;
     const char* zSQL = "INSERT OR REPLACE INTO installed_packages (id, repository, name, author, description, version_major, version_minor, version_patch, installed_as_dependency) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);";
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
     sqlite3_bind_text(statement, 1, id, -1, SQLITE_STATIC);
@@ -462,7 +360,7 @@ bool Internal_InstallItem(KPM* kpm, char* repository, char* path, bool installed
 
     sqlite3_finalize(statement);
     free(manifest);
-    cJSON_Delete(json);
+    cJSON_Delete(json);*/
     return true;
 }
 
