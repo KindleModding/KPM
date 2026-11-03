@@ -118,31 +118,14 @@ KPMResult KPM_ListInstalledPackages(KPM* kpm, size_t* packageCount, InstalledPac
     return KPM_OK;
 }
 
-void KPM_FreeInstalledPackageDependency(InstalledDependency* dependency)
-{
-    free(dependency->dependency_id);
-    free(dependency->dependent);
 
-    dependency->dependency_id = NULL;
-    dependency->dependent = NULL;
-}
-
-void KPM_FreeInstalledPackageDependencyList(size_t dependencyCount, InstalledDependency* dependencies)
-{
-    for (size_t i=0; i < dependencyCount; i++)
-        KPM_FreeInstalledPackageDependency(dependencies + i);
-        
-    free(dependencies);
-}
-
-
-KPMResult KPM_ListInstalledPackageDependencies(KPM* kpm, const char* id, size_t* dependencyCount, InstalledDependency** dependencies)
+KPMResult KPM_ListInstalledPackageDependencies(KPM* kpm, const char* id, size_t* dependencyCount, Dependency** dependencies)
 {
     *dependencyCount = 0;
     if (dependencies != NULL)
         *dependencies = NULL;
     
-    const char* zSQL = "SELECT (SELECT COUNT() FROM current_dependencies WHERE dependent=?), dependent, dependency_id, min_version_major, min_version_minor, min_version_patch, max_version_major, max_version_minor, max_version_patch FROM current_dependencies WHERE dependent=?;";
+    const char* zSQL = "SELECT (SELECT COUNT() FROM current_dependencies WHERE dependent=?), dependency_id, min_version_major, min_version_minor, min_version_patch, max_version_major, max_version_minor, max_version_patch FROM current_dependencies WHERE dependent=?;";
     sqlite3_stmt* statement;
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
     sqlite3_bind_text(statement, 1, id, -1, SQLITE_STATIC);
@@ -160,17 +143,16 @@ KPMResult KPM_ListInstalledPackageDependencies(KPM* kpm, const char* id, size_t*
         {
             if (!*dependencies)
             {
-                *dependencies = malloc(*dependencyCount * sizeof(ArtifactDependency));
+                *dependencies = malloc(*dependencyCount * sizeof(Dependency));
             }
 
-            (*dependencies)[i].dependent = strdup((const char*) sqlite3_column_text(statement, 1));
-            (*dependencies)[i].dependency_id = strdup((const char*) sqlite3_column_text(statement, 2));
-            (*dependencies)[i].min_version.major = sqlite3_column_int(statement, 3);
-            (*dependencies)[i].min_version.minor = sqlite3_column_int(statement, 4);
-            (*dependencies)[i].min_version.patch = sqlite3_column_int(statement,5);
-            (*dependencies)[i].max_version.major = sqlite3_column_int(statement, 6);
-            (*dependencies)[i].max_version.minor = sqlite3_column_int(statement, 7);
-            (*dependencies)[i].max_version.patch = sqlite3_column_int(statement,8);
+            (*dependencies)[i].id = strdup((const char*) sqlite3_column_text(statement, 1));
+            (*dependencies)[i].min_version.major = sqlite3_column_int(statement, 2);
+            (*dependencies)[i].min_version.minor = sqlite3_column_int(statement, 3);
+            (*dependencies)[i].min_version.patch = sqlite3_column_int(statement,4);
+            (*dependencies)[i].max_version.major = sqlite3_column_int(statement, 5);
+            (*dependencies)[i].max_version.minor = sqlite3_column_int(statement, 6);
+            (*dependencies)[i].max_version.patch = sqlite3_column_int(statement,7);
         }
     }
 
@@ -184,13 +166,13 @@ KPMResult KPM_ListInstalledPackageDependencies(KPM* kpm, const char* id, size_t*
     return KPM_OK;
 }
 
-KPMResult KPM_ListInstalledPackageDependents(KPM* kpm, const char* id, size_t* dependentCount, InstalledDependency** dependents)
-{
+KPMResult KPM_ListInstalledPackageDependents(KPM* kpm, const char* id, size_t* dependentCount, Dependency** dependents)
+{ // @TODO: Rework
     *dependentCount = 0;
     if (dependents != NULL)
         *dependents = NULL;
     
-    const char* zSQL = "SELECT (SELECT COUNT() FROM current_dependencies WHERE dependancy_id=?), dependent, dependency_id, min_version_major, min_version_minor, min_version_patch, max_version_major, max_version_minor, max_version_patch FROM current_dependencies WHERE dependency_id=?;";
+    const char* zSQL = "SELECT (SELECT COUNT() FROM current_dependencies WHERE dependancy_id=?), dependent, min_version_major, min_version_minor, min_version_patch, max_version_major, max_version_minor, max_version_patch FROM current_dependencies WHERE dependency_id=?;";
     sqlite3_stmt* statement;
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
     sqlite3_bind_text(statement, 1, id, -1, SQLITE_STATIC);
@@ -208,17 +190,16 @@ KPMResult KPM_ListInstalledPackageDependents(KPM* kpm, const char* id, size_t* d
         {
             if (!*dependents)
             {
-                *dependents = malloc(*dependentCount * sizeof(InstalledPackage));
+                *dependents = malloc(*dependentCount * sizeof(Dependency));
             }
 
-            (*dependents)[i].dependent = strdup((const char*) sqlite3_column_text(statement, 1));
-            (*dependents)[i].dependency_id = strdup((const char*) sqlite3_column_text(statement, 2));
-            (*dependents)[i].min_version.major = sqlite3_column_int(statement, 3);
-            (*dependents)[i].min_version.minor = sqlite3_column_int(statement, 4);
-            (*dependents)[i].min_version.patch = sqlite3_column_int(statement,5);
-            (*dependents)[i].max_version.major = sqlite3_column_int(statement, 6);
-            (*dependents)[i].max_version.minor = sqlite3_column_int(statement, 7);
-            (*dependents)[i].max_version.patch = sqlite3_column_int(statement,8);
+            (*dependents)[i].id = strdup((const char*) sqlite3_column_text(statement, 1));
+            (*dependents)[i].min_version.major = sqlite3_column_int(statement, 2);
+            (*dependents)[i].min_version.minor = sqlite3_column_int(statement, 3);
+            (*dependents)[i].min_version.patch = sqlite3_column_int(statement,4);
+            (*dependents)[i].max_version.major = sqlite3_column_int(statement, 5);
+            (*dependents)[i].max_version.minor = sqlite3_column_int(statement, 6);
+            (*dependents)[i].max_version.patch = sqlite3_column_int(statement,7);
         }
     }
 

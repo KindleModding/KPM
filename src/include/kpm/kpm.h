@@ -81,13 +81,10 @@ typedef struct
 */
 typedef struct
 {
-    char* artifact_repository; /**< Repository of the artifact */
-    char* artifact_id; /**< ID of the artifact */
-    char* artifact_url; /**< URL of the artifact */
     char* id; /**< The package ID */
     SemVer min_version; /**< The min version of the dependency (inclusive) */
     SemVer max_version; /**< The max version of the dependency (exclusive) */
-} ArtifactDependency;
+} Dependency;
 
 
 /**
@@ -105,18 +102,6 @@ typedef struct
     bool installed_as_dependency; /**< Whether or not this package was installed as a dependency of another package */
 } InstalledPackage;
 
-
-/**
-* @brief A dependency of a package KPM has installed
-* 
-*/
-typedef struct
-{
-    char* dependent; /**< ID of installed package */
-    char* dependency_id; /**< ID of the dependency */
-    SemVer min_version; /**< The min version of the dependency (inclusive) */
-    SemVer max_version; /**< The max version of the dependency (exclusive) */
-} InstalledDependency;
 
 typedef enum {
     INSTALL_REMOTE,
@@ -317,21 +302,6 @@ KPMResult KPM_GetInstalledPackage(KPM* kpm, const char* packageId, InstalledPack
  */
 KPMResult KPM_ListInstalledPackages(KPM* kpm, size_t* packageCount, InstalledPackage** packages);
 
-// Installed dependency management functions
-/**
- * @brief Free the properties of an installed dependency
- * 
- * @param dependency The installed dependency to free the properties of
- */
-void KPM_FreeInstalledPackageDependency(InstalledDependency* dependency);
-/**
- * @brief Free an allocated list of installed dependencies
- * 
- * @param dependencyCount The number of installed dependencies in the array
- * @param dependency The installed dependency array
-*/
-void KPM_FreeInstalledPackageDependencyList(size_t dependencyCount, InstalledDependency* dependency);
-
 /**
  * @brief List dependencies for an installed package
  * 
@@ -341,7 +311,7 @@ void KPM_FreeInstalledPackageDependencyList(size_t dependencyCount, InstalledDep
  * @param dependencies The dependency array
  * @return KPMResult 
  */
-KPMResult KPM_ListInstalledPackageDependencies(KPM* kpm, const char* id, size_t* dependencyCount, InstalledDependency** dependencies);
+KPMResult KPM_ListInstalledPackageDependencies(KPM* kpm, const char* id, size_t* dependencyCount, Dependency** dependencies);
 
 /**
  * @brief Get the list of dependent packages for a given package id
@@ -352,7 +322,7 @@ KPMResult KPM_ListInstalledPackageDependencies(KPM* kpm, const char* id, size_t*
  * @param dependents The dependent packages array
  * @return KPMResult 
  */
-KPMResult KPM_ListInstalledPackageDependents(KPM* kpm, const char* id, size_t* dependentCount, InstalledDependency** dependents);
+KPMResult KPM_ListInstalledPackageDependents(KPM* kpm, const char* id, size_t* dependentCount, Dependency** dependents);
 
 // Artifact management functions
 /**
@@ -400,14 +370,14 @@ KPMResult KPM_ListPackageArtifacts(KPM* kpm, const char* repositoryId, const cha
  * 
  * @param dependency The artifact dependency to free the properties of
  */
-void KPM_FreeArtifactDependency(ArtifactDependency* dependency);
+void KPM_FreeDependency(Dependency* dependency);
 /**
  * @brief Free an allocated list of artifact dependencies
  * 
  * @param dependencyCount The number of artifact dependencies in the array
  * @param dependencies The artifact dependency array
 */
-void KPM_FreeArtifactDependencyList(size_t dependencyCount, ArtifactDependency* dependencies);
+void KPM_FreeDependencyList(size_t dependencyCount, Dependency* dependencies);
 
 /**
  * @brief Get a list of dependencies for a given artifact
@@ -420,7 +390,7 @@ void KPM_FreeArtifactDependencyList(size_t dependencyCount, ArtifactDependency* 
  * @param dependencies The dependency array
  * @return KPMResult 
  */
-KPMResult KPM_ListArtifactDependencies(KPM* kpm, const char* repository, const char* id, const char* url, size_t* dependencyCount, ArtifactDependency** dependencies);
+KPMResult KPM_ListArtifactDependencies(KPM* kpm, const char* repository, const char* id, const char* url, size_t* dependencyCount, Dependency** dependencies);
 
 /**
  * @brief Update the local index of package by downloading repository manifests

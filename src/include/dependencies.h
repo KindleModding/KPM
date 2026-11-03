@@ -41,6 +41,6 @@ bool FindArtifactNode(DependencyGraph* graph, char* id, SemVer version, NodeInde
 void RenderGraph(DependencyGraph* graph, char** output);
 void Internal_ArrayAddNode(size_t* traversedNodeCount, NodeIndex_t** traversedNodes, NodeIndex_t node);
 
-KPMResult Internal_GetArtifactDependencies(KPM* kpm, IndexedArtifact* target, size_t* targetDependencyCount, ArtifactDependency** targetDependencies, KPMIO* statusCallback);
+KPMResult Internal_GetArtifactDependencies(KPM* kpm, IndexedArtifact* target, size_t* targetDependencyCount, Dependency** targetDependencies, KPMIO* statusCallback);
 int Internal_ConstructGraphFromArtifact(KPM* kpm, DependencyGraph* graph, IndexedArtifact* artifact, KPMIO* statusCallback);
 bool Internal_ResolveDependencyGraph(DependencyGraph* graph, NodeIndex_t root, NodeIndex_t currentNode,size_t* traversedNodeCount, NodeIndex_t** traversedNodes, KPMIO* statusCallback);

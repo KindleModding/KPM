@@ -12,6 +12,20 @@
 #include <string.h>
 #include "internal_utils.h"
 
+void KPM_FreeDependency(Dependency* dependency)
+{
+    free(dependency->id);
+    dependency->id = NULL;
+}
+
+void KPM_FreeDependencyList(size_t dependencyCount, Dependency* dependencies)
+{
+    for (size_t i=0; i < dependencyCount; i++)
+        KPM_FreeDependency(&dependencies[i]);
+    
+    free(dependencies);
+}
+
 /**
  * @brief Create a Dependency Graph object
  * 
@@ -242,7 +256,7 @@ bool FindDependencyNode(DependencyGraph* graph, char* id, SemVer min_version, Se
  * @param targetDependencies 
  * @return KPMResult 
  */
-KPMResult Internal_GetArtifactDependencies(KPM* kpm, IndexedArtifact* target, size_t* targetDependencyCount, ArtifactDependency** targetDependencies, KPMIO* kpm_io)
+KPMResult Internal_GetArtifactDependencies(KPM* kpm, IndexedArtifact* target, size_t* targetDependencyCount, Dependency** targetDependencies, KPMIO* kpm_io)
 {
     if (target->url != NULL && target->repository == NULL)
     {
@@ -272,7 +286,7 @@ KPMResult Internal_GetArtifactDependencies(KPM* kpm, IndexedArtifact* target, si
         }
 
         *targetDependencyCount = cJSON_GetArraySize(cJSON_GetObjectItem(json, "dependencies"));
-        *targetDependencies = malloc(*targetDependencyCount * sizeof(ArtifactDependency));
+        *targetDependencies = malloc(*targetDependencyCount * sizeof(Dependency));
         for (size_t i=0; i < *targetDependencyCount; i++)
         {
             cJSON* dependencyJSON = cJSON_GetArrayItem(cJSON_GetObjectItem(json, "dependencies"), i);
@@ -283,9 +297,6 @@ KPMResult Internal_GetArtifactDependencies(KPM* kpm, IndexedArtifact* target, si
                 return KPM_PARSE_ERROR;
             }
 
-            (*targetDependencies)[i].artifact_repository = NULL; // for file-based installs
-            (*targetDependencies)[i].artifact_id = strdup(target->id);
-            (*targetDependencies)[i].artifact_url = strdup(target->url);
             (*targetDependencies)[i].id = strdup(cJSON_GetStringValue(cJSON_GetObjectItem(dependencyJSON, "id"))); // 90% sure I don't need to free this
 
             cJSON* min = cJSON_GetObjectItem(dependencyJSON, "min");
@@ -332,26 +343,9 @@ KPMResult Internal_GetArtifactDependencies(KPM* kpm, IndexedArtifact* target, si
             KPM_GetInstalledPackage(kpm, target->id, &installedPackage);
             if (SemVerCmp(installedPackage.version, target->version) == 0)
             {
-                size_t extraDependencyCount;
-                InstalledDependency* extraDependencies;
-                if ((status = KPM_ListInstalledPackageDependencies(kpm, target->id, &extraDependencyCount, &extraDependencies)) != KPM_OK)
-                {
-                    KPM_FreeInstalledPackageDependencyList(extraDependencyCount, extraDependencies);
-                    return status;
-                }
-
-                *targetDependencyCount = extraDependencyCount;
-                *targetDependencies = malloc(extraDependencyCount * sizeof(ArtifactDependency));
-                for (size_t i=0; i < *targetDependencyCount; i++)
-                {
-                    (*targetDependencies)[i].artifact_id = strdup(target->id);
-                    (*targetDependencies)[i].artifact_repository = strdup(target->repository);
-                    (*targetDependencies)[i].artifact_url = strdup(target->url);
-                    (*targetDependencies)[i].id = strdup(extraDependencies[i].dependency_id);
-                    (*targetDependencies)[i].min_version = extraDependencies[i].min_version;
-                    (*targetDependencies)[i].max_version = extraDependencies[i].max_version;
-                }
-                KPM_FreeInstalledPackageDependencyList(extraDependencyCount, extraDependencies);
+                status = KPM_ListInstalledPackageDependencies(kpm, target->id, targetDependencyCount, targetDependencies);
+                KPM_FreeInstalledPackage(&installedPackage);
+                return status;
             }
             KPM_FreeInstalledPackage(&installedPackage);
         }
@@ -455,10 +449,10 @@ int Internal_ConstructGraphFromArtifact(KPM* kpm, DependencyGraph* graph, Indexe
     int root = AddNode(graph, node);
 
     size_t dependencyCount = 0;
-    ArtifactDependency* dependencies = NULL;
+    Dependency* dependencies = NULL;
     if (Internal_GetArtifactDependencies(kpm, artifact, &dependencyCount, &dependencies, kpm_io) != KPM_OK)
     {
-        KPM_FreeArtifactDependencyList(dependencyCount, dependencies);
+        KPM_FreeDependencyList(dependencyCount, dependencies);
         kpm_io->log(KPM_VERBOSITY_ERROR, "Could not list dependencies for %s (%u.%u.%u)", artifact->id, artifact->version.major, artifact->version.minor, artifact->version.patch);
         return -1;
     }
@@ -516,7 +510,7 @@ int Internal_ConstructGraphFromArtifact(KPM* kpm, DependencyGraph* graph, Indexe
                 if (artifactNodeId == -1)
                 {
                     kpm_io->log(KPM_VERBOSITY_ERROR, "Could not construct graph for %s", artifacts[j].id);
-                    KPM_FreeArtifactDependencyList(dependencyCount, dependencies);
+                    KPM_FreeDependencyList(dependencyCount, dependencies);
                     return -1;
                 }
             }
@@ -549,7 +543,7 @@ int Internal_ConstructGraphFromArtifact(KPM* kpm, DependencyGraph* graph, Indexe
                 if (artifactNodeId == -1)
                 {
                     kpm_io->log(KPM_VERBOSITY_ERROR, "Could not construct graph for %s", fakeArtifact.id);
-                    KPM_FreeArtifactDependencyList(dependencyCount, dependencies);
+                    KPM_FreeDependencyList(dependencyCount, dependencies);
                     return -1;
                 }
             }
@@ -561,12 +555,12 @@ int Internal_ConstructGraphFromArtifact(KPM* kpm, DependencyGraph* graph, Indexe
         if (!validArtifactFound)
         {
             kpm_io->log(KPM_VERBOSITY_ERROR, "Could not find artifact for %s (%u.%u.%u - %u.%u.%u)", dependencyNode.id, dependencyNode.min_version.major, dependencyNode.min_version.minor, dependencyNode.min_version.patch, dependencyNode.max_version.major, dependencyNode.max_version.minor, dependencyNode.max_version.patch);
-            KPM_FreeArtifactDependencyList(dependencyCount, dependencies);
+            KPM_FreeDependencyList(dependencyCount, dependencies);
             return -1;
         }
     }
 
-    KPM_FreeArtifactDependencyList(dependencyCount, dependencies);
+    KPM_FreeDependencyList(dependencyCount, dependencies);
     return root;
 }
 

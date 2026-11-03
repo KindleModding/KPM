@@ -99,13 +99,13 @@ KPMResult KPM_UninstallPackages(KPM* kpm, size_t packageCount, const char* packa
     for (int i=0; i < packageCount; i++)
     {
         size_t dependentCount;
-        InstalledDependency* dependents;
+        Dependency* dependents;
         KPM_ListInstalledPackageDependents(kpm, packageIds[i], &dependentCount, &dependents);
 
         size_t unaccountedDependencies = dependentCount;
         for (int j=0; j < packageCount; j++)
             for (int k=0; k < dependentCount; k++)
-                if (strcmp(packageIds[j], dependents[k].dependent) == 0)
+                if (strcmp(packageIds[j], dependents[k].id) == 0)
                     unaccountedDependencies--;
 
         if (unaccountedDependencies > 0)
@@ -114,12 +114,11 @@ KPMResult KPM_UninstallPackages(KPM* kpm, size_t packageCount, const char* packa
             for (int i=0; i < dependentCount; i++)
             {
                 for (int j=0; j < packageCount; j++)
-                    if (strcmp(packageIds[j], dependents[i].dependent) == 0)
+                    if (strcmp(packageIds[j], dependents[i].id) == 0)
                         continue;
 
-                kpmIO->log(KPM_VERBOSITY_ERROR, "- %s (%u.%u.%u - %u.%u.%u)", dependents[i].dependent, dependents[i].min_version.major, dependents[i].min_version.minor, dependents[i].min_version.patch, dependents[i].max_version.major, dependents[i].max_version.minor, dependents[i].max_version.patch);
+                kpmIO->log(KPM_VERBOSITY_ERROR, "- %s (%u.%u.%u - %u.%u.%u)", dependents[i].id, dependents[i].min_version.major, dependents[i].min_version.minor, dependents[i].min_version.patch, dependents[i].max_version.major, dependents[i].max_version.minor, dependents[i].max_version.patch);
             }
-            KPM_FreeInstalledPackageDependencyList(dependentCount, dependents);
             return KPM_GENERIC_ERROR;
         }
     }
