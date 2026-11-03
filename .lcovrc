@@ -1,0 +1,2 @@
+merge_continuation_lines = 1
+ignore_errors = count,unsupported,inconsistent
