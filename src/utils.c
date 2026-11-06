@@ -14,12 +14,7 @@ void KPM_FreeInstallTarget(InstallTarget* target)
     }
     else
     {
-        free(target->repository);
-        free(target->id);
-        free(target->version);
-        target->repository = NULL;
-        target->id = NULL;
-        target->version = NULL;
+        KPM_FreeIndexedArtifact(&target->artifact);
     }
 }
 

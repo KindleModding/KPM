@@ -13,7 +13,8 @@ sources = files(
     'simpleGET.c',
     'uninstall.c',
     'utils.c',
-    'kpkg.c'
+    'kpkg.c',
+    'install_target.c'
 )
 include_dir = include_directories('./include')
 
