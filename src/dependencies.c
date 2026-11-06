@@ -70,9 +70,14 @@ void Hashmap_Remove(Hashmap* hashmap, char* key)
         {
             free(bucket->key);
             free(bucket->nodes);
-            struct HashmapBucket* to_free = bucket->pnext;
-            *bucket = *to_free;
-            free(to_free);
+            bucket->key = NULL;
+            bucket->nodes = NULL;
+            if (bucket->pnext)
+            {
+                struct HashmapBucket* to_free = bucket->pnext;
+                *bucket = *to_free;
+                free(to_free);
+            }
         }
 
         if (!bucket->pnext)
@@ -119,21 +124,23 @@ void Hashmap_AddNode(Hashmap* hashmap, char* key, NodeIndex_t node)
     )
     {
         if (!strcmp(bucket->key, key))
-        {
-            bucket->nodes = realloc(bucket->nodes, sizeof(NodeIndex_t) * ++bucket->node_count);
-            bucket->nodes[bucket->node_count-1] = node;
-            return;
-        }
-
-        if (!bucket->pnext)
             break;
+
+        if (!bucket->key || !bucket->pnext)
+        {
+            if (bucket->key)
+            {
+                bucket->pnext = malloc(sizeof(struct HashmapBucket));
+                bucket = bucket->pnext;
+            }
+
+            bucket->key = strdup(key);
+            bucket->node_count = 0;
+        }
     }
 
-    bucket->pnext = malloc(sizeof(struct HashmapBucket));
-    bucket->pnext->key = strdup(key);
-    bucket->pnext->node_count = 1;
-    bucket->pnext->nodes = malloc(sizeof(NodeIndex_t));
-    bucket->pnext->nodes[0] = node;
+    bucket->nodes = realloc(bucket->nodes, sizeof(NodeIndex_t) * ++bucket->node_count);
+    bucket->nodes[0] = node;
 }
 
 void KPM_FreeDependency(Dependency* dependency)
@@ -234,6 +241,14 @@ NodeIndex_t AddNode(DependencyGraph *graph, GraphNode node)
     }
 
     graph->nodes[graph->nodeCount++] = node;
+
+    if (graph->nodes->gt.type == GT_DEPENDENCY)
+        Hashmap_AddNode(graph->depmap, node.gt.dependency.id, graph->nodeCount-1);
+    else if (graph->nodes->gt.type == GT_INSTALL_TARGET)
+        Hashmap_AddNode(graph->depmap, KPM_GetInstallTargetId(node.gt.target), graph->nodeCount-1);
+    else
+        Hashmap_AddNode(graph->depmap, node.gt.installed.id, graph->nodeCount-1);
+
     return graph->nodeCount-1;
 }
 
@@ -271,36 +286,34 @@ void AddArtifactDep(DependencyGraph* graph, NodeIndex_t artNodeIdx, NodeIndex_t 
     graph->nodes[artNodeIdx].connected[graph->nodes[artNodeIdx].connectedCount-1] = depNodeIdx;
 }
 
-/**
- * @brief Add an artifact to a dependency
- * 
- * @param graph 
- * @param firstNodeIndex 
- * @param nextNodeIndex 
- */
-void AddDepTarget(DependencyGraph* graph, NodeIndex_t depNodeIdx, NodeIndex_t artNodeIdx)
+
+void AddDepTarget(DependencyGraph* graph, NodeIndex_t depNodeIdx, NodeIndex_t target_node_idx)
 {
+    GraphNode target_node = graph->nodes[target_node_idx];
     assert(graph->nodes[depNodeIdx].gt.type == GT_DEPENDENCY);
-    assert(graph->nodes[artNodeIdx].gt.type == GT_INSTALL_TARGET || graph->nodes[artNodeIdx].gt.type == GT_INSTALLED);
+    assert(target_node.gt.type == GT_INSTALL_TARGET || target_node.gt.type == GT_INSTALLED);
 
     graph->nodes[depNodeIdx].connectedCount++;
     graph->nodes[depNodeIdx].connected = realloc(graph->nodes[depNodeIdx].connected, graph->nodes[depNodeIdx].connectedCount * sizeof(size_t));
     
-    // Insert it into the list such that dependency artifacts are ordered newest to oldest
     NodeIndex_t insertionIndex = graph->nodes[depNodeIdx].connectedCount-1;
-    while (
-        insertionIndex > 0 &&
-        SemVerCmp(
-            GetGraphTargetVersion(graph->nodes[graph->nodes[depNodeIdx].connected[insertionIndex-1]].gt),
-            GetGraphTargetVersion(graph->nodes[artNodeIdx].gt)
-        ) > 0
-    )
+    while (insertionIndex > 0)
     {
+        GraphNode prev_node = graph->nodes[graph->nodes[depNodeIdx].connected[insertionIndex-1]];
+        if (prev_node.gt.priority > target_node.gt.priority)
+            break; // Insert here
+
+        if (SemVerCmp(
+            GetGraphTargetVersion(prev_node.gt),
+            GetGraphTargetVersion(target_node.gt)
+        ) > 0)
+            break; // Insert here
+
         graph->nodes[depNodeIdx].connected[insertionIndex] = graph->nodes[depNodeIdx].connected[insertionIndex-1];
         insertionIndex--;
     }
     
-    graph->nodes[depNodeIdx].connected[insertionIndex] = artNodeIdx;
+    graph->nodes[depNodeIdx].connected[insertionIndex] = target_node_idx;
 }
 
 /**
@@ -471,12 +484,13 @@ void RenderGraph(DependencyGraph* graph, char** output)
     Internal_RenderGraph(graph, *output, false);
 }
 
-NodeIndex_t CreateTargetNode(DependencyGraph* graph, InstallTarget target)
+NodeIndex_t CreateTargetNode(DependencyGraph* graph, InstallTarget target, GraphTargetPriority priority)
 {
     return AddNode(graph, (GraphNode) {
         .connectedCount = 0,
         .connected = NULL,
         .gt = {
+            .priority = priority,
             .type = GT_INSTALL_TARGET,
             .target = target
         }
@@ -489,6 +503,7 @@ NodeIndex_t CreateInstalledNode(DependencyGraph* graph, InstalledPackage install
         .connectedCount = 0,
         .connected = NULL,
         .gt = {
+            .priority = GT_PRIORITY_INSTALLED,
             .type = GT_INSTALLED,
             .installed = installed
         }
@@ -501,6 +516,7 @@ NodeIndex_t CreateDependencyNode(DependencyGraph* graph, Dependency dependency)
         .connectedCount = 0,
         .connected = NULL,
         .gt = {
+            .priority = GT_PRIORITY_NONE,
             .type = GT_DEPENDENCY,
             .dependency = dependency
         }
@@ -626,27 +642,19 @@ void Internal_AddTargetToExistingDependencies(DependencyGraph* graph, NodeIndex_
     }
 }
 
-NodeIndex_t Internal_ConstructGraphFromTarget(KPM* kpm, DependencyGraph* graph, GraphTarget gt, KPMIO* kpm_io)
+bool Internal_FillGraphFromTarget(KPM* kpm, DependencyGraph* graph, NodeIndex_t target_node_id, KPMIO* kpm_io)
 {
-    assert(gt.type == GT_INSTALL_TARGET);
-    assert(gt.type == GT_INSTALLED);
+    GraphTarget graph_target = graph->nodes[target_node_id].gt;
+    assert(graph_target.type == GT_INSTALL_TARGET);
+    assert(graph_target.type == GT_INSTALLED);
 
-    NodeIndex_t constructed_idx = AddNode(
-        graph,
-        (GraphNode) {
-            .connectedCount = 0,
-            .connected = NULL,
-            .gt = gt
-        }
-    ); // We push nodes as soon as possible for loop closure when recursing
-
-    Internal_AddTargetToExistingDependencies(graph, constructed_idx);
+    Internal_AddTargetToExistingDependencies(graph, target_node_id);
 
     // Go through this target's own dependencies
     size_t dep_count;
     Dependency* dependencies;
-    if (Internal_GetGraphTargetDependencies(kpm, gt, &dep_count, &dependencies, kpm_io) != KPM_OK)
-        return NODE_NULL;
+    if (Internal_GetGraphTargetDependencies(kpm, graph_target, &dep_count, &dependencies, kpm_io) != KPM_OK)
+        return false;
 
     for (int i=0; i < dep_count; i++)
     {
@@ -656,7 +664,7 @@ NodeIndex_t Internal_ConstructGraphFromTarget(KPM* kpm, DependencyGraph* graph, 
         NodeIndex_t dep_found = Internal_FindDependencyInGraph(graph, dep);
         if (dep_found != NODE_NULL)
         {
-            AddArtifactDep(graph, constructed_idx, dep_found);
+            AddArtifactDep(graph, target_node_id, dep_found);
             continue;
         }
 
@@ -670,7 +678,7 @@ NodeIndex_t Internal_ConstructGraphFromTarget(KPM* kpm, DependencyGraph* graph, 
         size_t artifact_count;
         Artifact* artifacts;
         if (!KPM_ListPackageArtifacts(kpm, NULL, dep.id,  &artifact_count, &artifacts))
-            return NODE_NULL;
+            return false;
 
         for (int j = 0; j < artifact_count; j++)
         {            
@@ -679,28 +687,31 @@ NodeIndex_t Internal_ConstructGraphFromTarget(KPM* kpm, DependencyGraph* graph, 
                 continue;
 
             // This artifact is new, we should add it to the graph...
-            NodeIndex_t idx = Internal_ConstructGraphFromTarget(
-                kpm,
+            NodeIndex_t idx = CreateTargetNode(
                 graph,
-                (GraphTarget) {
-                    .type = GT_INSTALL_TARGET,
-                    .target = (InstallTarget) {
-                        .type = INSTALL_ARTIFACT,
-                        .artifact = artifacts[j]
-                    }
+                (InstallTarget) {
+                    .type = INSTALL_ARTIFACT,
+                    .artifact = artifacts[j]
                 },
-                kpm_io
+                GT_PRIORITY_NONE
             );
 
             if (idx == NODE_NULL)
-                return NODE_NULL; // @TODO: Cleanup
+                return false; // @TODO: Cleanup
 
             AddDepTarget(graph, dep_idx, idx);
+
+            Internal_FillGraphFromTarget(
+                kpm,
+                graph,
+                idx,
+                kpm_io
+            );
         }
     }
 
     KPM_FreeDependencyList(dep_count, dependencies);
-    return constructed_idx;
+    return true;
 }
 
 void Internal_ArrayAddNode(size_t* traversedNodeCount, NodeIndex_t** traversedNodes, NodeIndex_t node)

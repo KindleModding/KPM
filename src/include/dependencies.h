@@ -32,8 +32,16 @@ typedef enum
     GT_INSTALLED, /**< Node that declares an already installed target */
 } GraphTargetType;
 
+typedef enum
+{
+    GT_PRIORITY_EXPLICIT=2,
+    GT_PRIORITY_INSTALLED=1,
+    GT_PRIORITY_NONE=0,
+} GraphTargetPriority;
+
 typedef struct
 {
+    GraphTargetPriority priority; /**< Explicit user-selected target */
     GraphTargetType type;
     union {
         Dependency dependency;
@@ -63,7 +71,7 @@ void ExtendDependencyGraph(DependencyGraph* graph, int allocate);
 void FreeNode(GraphNode* node);
 void FreeDependencyGraph(DependencyGraph* graph);
 NodeIndex_t AddNode(DependencyGraph* graph, GraphNode node);
-NodeIndex_t CreateTargetNode(DependencyGraph* graph, InstallTarget target);
+NodeIndex_t CreateTargetNode(DependencyGraph* graph, InstallTarget target, GraphTargetPriority priority);
 NodeIndex_t CreateInstalledNode(DependencyGraph* graph, InstalledPackage installed);
 NodeIndex_t CreateDependencyNode(DependencyGraph* graph, Dependency dependency);
 void AddArtifactDep(DependencyGraph* graph, NodeIndex_t artNodeIdx, NodeIndex_t depNodeIdx);
@@ -71,6 +79,5 @@ void AddDepTarget(DependencyGraph* graph, NodeIndex_t depNodeIdx, NodeIndex_t ar
 void AddFirstEdge(DependencyGraph* graph, NodeIndex_t firstNodeIndex, NodeIndex_t nextNodeIndex);
 void RenderGraph(DependencyGraph* graph, char** output);
 void Internal_ArrayAddNode(size_t* traversedNodeCount, NodeIndex_t** traversedNodes, NodeIndex_t node);
-
 
 bool Internal_ResolveDependencyGraph(DependencyGraph* graph, NodeIndex_t root, NodeIndex_t currentNode,size_t* traversedNodeCount, NodeIndex_t** traversedNodes, KPMIO* statusCallback);
