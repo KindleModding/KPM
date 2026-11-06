@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-void KPM_FreeIndexedArtifact(IndexedArtifact* artifact)
+void KPM_FreeIndexedArtifact(Artifact* artifact)
 {
      free(artifact->repository);
      free(artifact->id);
@@ -15,7 +15,7 @@ void KPM_FreeIndexedArtifact(IndexedArtifact* artifact)
      artifact->url = NULL;
 }
  
-void KPM_FreeIndexedArtifactList(size_t artifactCount, IndexedArtifact* artifacts)
+void KPM_FreeIndexedArtifactList(size_t artifactCount, Artifact* artifacts)
 {
      for (size_t i=0; i < artifactCount; i++)
         KPM_FreeIndexedArtifact(&artifacts[i]);
@@ -23,7 +23,7 @@ void KPM_FreeIndexedArtifactList(size_t artifactCount, IndexedArtifact* artifact
      free(artifacts);
 }
 
-KPMResult KPM_GetArtifact(KPM* kpm, const char* repositoryId, const char* packageId, SemVer version, IndexedArtifact* artifact)
+KPMResult KPM_GetArtifact(KPM* kpm, const char* repositoryId, const char* packageId, SemVer version, Artifact* artifact)
 {
     const char* zSQL;
     sqlite3_stmt* statement;

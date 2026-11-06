@@ -162,7 +162,7 @@ KPMResult KPM_SearchPackages(KPM* kpm, const char* query, size_t* packageCount, 
     return KPM_OK;
 }
 
-KPMResult KPM_ListPackageArtifacts(KPM* kpm, const char* repositoryId, const char* packageId, size_t* artifactCount, IndexedArtifact** artifacts)
+KPMResult KPM_ListPackageArtifacts(KPM* kpm, const char* repositoryId, const char* packageId, size_t* artifactCount, Artifact** artifacts)
 {
     *artifactCount = 0;
     if (artifacts != NULL)
@@ -206,7 +206,7 @@ KPMResult KPM_ListPackageArtifacts(KPM* kpm, const char* repositoryId, const cha
         {
             if (!*artifacts)
             {
-                *artifacts = malloc(*artifactCount * sizeof(IndexedArtifact));
+                *artifacts = malloc(*artifactCount * sizeof(Artifact));
             }
 
             (*artifacts)[i].url = strdup((const char*) sqlite3_column_text(statement, 1));

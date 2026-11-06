@@ -124,6 +124,7 @@ char* KPKG_GetName(KPKG_File* file);
 char* KPKG_GetAuthor(KPKG_File* file);
 char* KPKG_GetDescription(KPKG_File* file);
 SemVer KPKG_GetVersion(KPKG_File* file);
+size_t KPKG_GetDependencies(KPKG_File* file, KPKG_DependencyEntry** dependencies);
 void KPKG_CloseFile(KPKG_File* file);
 
 //// KPKG1-specific functions

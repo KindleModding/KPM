@@ -721,7 +721,8 @@ char* KPKG_GetName(KPKG_File* file)
     if (file->kpkg_version == KPKG_VERSION_1 || file->kpkg_version == KPKG_VERSION_2)
     {
         return file->kpkg1_payload.name;
-    } else
+    }
+    else
     {
         int offset = 0;
         for (int i = 0; i < 1; i++)
@@ -735,7 +736,8 @@ char* KPKG_GetAuthor(KPKG_File* file)
     if (file->kpkg_version == KPKG_VERSION_1 || file->kpkg_version == KPKG_VERSION_2)
     {
         return file->kpkg1_payload.author;
-    } else
+    }
+    else
     {
         int offset = 0;
         for (int i = 0; i < 2; i++)
@@ -749,7 +751,8 @@ char* KPKG_GetDescription(KPKG_File* file)
     if (file->kpkg_version == KPKG_VERSION_1 || file->kpkg_version == KPKG_VERSION_2)
     {
         return file->kpkg1_payload.description;
-    } else
+    }
+    else
     {
         int offset = 0;
         for (int i = 0; i < 3; i++)
@@ -763,9 +766,26 @@ SemVer KPKG_GetVersion(KPKG_File* file)
     if (file->kpkg_version == KPKG_VERSION_1 || file->kpkg_version == KPKG_VERSION_2)
     {
         return file->kpkg1_payload.package_version;
-    } else
+    }
+    else
     {
         return file->kpkg3_payload.header->package_version;
+    }
+}
+
+size_t KPKG_GetDependencies(KPKG_File* file, KPKG_DependencyEntry** dependencies)
+{
+    if (file->kpkg_version == KPKG_VERSION_1 || file->kpkg_version == KPKG_VERSION_2)
+    {
+        *dependencies = malloc(file->kpkg1_payload.dependency_count * sizeof(KPKG_DependencyEntry));
+        memcpy(*dependencies, file->kpkg1_payload.dependencies, file->kpkg1_payload.dependency_count * sizeof(KPKG_DependencyEntry));
+        return file->kpkg1_payload.dependency_count;
+    }
+    else
+    {
+        *dependencies = malloc(file->kpkg3_payload.header->dependency_count * sizeof(KPKG_DependencyEntry));
+        memcpy(*dependencies, file->kpkg3_payload.dependencies, file->kpkg3_payload.header->dependency_count * sizeof(KPKG_DependencyEntry));
+        return file->kpkg1_payload.dependency_count;
     }
 }
 

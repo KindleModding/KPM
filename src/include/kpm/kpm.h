@@ -72,7 +72,7 @@ typedef struct
     char* id; /**< The package ID */
     char* url; /**< URL of the artifact - primary key */
     SemVer version; /**< The version of this artifact */
-} IndexedArtifact;
+} Artifact;
 
 
 /**
@@ -104,7 +104,7 @@ typedef struct
 
 
 typedef enum {
-    INSTALL_REMOTE,
+    INSTALL_ARTIFACT,
     INSTALL_FILE
 } InstallTargetSource;
 
@@ -116,11 +116,7 @@ typedef struct
 {
     InstallTargetSource type; /**< The source of this target */
     union {
-        struct {
-            char* repository; /**< The repository to look for the package in (or NULL) */
-            char* id; /**< The id of the package to install */
-            SemVer* version; /**< Note: may be NULL if version doesn't matter */
-        };
+        Artifact artifact;
         KPKG_File* file; /**< The local file for the package, if applicable */
     };
 } InstallTarget;
@@ -132,6 +128,10 @@ typedef struct
     char* pkgPath; /**< The path to KPM packages */
     int maxConnections; /**< Maximum number of parallel connections to hold when downloading stuff */
 } KPM;
+
+char* KPM_GetInstallTargetId(InstallTarget target);
+SemVer KPM_GetInstallTargetVersion(InstallTarget target);
+int KPM_GetInstallTargetDependencies(KPM* kpm, InstallTarget target, Dependency** dependencies);
 
 /**
  * @brief Initialise the KPM object
@@ -330,7 +330,7 @@ KPMResult KPM_ListInstalledPackageDependents(KPM* kpm, const char* id, size_t* d
  * 
  * @param artifact The artifact to free the properties of
  */
-void KPM_FreeIndexedArtifact(IndexedArtifact* artifact);
+void KPM_FreeIndexedArtifact(Artifact* artifact);
 
 /**
  * @brief Free an allocated list of indexed artifact
@@ -338,7 +338,7 @@ void KPM_FreeIndexedArtifact(IndexedArtifact* artifact);
  * @param artifactCount The number of indexed artifacts in the array
  * @param artifacts The indexed artifact array
 */
-void KPM_FreeIndexedArtifactList(size_t artifactCount, IndexedArtifact* artifacts);
+void KPM_FreeIndexedArtifactList(size_t artifactCount, Artifact* artifacts);
 
 /**
  * @brief Get an IndexedArtifact
@@ -350,19 +350,19 @@ void KPM_FreeIndexedArtifactList(size_t artifactCount, IndexedArtifact* artifact
  * @param artifact The indexed artifact
  * @return KPMResult 
  */
-KPMResult KPM_GetArtifact(KPM* kpm, const char* repositoryId, const char* packageId, SemVer version, IndexedArtifact* artifact);
+KPMResult KPM_GetArtifact(KPM* kpm, const char* repositoryId, const char* packageId, SemVer version, Artifact* artifact);
 
 /**
  * @brief List the indexed artifacts of a package 
  * 
  * @param kpm The KPM object
- * @param repositoryId The repository ID of the package
+ * @param repositoryId The repository ID of the package (or NULL)
  * @param packageId The package ID of the package
  * @param artifactCount Pointer to store the artifact count
  * @param artifacts Pointer to store the artifact array
  * @return KPMResult 
  */
-KPMResult KPM_ListPackageArtifacts(KPM* kpm, const char* repositoryId, const char* packageId, size_t* artifactCount, IndexedArtifact** artifacts);
+KPMResult KPM_ListPackageArtifacts(KPM* kpm, const char* repositoryId, const char* packageId, size_t* artifactCount, Artifact** artifacts);
 
 // Dependency management functions
 /**

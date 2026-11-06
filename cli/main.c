@@ -245,9 +245,7 @@ int main(int argc, char* argv[])
             }
             else
             {
-                targets[i].repository = NULL;
-                targets[i].version = NULL;
-                targets[i].id = strdup(argv[command_index+1 + i]);
+                // @TODO: Convert string to install target
             }
         }
 
@@ -299,7 +297,7 @@ int main(int argc, char* argv[])
             }
 
             size_t artifact_count;
-            IndexedArtifact* artifacts;
+            Artifact* artifacts;
             if (KPM_ListPackageArtifacts(&kpm, installed_packages[i].repository, installed_packages[i].id, &artifact_count, &artifacts) != KPM_OK || artifact_count == 0) // @TODO: Allow cross-repository upgrades?
             {
                 kpm_io.log(KPM_VERBOSITY_WARN, "Could not find an artifact for %s", installed_packages[i].id);
@@ -314,13 +312,13 @@ int main(int argc, char* argv[])
                 continue;
             }
 
-            targets[target_count].repository = NULL;
-            if (artifacts[0].repository != NULL)
-            {
-                targets[target_count].repository = strdup(artifacts[0].repository);
-                targets[target_count].id = strdup(artifacts[0].id);
-            }
-            targets[target_count].version = NULL;
+            targets[target_count].artifact = (Artifact) {
+                .id = strdup(artifacts[0].id),
+                .url = strdup(artifacts[0].url),
+                .version = artifacts[0].version
+            };
+            if (artifacts[0].repository)
+                targets[target_count].artifact.repository = strdup(artifacts[0].repository);
             KPM_FreeIndexedArtifactList(artifact_count, artifacts);
             target_count++;
         }
