@@ -1,7 +1,6 @@
 #include "dependencies.h"
 
-#include "cjson/cJSON.h"
-#include "install.h"
+#include "kpm/kpkg.h"
 #include "kpm/kpm.h"
 #include "kpm/semver.h"
 #include <assert.h>
@@ -11,6 +10,131 @@
 #include <stdlib.h>
 #include <string.h>
 #include "internal_utils.h"
+
+Hashmap* Hashmap_Create(int size)
+{
+    assert((size & (size-1)) == 0); // Ensure power of 2
+    Hashmap* h = malloc(sizeof(Hashmap));
+    *h = (Hashmap) {
+        .bucket_count = size,
+        .buckets = malloc(size * sizeof(struct HashmapBucket))
+    };
+    memset(h->buckets, 0, sizeof(struct HashmapBucket) * size);
+    return h;
+}
+
+int Hashmap_Hash(Hashmap* hashmap, char* key)
+{
+    int hash = 0;
+    int len = strlen(key);
+    for (int i=0; i < len; i++)
+        hash += key[i]; // @TODO: More robust hashing algorithm lol
+    return (hashmap->bucket_count - 1) & hash;
+}
+
+NodeIndex_t Hashmap_Get(Hashmap* hashmap, NodeIndex_t** nodes, char* key)
+{
+    *nodes = NULL;
+    int hash = Hashmap_Hash(hashmap, key);
+    
+    for (
+        struct HashmapBucket* bucket = hashmap->buckets + hash;
+        bucket->key != NULL;
+        bucket = bucket->pnext
+    )
+    {
+        if (!strcmp(bucket->key, key))
+        {
+            *nodes = bucket->nodes;
+            return bucket->node_count;
+        }
+
+        if (!bucket->pnext)
+            break;
+    }
+
+    return NODE_NULL;
+}
+
+void Hashmap_Remove(Hashmap* hashmap, char* key)
+{
+    int hash = Hashmap_Hash(hashmap, key);
+
+    for (
+        struct HashmapBucket* bucket = hashmap->buckets + hash;
+        bucket->key != NULL;
+        bucket = bucket->pnext
+    )
+    {
+        if (!strcmp(bucket->key, key))
+        {
+            free(bucket->key);
+            free(bucket->nodes);
+            struct HashmapBucket* to_free = bucket->pnext;
+            *bucket = *to_free;
+            free(to_free);
+        }
+
+        if (!bucket->pnext)
+            break;
+    }
+}
+
+void Hashmap_RemoveNode(Hashmap* hashmap, char* key, NodeIndex_t node)
+{
+    int hash = Hashmap_Hash(hashmap, key);
+
+    for (
+        struct HashmapBucket* bucket = hashmap->buckets + hash;
+        bucket->key != NULL;
+        bucket = bucket->pnext
+    )
+    {
+        if (!strcmp(bucket->key, key))
+        {
+            for (int i=0; i < bucket->node_count-1; i++)
+            {
+                if (bucket->nodes[i] == node)
+                {
+                    memcpy(&bucket->nodes[i], &bucket->nodes[i+1], bucket->node_count - i - 1);
+                    bucket->nodes = realloc(bucket->nodes, sizeof(NodeIndex_t) * --bucket->node_count);
+                    return;
+                }
+            }
+        }
+
+        if (!bucket->pnext)
+            break;
+    }
+}
+
+void Hashmap_AddNode(Hashmap* hashmap, char* key, NodeIndex_t node)
+{
+    int hash = Hashmap_Hash(hashmap, key);
+    struct HashmapBucket* bucket;
+    for (
+        bucket = hashmap->buckets + hash;
+        bucket->key != NULL;
+        bucket = bucket->pnext
+    )
+    {
+        if (!strcmp(bucket->key, key))
+        {
+            bucket->nodes = realloc(bucket->nodes, sizeof(NodeIndex_t) * ++bucket->node_count);
+            bucket->nodes[bucket->node_count-1] = node;
+            return;
+        }
+
+        if (!bucket->pnext)
+            break;
+    }
+
+    bucket->pnext = malloc(sizeof(struct HashmapBucket));
+    bucket->pnext->key = strdup(key);
+    bucket->pnext->node_count = 1;
+    bucket->pnext->nodes = malloc(sizeof(NodeIndex_t));
+    bucket->pnext->nodes[0] = node;
+}
 
 void KPM_FreeDependency(Dependency* dependency)
 {
@@ -40,7 +164,7 @@ void CreateDependencyGraph(DependencyGraph* graph, int count)
 
     if (count != 0)
     {
-        graph->nodes = malloc(sizeof(DependencyNode) * count);
+        graph->nodes = malloc(sizeof(GraphNode) * count);
         graph->allocated = count;
     }
 }
@@ -50,15 +174,17 @@ void CreateDependencyGraph(DependencyGraph* graph, int count)
  * 
  * @param node The node to free
  */
-void FreeNode(DependencyNode* node)
+void FreeNode(GraphNode* node)
 {
-    free(node->repository);
-    free(node->id);
-    free(node->url);
-    free(node->connected);
-    node->repository = NULL;
-    node->id = NULL;
-    node->url = NULL;
+    if (node->gt.type == GT_DEPENDENCY)
+    {
+        free(node->gt.dependency.id);
+        node->gt.dependency.id = NULL;
+    }
+    else
+    {
+        KPM_FreeInstallTarget(&node->gt.target);
+    }
     node->connected = NULL;
     node->connectedCount = 0;
 }
@@ -90,7 +216,7 @@ void FreeDependencyGraph(DependencyGraph* graph)
 void ExtendDependencyGraph(DependencyGraph* graph, int allocate)
 {
     graph->allocated += allocate;
-    graph->nodes = realloc(graph->nodes, sizeof(DependencyNode) * graph->allocated);
+    graph->nodes = realloc(graph->nodes, sizeof(GraphNode) * graph->allocated);
 }
 
 /**
@@ -100,46 +226,81 @@ void ExtendDependencyGraph(DependencyGraph* graph, int allocate)
  * @param node 
  * @return NodeIndex_t 
  */
-NodeIndex_t AddNode(DependencyGraph *graph, DependencyNode node)
+NodeIndex_t AddNode(DependencyGraph *graph, GraphNode node)
 {
     if (graph->nodeCount == graph->allocated)
     {
-        ExtendDependencyGraph(graph, graph->allocated/2 + 1);
+        ExtendDependencyGraph(graph, graph->allocated/2 + 1); // ~1.5x growth factor
     }
 
     graph->nodes[graph->nodeCount++] = node;
     return graph->nodeCount-1;
 }
 
+SemVer GetGraphTargetVersion(GraphTarget target)
+{
+    if (target.type == GT_DEPENDENCY)
+        return target.dependency.min_version;
+    if (target.type == GT_INSTALL_TARGET)
+        return KPM_GetInstallTargetVersion(target.target);
+    if (target.type == GT_INSTALLED)
+        return target.installed.version;
+}
+
+char* GetGraphTargetId(GraphTarget target)
+{
+    if (target.type == GT_DEPENDENCY)
+        return target.dependency.id;
+    if (target.type == GT_INSTALL_TARGET)
+        return KPM_GetInstallTargetId(target.target);
+    if (target.type == GT_INSTALLED)
+        return target.installed.id;
+}
+
 /**
- * @brief Add a connection between two nodes in the graph
+ * @brief Add a dependency to an artifact
  * 
  * @param graph 
  * @param firstNodeIndex 
  * @param nextNodeIndex 
  */
-void AddEdge(DependencyGraph* graph, NodeIndex_t firstNodeIndex, NodeIndex_t nextNodeIndex)
+void AddArtifactDep(DependencyGraph* graph, NodeIndex_t artNodeIdx, NodeIndex_t depNodeIdx)
 {
-    graph->nodes[firstNodeIndex].connectedCount++;
-    graph->nodes[firstNodeIndex].connected = realloc(graph->nodes[firstNodeIndex].connected, graph->nodes[firstNodeIndex].connectedCount * sizeof(size_t));
+    graph->nodes[artNodeIdx].connectedCount++;
+    graph->nodes[artNodeIdx].connected = realloc(graph->nodes[artNodeIdx].connected, graph->nodes[artNodeIdx].connectedCount * sizeof(size_t));
+    graph->nodes[artNodeIdx].connected[graph->nodes[artNodeIdx].connectedCount-1] = depNodeIdx;
+}
+
+/**
+ * @brief Add an artifact to a dependency
+ * 
+ * @param graph 
+ * @param firstNodeIndex 
+ * @param nextNodeIndex 
+ */
+void AddDepTarget(DependencyGraph* graph, NodeIndex_t depNodeIdx, NodeIndex_t artNodeIdx)
+{
+    assert(graph->nodes[depNodeIdx].gt.type == GT_DEPENDENCY);
+    assert(graph->nodes[artNodeIdx].gt.type == GT_INSTALL_TARGET || graph->nodes[artNodeIdx].gt.type == GT_INSTALLED);
+
+    graph->nodes[depNodeIdx].connectedCount++;
+    graph->nodes[depNodeIdx].connected = realloc(graph->nodes[depNodeIdx].connected, graph->nodes[depNodeIdx].connectedCount * sizeof(size_t));
     
     // Insert it into the list such that dependency artifacts are ordered newest to oldest
-    NodeIndex_t insertionIndex = graph->nodes[firstNodeIndex].connectedCount-1;
-    if (graph->nodes[nextNodeIndex].type == NODE_ARTIFACT)
+    NodeIndex_t insertionIndex = graph->nodes[depNodeIdx].connectedCount-1;
+    while (
+        insertionIndex > 0 &&
+        SemVerCmp(
+            GetGraphTargetVersion(graph->nodes[graph->nodes[depNodeIdx].connected[insertionIndex-1]].gt),
+            GetGraphTargetVersion(graph->nodes[artNodeIdx].gt)
+        ) > 0
+    )
     {
-        while (insertionIndex > 0)
-        {
-            if (SemVerCmp(graph->nodes[graph->nodes[firstNodeIndex].connected[insertionIndex-1]].min_version, graph->nodes[nextNodeIndex].min_version) > 0)
-            {
-                break;
-            }
-
-            graph->nodes[firstNodeIndex].connected[insertionIndex] = graph->nodes[firstNodeIndex].connected[insertionIndex-1];
-            insertionIndex--;
-        }
+        graph->nodes[depNodeIdx].connected[insertionIndex] = graph->nodes[depNodeIdx].connected[insertionIndex-1];
+        insertionIndex--;
     }
-
-    graph->nodes[firstNodeIndex].connected[insertionIndex] = nextNodeIndex;
+    
+    graph->nodes[depNodeIdx].connected[insertionIndex] = artNodeIdx;
 }
 
 /**
@@ -155,96 +316,13 @@ void AddFirstEdge(DependencyGraph* graph, NodeIndex_t firstNodeIndex, NodeIndex_
     graph->nodes[firstNodeIndex].connected = realloc(graph->nodes[firstNodeIndex].connected, graph->nodes[firstNodeIndex].connectedCount * sizeof(size_t));
     
     NodeIndex_t insertionIndex = graph->nodes[firstNodeIndex].connectedCount-1;
-    if (graph->nodes[nextNodeIndex].type == NODE_ARTIFACT)
+    while (insertionIndex > 0)
     {
-        while (insertionIndex > 0)
-        {
-            graph->nodes[firstNodeIndex].connected[insertionIndex] = graph->nodes[firstNodeIndex].connected[insertionIndex-1];
-            insertionIndex--;
-        }
+        graph->nodes[firstNodeIndex].connected[insertionIndex] = graph->nodes[firstNodeIndex].connected[insertionIndex-1];
+        insertionIndex--;
     }
 
     graph->nodes[firstNodeIndex].connected[insertionIndex] = nextNodeIndex;
-}
-
-/**
- * @brief Search the graph for an artifact
- * 
- * @param graph 
- * @param repository 
- * @param id 
- * @param version 
- * @param index The index of the artifact's node
- * @return true Returned if the node is found and index is set
- * @return false Returned if the node is not found and index is not set
- */
-bool FindArtifactNode(DependencyGraph* graph, char* id, SemVer version, NodeIndex_t* index)
-{
-    for (NodeIndex_t i=0; i < graph->nodeCount; i++)
-    {
-        if (graph->nodes[i].type == NODE_DEPENDENCY)
-        {
-            continue;
-        }
-
-        if (graph->nodes[i].id == NULL || strcmp(graph->nodes[i].id, id) != 0)
-        {
-            continue;
-        }
-
-        if (SemVerCmp(version, graph->nodes[i].min_version) != 0) // NODE_ARTIFACT is a fixed version
-        {
-            continue;
-        }
-
-        *index = i;
-        return true;
-    }
-
-    return false;
-}
-
-/**
- * @brief Search the graph for a dependency node
- * 
- * @param graph 
- * @param repository 
- * @param id 
- * @param min_version 
- * @param max_version 
- * @param index 
- * @return true 
- * @return false 
- */
-bool FindDependencyNode(DependencyGraph* graph, char* id, SemVer min_version, SemVer max_version, NodeIndex_t* index)
-{
-    for (NodeIndex_t i=0; i < graph->nodeCount; i++)
-    {
-        if (graph->nodes[i].type == NODE_ARTIFACT)
-        {
-            continue;
-        }
-
-        if (strcmp(graph->nodes[i].id, id) != 0)
-        {
-            continue;
-        }
-
-        if (SemVerCmp(min_version, graph->nodes[i].min_version) != 0)
-        {
-            continue;
-        }
-
-        if (SemVerCmp(max_version, graph->nodes[i].max_version) != 0)
-        {
-            continue;
-        }
-
-        *index = i;
-        return true;
-    }
-
-    return false;
 }
 
 /**
@@ -256,39 +334,98 @@ bool FindDependencyNode(DependencyGraph* graph, char* id, SemVer min_version, Se
  * @param targetDependencies 
  * @return KPMResult 
  */
-KPMResult Internal_GetArtifactDependencies(KPM* kpm, IndexedArtifact* target, size_t* targetDependencyCount, Dependency** targetDependencies, KPMIO* kpm_io)
+KPMResult Internal_GetGraphTargetDependencies(KPM* kpm, GraphTarget target, size_t* targetDependencyCount, Dependency** targetDependencies, KPMIO* kpm_io)
 {
-    
+    if (target.type == GT_INSTALL_TARGET)
+    {
+        if (target.target.type == INSTALL_ARTIFACT)
+            return KPM_ListArtifactDependencies(kpm, target.target.artifact.repository, target.target.artifact.id, target.target.artifact.url, targetDependencyCount, targetDependencies);
 
-    return KPM_OK;
+        *targetDependencyCount = KPKG_GetDependencies(target.target.file, (KPKG_DependencyEntry**) targetDependencies);
+        return KPM_OK;
+    }
+
+    if (target.type == GT_INSTALLED)
+        return KPM_ListInstalledPackageDependencies(kpm, target.installed.id, targetDependencyCount, targetDependencies);
 }
 
-void stringConcatenate(char* dest, char* src, size_t* length, bool dry)
+void strcat_hd(char* dest, char* src, size_t* length, bool dry)
 {
     *length += strlen(src);
     if (!dry)
         strcat(dest, src);
 }
 
-void getNameFromNode(DependencyGraph* graph, NodeIndex_t index, char** output, bool declaration)
+void node2str(DependencyGraph* graph, NodeIndex_t index, char** output, bool declaration)
 {
+    GraphNode node = graph->nodes[index];
     if (declaration)
     {
-        if (graph->nodes[index].type == NODE_ARTIFACT)
+        if (node.gt.type == GT_INSTALL_TARGET)
         {
-            *output = asprintf_hd("%zu[\"%s\n%s\n%u.%u.%u\"]", index, graph->nodes[index].repository, graph->nodes[index].id, graph->nodes[index].min_version.major, graph->nodes[index].min_version.minor, graph->nodes[index].min_version.patch);
+            if (node.gt.target.type == INSTALL_ARTIFACT)
+            {
+                *output = asprintf_hd(
+                    "%i[\"%s\n%s\n%u.%u.%u\"]",
+                    index,
+                    node.gt.target.artifact.repository,
+                    node.gt.target.artifact.id,
+                    node.gt.target.artifact.version.major,
+                    node.gt.target.artifact.version.minor,
+                    node.gt.target.artifact.version.patch
+                );
+            }
+            else
+            {
+                *output = asprintf_hd(
+                    "%i[\"%s\n%s\n%u.%u.%u\"]",
+                    index,
+                    NULL,
+                    KPKG_GetId(node.gt.target.file),
+                    KPKG_GetVersion(node.gt.target.file).major,
+                    KPKG_GetVersion(node.gt.target.file).minor,
+                    KPKG_GetVersion(node.gt.target.file).patch
+                );
+            }
             return;
         }
 
-        if (graph->nodes[index].type == NODE_DEPENDENCY)
+        if (node.gt.type == GT_INSTALLED)
         {
-            *output = asprintf_hd("%zu([\"%s\n%s\n%u.%u.%u to %u.%u.%u\"])", index, graph->nodes[index].repository, graph->nodes[index].id, graph->nodes[index].min_version.major, graph->nodes[index].min_version.minor, graph->nodes[index].min_version.patch, graph->nodes[index].max_version.major, graph->nodes[index].max_version.minor, graph->nodes[index].max_version.patch);
+            if (node.gt.target.type == INSTALL_ARTIFACT)
+            {
+                *output = asprintf_hd(
+                    "%i[\"%s\n%s\n%u.%u.%u\"]",
+                    index,
+                    node.gt.installed.repository,
+                    node.gt.installed.id,
+                    node.gt.installed.version.major,
+                    node.gt.installed.version.minor,
+                    node.gt.installed.version.patch
+                );
+            }
+            return;
+        }
+
+        if (node.gt.type == GT_DEPENDENCY)
+        {
+            *output = asprintf_hd(
+                "%i([\"%s\n%u.%u.%u to %u.%u.%u\"])",
+                index,
+                node.gt.dependency.id,
+                node.gt.dependency.min_version.major,
+                node.gt.dependency.min_version.minor,
+                node.gt.dependency.min_version.patch,
+                node.gt.dependency.max_version.major,
+                node.gt.dependency.max_version.minor,
+                node.gt.dependency.max_version.patch
+            );
             return;
         }
     }
     else 
     {
-        *output = asprintf_hd("%zu", index);
+        *output = asprintf_hd("%i", index);
         return;
     }
 }
@@ -296,27 +433,27 @@ void getNameFromNode(DependencyGraph* graph, NodeIndex_t index, char** output, b
 int Internal_RenderGraph(DependencyGraph* graph, char* output, bool dry)
 {
     size_t outputLength=0;
-    stringConcatenate(output, "flowchart TD\n", &outputLength, dry);
+    strcat_hd(output, "flowchart TD\n", &outputLength, dry);
 
     for (NodeIndex_t i=0; i < graph->nodeCount; i++)
     {
         char* nodeName = NULL;
-        getNameFromNode(graph, i, &nodeName, true);
-        stringConcatenate(output, "    ", &outputLength, dry);
-        stringConcatenate(output, nodeName, &outputLength, dry);
-        stringConcatenate(output, "\n", &outputLength, dry);
+        node2str(graph, i, &nodeName, true);
+        strcat_hd(output, "    ", &outputLength, dry);
+        strcat_hd(output, nodeName, &outputLength, dry);
+        strcat_hd(output, "\n", &outputLength, dry);
         free(nodeName);
 
         for (size_t j=0; j < graph->nodes[i].connectedCount; j++)
         {
             char* connectedName = NULL;
-            getNameFromNode(graph, i, &nodeName, false);
-            getNameFromNode(graph, graph->nodes[i].connected[j], &connectedName, false);
-            stringConcatenate(output, "    ", &outputLength, dry);
-            stringConcatenate(output, nodeName, &outputLength, dry);
-            stringConcatenate(output, " --> ", &outputLength, dry);
-            stringConcatenate(output, connectedName, &outputLength, dry);
-            stringConcatenate(output, "\n", &outputLength, dry);
+            node2str(graph, i, &nodeName, false);
+            node2str(graph, graph->nodes[i].connected[j], &connectedName, false);
+            strcat_hd(output, "    ", &outputLength, dry);
+            strcat_hd(output, nodeName, &outputLength, dry);
+            strcat_hd(output, " --> ", &outputLength, dry);
+            strcat_hd(output, connectedName, &outputLength, dry);
+            strcat_hd(output, "\n", &outputLength, dry);
             free(connectedName);
             free(nodeName);
         }
@@ -334,141 +471,236 @@ void RenderGraph(DependencyGraph* graph, char** output)
     Internal_RenderGraph(graph, *output, false);
 }
 
-int Internal_ConstructGraphFromArtifact(KPM* kpm, DependencyGraph* graph, IndexedArtifact* artifact, KPMIO* kpm_io)
+NodeIndex_t CreateTargetNode(DependencyGraph* graph, InstallTarget target)
 {
-    kpm_io->log(KPM_VERBOSITY_DEBUG, "Constructing graph from %i", artifact->id);
-    DependencyNode node = {
-        .type = NODE_ARTIFACT,
-        .connected = NULL,
+    return AddNode(graph, (GraphNode) {
         .connectedCount = 0,
-        .repository = NULL,
-        .id = strdup(artifact->id),
-        .url = NULL,
-        .min_version = artifact->version,
-        .max_version = artifact->version
-    };
-    if (artifact->url != NULL)
-        node.url = strdup(artifact->url);
-    if (artifact->repository != NULL)
-        node.repository = strdup(artifact->repository);
+        .connected = NULL,
+        .gt = {
+            .type = GT_INSTALL_TARGET,
+            .target = target
+        }
+    });
+}
 
-    // Add this artifact to the graph
-    int root = AddNode(graph, node);
+NodeIndex_t CreateInstalledNode(DependencyGraph* graph, InstalledPackage installed)
+{
+    return AddNode(graph, (GraphNode) {
+        .connectedCount = 0,
+        .connected = NULL,
+        .gt = {
+            .type = GT_INSTALLED,
+            .installed = installed
+        }
+    });
+}
 
-    size_t dependencyCount = 0;
-    Dependency* dependencies = NULL;
-    if (Internal_GetArtifactDependencies(kpm, artifact, &dependencyCount, &dependencies, kpm_io) != KPM_OK)
+NodeIndex_t CreateDependencyNode(DependencyGraph* graph, Dependency dependency)
+{
+    return AddNode(graph, (GraphNode) {
+        .connectedCount = 0,
+        .connected = NULL,
+        .gt = {
+            .type = GT_DEPENDENCY,
+            .dependency = dependency
+        }
+    });
+}
+
+NodeIndex_t Internal_FindDependencyInGraph(DependencyGraph* graph, Dependency dep)
+{
+    NodeIndex_t* deps_found;
+    int dep_count = Hashmap_Get(graph->depmap, &deps_found, dep.id);
+    for (int i=0; i < dep_count; i++)
     {
-        KPM_FreeDependencyList(dependencyCount, dependencies);
-        kpm_io->log(KPM_VERBOSITY_ERROR, "Could not list dependencies for %s (%u.%u.%u)", artifact->id, artifact->version.major, artifact->version.minor, artifact->version.patch);
-        return -1;
+        NodeIndex_t idx = deps_found[i];
+        GraphNode node = graph->nodes[idx];
+        assert(node.gt.type == GT_DEPENDENCY);
+
+        if (SemVerCmp(node.gt.dependency.min_version, dep.min_version))
+            continue;
+
+        if (SemVerCmp(node.gt.dependency.max_version, dep.max_version))
+            continue;
+
+        free(deps_found);
+        return idx;
+    }
+    return NODE_NULL;
+}
+
+NodeIndex_t Internal_FindTargetInGraph(DependencyGraph* graph, GraphTarget gt)
+{
+    NodeIndex_t* targets_found;
+    int target_count = Hashmap_Get(graph->targetmap, &targets_found, GetGraphTargetId(gt));
+    for (int i=0; i < target_count; i++)
+    {
+        NodeIndex_t idx = targets_found[i];
+        GraphNode node = graph->nodes[idx];
+        assert(node.gt.type != GT_DEPENDENCY);
+
+        if (SemVerCmp(GetGraphTargetVersion(gt), GetGraphTargetVersion(node.gt)))
+            continue;
+
+        free(targets_found);
+        return idx;
     }
 
-    kpm_io->log(KPM_VERBOSITY_DEBUG, "Got %i dependencies for artifact", dependencyCount);
-    for (size_t i=0; i < dependencyCount; i++)
+    return NODE_NULL;
+}
+
+NodeIndex_t Internal_FindArtifactInGraph(DependencyGraph* graph, Artifact artifact)
+{
+    NodeIndex_t* targets_found;
+    int target_count = Hashmap_Get(graph->targetmap, &targets_found, artifact.id);
+    for (int i=0; i < target_count; i++)
     {
-        kpm_io->log(KPM_VERBOSITY_DEBUG, "Checking dependency %s %zi.%zi.%zi - %zi.%zi.%zi", dependencies[i].id, dependencies[i].min_version.major, dependencies[i].min_version.minor, dependencies[i].min_version.patch, dependencies[i].max_version.major, dependencies[i].max_version.minor, dependencies[i].max_version.patch);
+        NodeIndex_t idx = targets_found[i];
+        GraphNode node = graph->nodes[idx];
+        assert(node.gt.type != GT_DEPENDENCY);
 
-        // Check if this dependency is already present
-        NodeIndex_t dependencyNodeId;
-        if (FindDependencyNode(graph, dependencies[i].id, dependencies[i].min_version, dependencies[i].max_version, &dependencyNodeId))
+        if (SemVerCmp(artifact.version, GetGraphTargetVersion(node.gt)))
+            continue;
+
+        free(targets_found);
+        return idx;
+    }
+
+    return NODE_NULL;
+}
+
+void Internal_AddExistingTargetsToDependency(DependencyGraph* graph, NodeIndex_t dep_idx)
+{
+    assert(graph->nodes[dep_idx].gt.type == GT_DEPENDENCY);
+    Dependency dep = graph->nodes[dep_idx].gt.dependency;
+
+    NodeIndex_t* target_node_idS;
+    int node_count = Hashmap_Get(graph->targetmap, &target_node_idS, dep.id);
+    for (int i=0; i < node_count; i++)
+    {
+        NodeIndex_t target_idx = target_node_idS[i];
+        GraphNode node = graph->nodes[target_idx];
+        assert(node.gt.type != GT_DEPENDENCY);
+
+        if (
+            SemVerCmp(
+                GetGraphTargetVersion(node.gt),
+                dep.min_version
+            ) >= 0 &&
+            SemVerCmp(
+                GetGraphTargetVersion(node.gt),
+                dep.max_version
+            ) < 0
+        )
         {
-            AddEdge(graph, root, dependencyNodeId);
-            kpm_io->log(KPM_VERBOSITY_DEBUG, "Dependency found version: %zi.%zi.%zi", graph->nodes[dependencyNodeId].min_version.major, graph->nodes[dependencyNodeId].min_version.minor, graph->nodes[dependencyNodeId].min_version.patch);
-            continue; // We can skip this dependency if it already exists in the graph
+            AddDepTarget(graph, dep_idx, target_idx);
         }
+    }
+}
 
-        DependencyNode dependencyNode = {
-            .type = NODE_DEPENDENCY,
-            .connected = NULL,
+void Internal_AddTargetToExistingDependencies(DependencyGraph* graph, NodeIndex_t target_idx)
+{
+    GraphNode target_node = graph->nodes[target_idx];
+    assert(target_node.gt.type != GT_DEPENDENCY);
+
+    NodeIndex_t* dep_node_ids;
+    int node_count = Hashmap_Get(graph->depmap, &dep_node_ids, GetGraphTargetId(target_node.gt));
+    for (int i=0; i < node_count; i++)
+    {
+        NodeIndex_t dep_idx = dep_node_ids[i];
+        GraphNode dep_node = graph->nodes[dep_idx];
+
+        if (
+            SemVerCmp(
+                GetGraphTargetVersion(target_node.gt),
+                dep_node.gt.dependency.min_version
+            ) >= 0 &&
+            SemVerCmp(
+                GetGraphTargetVersion(target_node.gt),
+                dep_node.gt.dependency.max_version
+            ) < 0
+        )
+        {
+            AddDepTarget(graph, dep_idx, target_idx);
+        }
+    }
+}
+
+NodeIndex_t Internal_ConstructGraphFromTarget(KPM* kpm, DependencyGraph* graph, GraphTarget gt, KPMIO* kpm_io)
+{
+    assert(gt.type == GT_INSTALL_TARGET);
+    assert(gt.type == GT_INSTALLED);
+
+    NodeIndex_t constructed_idx = AddNode(
+        graph,
+        (GraphNode) {
             .connectedCount = 0,
-            .repository = NULL,
-            .id = strdup(dependencies[i].id),
-            .min_version = dependencies[i].min_version,
-            .max_version = dependencies[i].max_version
-        };
+            .connected = NULL,
+            .gt = gt
+        }
+    ); // We push nodes as soon as possible for loop closure when recursing
 
-        dependencyNodeId = AddNode(graph, dependencyNode);
-        AddEdge(graph, root, dependencyNodeId);
+    Internal_AddTargetToExistingDependencies(graph, constructed_idx);
 
-        bool validArtifactFound = false;
+    // Go through this target's own dependencies
+    size_t dep_count;
+    Dependency* dependencies;
+    if (Internal_GetGraphTargetDependencies(kpm, gt, &dep_count, &dependencies, kpm_io) != KPM_OK)
+        return NODE_NULL;
 
-        // Add indexed artifacts that match the dependency
-        kpm_io->log(KPM_VERBOSITY_DEBUG, "Searching for artifact that matches %s", dependencies[i].id);
-        size_t artifactCount;
-        IndexedArtifact* artifacts;
-        KPM_ListPackageArtifacts(kpm, NULL, dependencies[i].id, &artifactCount, &artifacts);
-        kpm_io->log(KPM_VERBOSITY_DEBUG, "Found %i matches", artifactCount);
+    for (int i=0; i < dep_count; i++)
+    {
+        Dependency dep = dependencies[i];
 
-        for (size_t j=0; j < artifactCount; j++)
+        // Check if this dependency already exists in the graph
+        NodeIndex_t dep_found = Internal_FindDependencyInGraph(graph, dep);
+        if (dep_found != NODE_NULL)
         {
-            if (SemVerCmp(artifacts[j].version, dependencies[i].min_version) < 0 || SemVerCmp(artifacts[j].version, dependencies[i].max_version) >= 0)
-            {
+            AddArtifactDep(graph, constructed_idx, dep_found);
+            continue;
+        }
+
+        // Gotta make AND POPULATE the dep node ourselves!
+        NodeIndex_t dep_idx = CreateDependencyNode(graph, dep);
+
+        // For each target in the graph that fits, add it to our dependency
+        Internal_AddExistingTargetsToDependency(graph, dep_idx);
+
+        // Find all artifacts NOT in the graph that satisfy this dependency and recursively add them
+        size_t artifact_count;
+        Artifact* artifacts;
+        if (!KPM_ListPackageArtifacts(kpm, NULL, dep.id,  &artifact_count, &artifacts))
+            return NODE_NULL;
+
+        for (int j = 0; j < artifact_count; j++)
+        {            
+            NodeIndex_t existing_artifact = Internal_FindArtifactInGraph(graph, artifacts[j]);
+            if (existing_artifact != NODE_NULL)
                 continue;
-            }
 
-            validArtifactFound = true;
+            // This artifact is new, we should add it to the graph...
+            NodeIndex_t idx = Internal_ConstructGraphFromTarget(
+                kpm,
+                graph,
+                (GraphTarget) {
+                    .type = GT_INSTALL_TARGET,
+                    .target = (InstallTarget) {
+                        .type = INSTALL_ARTIFACT,
+                        .artifact = artifacts[j]
+                    }
+                },
+                kpm_io
+            );
 
-            NodeIndex_t artifactNodeId;
-            kpm_io->log(KPM_VERBOSITY_DEBUG, "Searching for %s (%zi.%zi.%zi) in graph", artifacts[j].id, artifacts[j].version.major, artifacts[j].version.minor, artifacts[j].version.patch);
-            if (!FindArtifactNode(graph, artifacts[j].id, artifacts[j].version, &artifactNodeId))
-            {
-                artifactNodeId = Internal_ConstructGraphFromArtifact(kpm, graph, &artifacts[j], kpm_io);
-                if (artifactNodeId == -1)
-                {
-                    kpm_io->log(KPM_VERBOSITY_ERROR, "Could not construct graph for %s", artifacts[j].id);
-                    KPM_FreeDependencyList(dependencyCount, dependencies);
-                    return -1;
-                }
-            }
+            if (idx == NODE_NULL)
+                return NODE_NULL; // @TODO: Cleanup
 
-            AddEdge(graph, dependencyNodeId, artifactNodeId);
-        }
-        KPM_FreeIndexedArtifactList(artifactCount, artifacts);
-
-        // Add locally installed package if present
-        InstalledPackage installedPackage;
-        KPM_GetInstalledPackage(kpm, dependencies[i].id, &installedPackage);
-        if (installedPackage.id != NULL && SemVerCmp(installedPackage.version, dependencies[i].min_version) >= 0 && SemVerCmp(installedPackage.version, dependencies[i].max_version) < 0)
-        {
-            validArtifactFound = true;
-
-            NodeIndex_t artifactNodeId;
-            if (!FindArtifactNode(graph, installedPackage.id, installedPackage.version, &artifactNodeId))
-            {
-                IndexedArtifact fakeArtifact = {
-                    .id = strdup(installedPackage.id),
-                    .repository = NULL,
-                    .url = NULL,
-                    .version = installedPackage.version
-                };
-                if (installedPackage.repository != NULL)
-                    fakeArtifact.repository = strdup(installedPackage.repository);
-                
-                artifactNodeId = Internal_ConstructGraphFromArtifact(kpm, graph, &fakeArtifact, kpm_io);
-                KPM_FreeIndexedArtifact(&fakeArtifact);
-                if (artifactNodeId == -1)
-                {
-                    kpm_io->log(KPM_VERBOSITY_ERROR, "Could not construct graph for %s", fakeArtifact.id);
-                    KPM_FreeDependencyList(dependencyCount, dependencies);
-                    return -1;
-                }
-            }
-
-            AddFirstEdge(graph, dependencyNodeId, artifactNodeId);
-        }
-        KPM_FreeInstalledPackage(&installedPackage);
-        
-        if (!validArtifactFound)
-        {
-            kpm_io->log(KPM_VERBOSITY_ERROR, "Could not find artifact for %s (%u.%u.%u - %u.%u.%u)", dependencyNode.id, dependencyNode.min_version.major, dependencyNode.min_version.minor, dependencyNode.min_version.patch, dependencyNode.max_version.major, dependencyNode.max_version.minor, dependencyNode.max_version.patch);
-            KPM_FreeDependencyList(dependencyCount, dependencies);
-            return -1;
+            AddDepTarget(graph, dep_idx, idx);
         }
     }
 
-    KPM_FreeDependencyList(dependencyCount, dependencies);
-    return root;
+    KPM_FreeDependencyList(dep_count, dependencies);
+    return constructed_idx;
 }
 
 void Internal_ArrayAddNode(size_t* traversedNodeCount, NodeIndex_t** traversedNodes, NodeIndex_t node)
@@ -480,310 +712,5 @@ void Internal_ArrayAddNode(size_t* traversedNodeCount, NodeIndex_t** traversedNo
 
 bool Internal_ResolveDependencyGraph(DependencyGraph* graph, NodeIndex_t root, NodeIndex_t currentNode, size_t* traversedNodeCount, NodeIndex_t** traversedNodes, KPMIO* kpmIO)
 {
-    for (;;)
-    {
-        kpmIO->log(KPM_VERBOSITY_DEBUG, "Traversing node: %zu - %s", currentNode, graph->nodes[currentNode].id);
-        // Check if this artifact is already traversed
-        bool alreadyTraversed=false;
-        for (size_t i=0; i < *traversedNodeCount; i++)
-        {
-            if ((*traversedNodes)[i] == currentNode)
-            {
-                kpmIO->log(KPM_VERBOSITY_DEBUG, "Already traversed!");
-                alreadyTraversed=true;
-                break;
-            }
-        }
 
-        Internal_ArrayAddNode(traversedNodeCount, traversedNodes, currentNode);
-
-        kpmIO->log(KPM_VERBOSITY_DEBUG, "Currently traversed:");
-        for (size_t i=0; i < *traversedNodeCount; i++)
-        {
-            kpmIO->log(KPM_VERBOSITY_DEBUG, "- %li\t%s (%u.%u.%u)", (*traversedNodes)[i], graph->nodes[(*traversedNodes)[i]].id, graph->nodes[(*traversedNodes)[i]].min_version.major, graph->nodes[(*traversedNodes)[i]].min_version.minor, graph->nodes[(*traversedNodes)[i]].min_version.patch);
-        }
-
-        if (!alreadyTraversed)
-        {
-            // Ensure this NEW node doesn't conflict with ANY previously traversed artifacts
-            bool conflicts = false;
-            NodeIndex_t conflictingArtifactId;
-            NodeIndex_t conflictingDependencyId;
-            for (size_t i=0; i < *traversedNodeCount; i++)
-            {
-                if (graph->nodes[(*traversedNodes)[i]].type != NODE_ARTIFACT || (*traversedNodes)[i] == root)
-                {
-                    continue;
-                }
-
-                conflictingArtifactId = (*traversedNodes)[i];
-                conflictingDependencyId = (*traversedNodes)[i-1];
-                if (currentNode != conflictingArtifactId && strcmp(graph->nodes[currentNode].id, graph->nodes[conflictingArtifactId].id) == 0)
-                {
-                    kpmIO->log(KPM_VERBOSITY_DEBUG, "Node conflicts with: %zu - %s", conflictingArtifactId, graph->nodes[conflictingArtifactId].id);
-                    // Don't need to check if version conflicts because if the node wasn't already traversed
-                    // It must be conflicting since it wasn't merged
-                    conflicts=true;
-                    break;
-                }
-            }
-
-            // Find an alternative artifact that matches the conflicting artifact
-            if (conflicts)
-            {
-                NodeIndex_t dependencyId = (*traversedNodes)[*traversedNodeCount - 2]; // Dependency for current artifact (traversedNodeCount must be at least 2 for a conflict to occur) (REMEMBER THAT -1 IS THE CURRENT -> -2 IS THE LAST!)
-                // Check if dependency has an artifact that matches the already resolved conflicting one
-                for (size_t i=0; i < graph->nodes[dependencyId].connectedCount; i++)
-                {
-                    if (conflictingArtifactId == graph->nodes[dependencyId].connected[i]) // We can compare nodes directly bc artifact merging
-                    {
-                        (*traversedNodeCount)--; // Remove this node from the traversed nodes
-                        currentNode = conflictingArtifactId; // Prepare to add the proper one
-                        conflicts = false;
-                        break;
-                    }
-                }
-
-                if (!conflicts)
-                {
-                    continue; // Try again but with the now-current next artifact candidate
-                }
-            }
-
-            // Try to rollback to first encounter of the conflicting dependency
-            if (conflicts)
-            {
-                NodeIndex_t dependencyId = (*traversedNodes)[*traversedNodeCount - 2]; // Dependency for current artifact (traversedNodeCount must be at least 2 for a conflict to occur) (REMEMBER THAT -1 IS THE CURRENT -> -2 IS THE LAST!)
-                
-                bool circular=false; // Detect a circular dependency by checking if the conflicting artifact is on our current path
-                for (size_t i=(*traversedNodeCount)-1; (*traversedNodes)[i] != root; i--)
-                {
-                    if ((*traversedNodes)[i] == conflictingArtifactId)
-                    {
-                        circular = true;
-                        break;
-                    }
-                }
-
-                if (!circular)
-                {
-                    // If the dependency isn't circular then we can just find a dependency that fits both branches and recompute from there
-                    // There's a fairly high chance that this should work in such scenarios
-                    for (size_t i=0; i < graph->nodes[dependencyId].connectedCount; i++)
-                    {
-                        for (size_t j=0; j < graph->nodes[conflictingDependencyId].connectedCount; j++)
-                        {
-                            if (graph->nodes[dependencyId].connected[i] == graph->nodes[conflictingDependencyId].connected[j])
-                            {
-                                // Find the point to rewind to
-                                for (size_t k=0; k < *traversedNodeCount; k++)
-                                {
-                                    if ((*traversedNodes)[k] == conflictingDependencyId)
-                                    {
-                                        *traversedNodeCount = k+1; // Rewind to dependency node (remember the count is index+1)
-                                        currentNode = graph->nodes[conflictingDependencyId].connected[j]; // Set new artifact as current node
-                                        conflicts=false; // Run from this new state
-                                        break;
-                                    }
-                                }
-                                break;
-                            }
-                        }
-
-                        if (!conflicts)
-                        {
-                            break;
-                        }
-                    }
-
-                    if (!conflicts)
-                    {
-                        continue; // Re-compute from new point
-                    }
-                }
-
-
-                // It's circular OR we couldn't find a trivial solution
-                // This is essentially the nuclear option - we TRY to eliminate the conflicting dependency from this point
-
-                (*traversedNodeCount)--; // We are no longer looking at artifacts! (No need to bounds check because a circular dependency cannot just happen like that)
-                NodeIndex_t currentDependencyId = dependencyId;
-                while (conflicts)
-                {
-                    // Does a parent artifact really exist?
-                    if (*traversedNodeCount <= 2 || (*traversedNodes)[*traversedNodeCount - 2] == root) // We cannot rewind further
-                    {
-                        break;
-                    }
-                    
-                    NodeIndex_t blacklistedDependency = currentDependencyId;
-                    // Go back to the dependent dependency :p
-                    (*traversedNodeCount) -= 2;
-                    currentDependencyId = (*traversedNodes)[*traversedNodeCount - 1];
-
-                    // Find a resolution to the dependency that doesn't directly require our now-blacklisted dependency
-                    bool blacklistPassed=false;
-                    for (size_t i=0; i < graph->nodes[currentDependencyId].connectedCount; i++)
-                    {
-                        bool artifactBlacklisted = false;
-                        NodeIndex_t candidateArtifact = graph->nodes[currentDependencyId].connected[i];
-                        for (size_t j=0; j < graph->nodes[candidateArtifact].connectedCount; j++)
-                        {
-                            if (graph->nodes[candidateArtifact].connected[j] == blacklistedDependency)
-                            {
-                                artifactBlacklisted = true;
-                                blacklistPassed=true;
-                                break;
-                            }
-                        }
-
-                        // Get the first artifact that doesn't have our blacklisted dependency
-                        // We ignore any before the blacklisted dep as we assume it has already been checked
-                        if (blacklistPassed && !artifactBlacklisted)
-                        {
-                            currentNode = candidateArtifact;
-                            conflicts=false;
-                            break;
-                        }
-                    }
-                }
-
-                if (!conflicts)
-                {
-                    continue;
-                }
-
-                // Somehow that didn't work
-                // Nuke it.
-                // Just nuke the original dependency
-
-                // Find the first time we saw this dependency
-                // And rewind there - then blacklist it!
-                for (size_t i=0; i < *traversedNodeCount; i++)
-                {
-                    if ((*traversedNodes)[i] == dependencyId)
-                    {
-                        currentDependencyId = (*traversedNodes)[i];
-                        *traversedNodeCount = i+1;
-                        break;
-                    }
-                }
-
-                while (conflicts)
-                {
-                    // Does a parent artifact really exist?
-                    if (*traversedNodeCount <= 2 || (*traversedNodes)[*traversedNodeCount - 2] == root) // We cannot rewind further
-                    {
-                        break;
-                    }
-                    
-                    NodeIndex_t blacklistedDependency = currentDependencyId;
-                    // Go back to the dependent dependency :p
-                    (*traversedNodeCount) -= 2;
-                    currentDependencyId = (*traversedNodes)[*traversedNodeCount - 1];
-
-                    bool blacklistPassed=false;
-                    for (size_t i=0; i < graph->nodes[currentDependencyId].connectedCount; i++)
-                    {
-                        bool artifactBlacklisted = false;
-                        NodeIndex_t candidateArtifact = graph->nodes[currentDependencyId].connected[i];
-                        for (size_t j=0; j < graph->nodes[candidateArtifact].connectedCount; j++)
-                        {
-                            if (graph->nodes[candidateArtifact].connected[j] == blacklistedDependency)
-                            {
-                                artifactBlacklisted = true;
-                                blacklistPassed=true;
-                                break;
-                            }
-                        }
-
-                        // Get the first artifact that doesn't have our blacklisted dependency
-                        // We ignore any before the blacklisted dep as we assume it has already been checked
-                        if (blacklistPassed && !artifactBlacklisted)
-                        {
-                            currentNode = candidateArtifact;
-                            conflicts=false;
-                            break;
-                        }
-                    }
-                }
-
-                if (!conflicts)
-                {
-                    continue;
-                }
-            }
-
-            if (conflicts)
-            {
-                return false;
-            }
-
-            // No traversal issue AND no conflict?
-            // Move to the next item in this node
-            if (graph->nodes[currentNode].connectedCount > 0)
-            {
-                // Go to first dependency
-                currentNode = graph->nodes[currentNode].connected[0];
-                Internal_ArrayAddNode(traversedNodeCount, traversedNodes, currentNode); // Add dependency to traversal list
-                // Go to first artifact candidate
-                currentNode = graph->nodes[currentNode].connected[0]; // It's guaranteed that a dependency will have viable candidates if it is in the graph
-                continue;
-            }
-        }
-
-        if (alreadyTraversed || graph->nodes[currentNode].connectedCount == 0) // Move towards the next dependency artifact
-        {
-            // Construct a new path for the next dependency
-            NodeIndex_t rootIndex;
-            for (rootIndex=(*traversedNodeCount)-1; (*traversedNodes)[rootIndex] != root; rootIndex--)
-            {
-                continue;
-            }
-
-            *traversedNodes = realloc(*traversedNodes, (*traversedNodeCount + (*traversedNodeCount - rootIndex)) * sizeof(size_t));
-            for (size_t i=0; i < (*traversedNodeCount - rootIndex); i++)
-            {
-                (*traversedNodes)[*traversedNodeCount + i] = (*traversedNodes)[rootIndex + i];
-            }
-            *traversedNodeCount+=(*traversedNodeCount-rootIndex);
-
-            // Move up-right until we find the next dependency to traverse
-            bool foundNextDependency=false;
-            while(!foundNextDependency)
-            {
-                // Does a parent artifact really exist?
-                if ((*traversedNodes)[*traversedNodeCount - 1]  == root) // We are the top
-                {
-                    // We are done
-                    return true;
-                }
-
-                // Nothing to do for this node, move up back to our dependent's artifact
-                NodeIndex_t traversedDependency = (*traversedNodes)[*traversedNodeCount - 2]; // Dependency we just resolved
-                (*traversedNodeCount) -= 2; // Move up
-                currentNode = (*traversedNodes)[*traversedNodeCount - 1]; // Set current node to the dependent artifact
-
-                // Find the next dependency
-                for (size_t i=0; i < graph->nodes[currentNode].connectedCount; i++)
-                {
-                    if (graph->nodes[currentNode].connected[i] == traversedDependency)
-                    {
-                        if (i == graph->nodes[currentNode].connectedCount-1) // Nothing next!
-                        {
-                            break;
-                        }
-
-                        foundNextDependency = true;
-                        currentNode = graph->nodes[currentNode].connected[i+1]; // Set currentNode to the next dependency
-                        Internal_ArrayAddNode(traversedNodeCount, traversedNodes, currentNode); // Add dependency to traversal list
-                        currentNode = graph->nodes[currentNode].connected[0]; // Set currentNode to our first artifact candidate in the dependency
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
-    return true;
 }
