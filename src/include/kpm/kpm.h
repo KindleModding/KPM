@@ -1,4 +1,5 @@
-#pragma once
+#ifndef KPM_H
+#define KPM_H
 
 /**
  * @file kpm.h
@@ -447,3 +448,5 @@ KPMResult KPM_InstallPackages(KPM *kpm, size_t target_count, InstallTarget *targ
  * @return KPMResult 
  */
 KPMResult KPM_UninstallPackages(KPM *kpm, size_t package_count, const char *package_ids[], KPMIO *kpm_io);
+
+#endif

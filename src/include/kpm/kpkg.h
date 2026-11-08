@@ -1,4 +1,5 @@
-#pragma once
+#ifndef KPKG_H
+#define KPKG_H
 
 /**
  * @file kpkg.h
@@ -144,3 +145,5 @@ KPKG3_FileEntry *KPKG3_GetFileEntries(KPKG3_Payload *kpkg3_payload, size_t *coun
  * @return KPKG_Result 
  */
 KPKG_Result KPKG3_ExtractData(void *ptr, uint64_t size, uint64_t out_size, char *out_path);
+
+#endif

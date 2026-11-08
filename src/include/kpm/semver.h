@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SEMVER_H
+#define SEMVER_H
 
 #include <limits.h>
 #include <stdint.h>
@@ -49,3 +50,5 @@ static inline long SemVerCmp(SemVer a, SemVer b)
     }
     return 0;
 }
+
+#endif
