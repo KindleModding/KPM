@@ -3,13 +3,64 @@
 #include "kpm/kpkg.h"
 #include "kpm/kpm.h"
 #include "kpm/semver.h"
+#include <__stddef_unreachable.h>
 #include <assert.h>
 #include <limits.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <threads.h>
 #include "internal_utils.h"
+
+NodeIdxArray* NodeIdxArray_Create()
+{
+    NodeIdxArray* array = malloc(sizeof(NodeIdxArray));
+    array->count = 0;
+    array->items = NULL;
+    return array;
+}
+
+void NodeIdxArray_Free(NodeIdxArray* array)
+{
+    free(array->items);
+    array->items = NULL;
+    array->count = 0;
+}
+
+void NodeIdxArray_Add(NodeIdxArray* array, NodeIdx_t node_idx)
+{
+    array->items = realloc(array->items, ++array->count);
+    array->items[array->count-1] = node_idx;
+}
+
+size_t NodeIdxArray_FindFirst(NodeIdxArray* array, NodeIdx_t item)
+{
+    NodeIdxArray_ForEachIndex(array, i, current)
+        if (current == item)
+            return i;
+    
+    return -1;
+}
+
+void NodeIdxArray_Insert(NodeIdxArray* array, size_t index, NodeIdx_t node_idx)
+{
+    array->items = realloc(array->items, ++array->count);
+    memcpy(array->items + index + 1, array->items + index, array->count - index);
+}
+
+int NodeIdxArray_Size(NodeIdxArray* array)
+{
+    return array->count;
+}
+
+NodeIdx_t NodeIdxArray_Get(NodeIdxArray* array, size_t index)
+{
+    if (index > array->count)
+        return NODE_NULL;
+    
+    return array->items[index];
+}
 
 Hashmap* Hashmap_Create(int size)
 {
@@ -32,9 +83,9 @@ int Hashmap_Hash(Hashmap* hashmap, char* key)
     return (hashmap->bucket_count - 1) & hash;
 }
 
-NodeIndex_t Hashmap_Get(Hashmap* hashmap, NodeIndex_t** nodes, char* key)
+bool Hashmap_Get(Hashmap* hashmap, char* key, NodeIdxArray** array)
 {
-    *nodes = NULL;
+    *array = NULL;
     int hash = Hashmap_Hash(hashmap, key);
     
     for (
@@ -45,15 +96,43 @@ NodeIndex_t Hashmap_Get(Hashmap* hashmap, NodeIndex_t** nodes, char* key)
     {
         if (!strcmp(bucket->key, key))
         {
-            *nodes = bucket->nodes;
-            return bucket->node_count;
+            if (array != NULL)
+                *array = bucket->payload;
+            return true;
         }
 
         if (!bucket->pnext)
-            break;
+            return false;
     }
 
-    return NODE_NULL;
+    return false;
+}
+
+void Hashmap_AddNode(Hashmap* hashmap, char* key, NodeIdx_t idx)
+{
+    int hash = Hashmap_Hash(hashmap, key);
+
+    struct HashmapBucket* bucket;
+    for (
+        bucket = hashmap->buckets + hash;
+        bucket->key != NULL;
+        bucket = bucket->pnext
+    )
+    {
+        if (!strcmp(bucket->key, key))
+            break;
+
+        if (!bucket->pnext)
+        {
+            bucket->pnext = malloc(sizeof(struct HashmapBucket));
+            bucket = bucket->pnext;
+            bucket->key = strdup(key);
+            bucket->payload = NodeIdxArray_Create();
+            break;
+        }
+    }
+
+    NodeIdxArray_Add(bucket->payload, idx);
 }
 
 void Hashmap_Remove(Hashmap* hashmap, char* key)
@@ -69,9 +148,8 @@ void Hashmap_Remove(Hashmap* hashmap, char* key)
         if (!strcmp(bucket->key, key))
         {
             free(bucket->key);
-            free(bucket->nodes);
             bucket->key = NULL;
-            bucket->nodes = NULL;
+            NodeIdxArray_Free(bucket->payload);
             if (bucket->pnext)
             {
                 struct HashmapBucket* to_free = bucket->pnext;
@@ -81,66 +159,8 @@ void Hashmap_Remove(Hashmap* hashmap, char* key)
         }
 
         if (!bucket->pnext)
-            break;
+            return;
     }
-}
-
-void Hashmap_RemoveNode(Hashmap* hashmap, char* key, NodeIndex_t node)
-{
-    int hash = Hashmap_Hash(hashmap, key);
-
-    for (
-        struct HashmapBucket* bucket = hashmap->buckets + hash;
-        bucket->key != NULL;
-        bucket = bucket->pnext
-    )
-    {
-        if (!strcmp(bucket->key, key))
-        {
-            for (int i=0; i < bucket->node_count-1; i++)
-            {
-                if (bucket->nodes[i] == node)
-                {
-                    memcpy(&bucket->nodes[i], &bucket->nodes[i+1], bucket->node_count - i - 1);
-                    bucket->nodes = realloc(bucket->nodes, sizeof(NodeIndex_t) * --bucket->node_count);
-                    return;
-                }
-            }
-        }
-
-        if (!bucket->pnext)
-            break;
-    }
-}
-
-void Hashmap_AddNode(Hashmap* hashmap, char* key, NodeIndex_t node)
-{
-    int hash = Hashmap_Hash(hashmap, key);
-    struct HashmapBucket* bucket;
-    for (
-        bucket = hashmap->buckets + hash;
-        bucket->key != NULL;
-        bucket = bucket->pnext
-    )
-    {
-        if (!strcmp(bucket->key, key))
-            break;
-
-        if (!bucket->key || !bucket->pnext)
-        {
-            if (bucket->key)
-            {
-                bucket->pnext = malloc(sizeof(struct HashmapBucket));
-                bucket = bucket->pnext;
-            }
-
-            bucket->key = strdup(key);
-            bucket->node_count = 0;
-        }
-    }
-
-    bucket->nodes = realloc(bucket->nodes, sizeof(NodeIndex_t) * ++bucket->node_count);
-    bucket->nodes[0] = node;
 }
 
 void KPM_FreeDependency(Dependency* dependency)
@@ -192,8 +212,7 @@ void FreeNode(GraphNode* node)
     {
         KPM_FreeInstallTarget(&node->gt.target);
     }
-    node->connected = NULL;
-    node->connectedCount = 0;
+    NodeIdxArray_Free(node->connected);
 }
 
 /**
@@ -203,7 +222,7 @@ void FreeNode(GraphNode* node)
  */
 void FreeDependencyGraph(DependencyGraph* graph)
 {
-    for (NodeIndex_t i=0; i < graph->nodeCount; i++)
+    for (NodeIdx_t i=0; i < graph->nodeCount; i++)
     {
         FreeNode(&graph->nodes[i]);
     }
@@ -233,7 +252,7 @@ void ExtendDependencyGraph(DependencyGraph* graph, int allocate)
  * @param node 
  * @return NodeIndex_t 
  */
-NodeIndex_t AddNode(DependencyGraph *graph, GraphNode node)
+NodeIdx_t AddNode(DependencyGraph *graph, GraphNode node)
 {
     if (graph->nodeCount == graph->allocated)
     {
@@ -254,22 +273,28 @@ NodeIndex_t AddNode(DependencyGraph *graph, GraphNode node)
 
 SemVer GetGraphTargetVersion(GraphTarget target)
 {
-    if (target.type == GT_DEPENDENCY)
+    switch (target.type)
+    {
+    case GT_DEPENDENCY:
         return target.dependency.min_version;
-    if (target.type == GT_INSTALL_TARGET)
+    case GT_INSTALL_TARGET:
         return KPM_GetInstallTargetVersion(target.target);
-    if (target.type == GT_INSTALLED)
+    case  GT_INSTALLED:
         return target.installed.version;
+    };
 }
 
 char* GetGraphTargetId(GraphTarget target)
 {
-    if (target.type == GT_DEPENDENCY)
+    switch (target.type)
+    {
+    case GT_DEPENDENCY:
         return target.dependency.id;
-    if (target.type == GT_INSTALL_TARGET)
+    case GT_INSTALL_TARGET:
         return KPM_GetInstallTargetId(target.target);
-    if (target.type == GT_INSTALLED)
+    case  GT_INSTALLED:
         return target.installed.id;
+    };
 }
 
 /**
@@ -279,27 +304,25 @@ char* GetGraphTargetId(GraphTarget target)
  * @param firstNodeIndex 
  * @param nextNodeIndex 
  */
-void AddArtifactDep(DependencyGraph* graph, NodeIndex_t artNodeIdx, NodeIndex_t depNodeIdx)
+void AddArtifactDep(DependencyGraph* graph, NodeIdx_t artNodeIdx, NodeIdx_t depNodeIdx)
 {
-    graph->nodes[artNodeIdx].connectedCount++;
-    graph->nodes[artNodeIdx].connected = realloc(graph->nodes[artNodeIdx].connected, graph->nodes[artNodeIdx].connectedCount * sizeof(size_t));
-    graph->nodes[artNodeIdx].connected[graph->nodes[artNodeIdx].connectedCount-1] = depNodeIdx;
+    NodeIdxArray_Add(graph->nodes[artNodeIdx].connected, depNodeIdx);
 }
 
 
-void AddDepTarget(DependencyGraph* graph, NodeIndex_t depNodeIdx, NodeIndex_t target_node_idx)
+void AddDepTarget(DependencyGraph* graph, NodeIdx_t depNodeIdx, NodeIdx_t target_node_idx)
 {
     GraphNode target_node = graph->nodes[target_node_idx];
     assert(graph->nodes[depNodeIdx].gt.type == GT_DEPENDENCY);
     assert(target_node.gt.type == GT_INSTALL_TARGET || target_node.gt.type == GT_INSTALLED);
 
-    graph->nodes[depNodeIdx].connectedCount++;
-    graph->nodes[depNodeIdx].connected = realloc(graph->nodes[depNodeIdx].connected, graph->nodes[depNodeIdx].connectedCount * sizeof(size_t));
+    graph->nodes[depNodeIdx].connected->count++;
+    graph->nodes[depNodeIdx].connected->items = realloc(graph->nodes[depNodeIdx].connected, graph->nodes[depNodeIdx].connected->count * sizeof(size_t));
     
-    NodeIndex_t insertionIndex = graph->nodes[depNodeIdx].connectedCount-1;
+    NodeIdx_t insertionIndex = graph->nodes[depNodeIdx].connected->count-1;
     while (insertionIndex > 0)
     {
-        GraphNode prev_node = graph->nodes[graph->nodes[depNodeIdx].connected[insertionIndex-1]];
+        GraphNode prev_node = graph->nodes[graph->nodes[depNodeIdx].connected->items[insertionIndex-1]];
         if (prev_node.gt.priority > target_node.gt.priority)
             break; // Insert here
 
@@ -308,34 +331,9 @@ void AddDepTarget(DependencyGraph* graph, NodeIndex_t depNodeIdx, NodeIndex_t ta
             GetGraphTargetVersion(target_node.gt)
         ) > 0)
             break; // Insert here
-
-        graph->nodes[depNodeIdx].connected[insertionIndex] = graph->nodes[depNodeIdx].connected[insertionIndex-1];
-        insertionIndex--;
     }
     
-    graph->nodes[depNodeIdx].connected[insertionIndex] = target_node_idx;
-}
-
-/**
- * @brief Add an edge to the graph such that this is the first edge for the given firstNode
- * 
- * @param graph 
- * @param firstNodeIndex 
- * @param nextNodeIndex 
- */
-void AddFirstEdge(DependencyGraph* graph, NodeIndex_t firstNodeIndex, NodeIndex_t nextNodeIndex)
-{
-    graph->nodes[firstNodeIndex].connectedCount++;
-    graph->nodes[firstNodeIndex].connected = realloc(graph->nodes[firstNodeIndex].connected, graph->nodes[firstNodeIndex].connectedCount * sizeof(size_t));
-    
-    NodeIndex_t insertionIndex = graph->nodes[firstNodeIndex].connectedCount-1;
-    while (insertionIndex > 0)
-    {
-        graph->nodes[firstNodeIndex].connected[insertionIndex] = graph->nodes[firstNodeIndex].connected[insertionIndex-1];
-        insertionIndex--;
-    }
-
-    graph->nodes[firstNodeIndex].connected[insertionIndex] = nextNodeIndex;
+    NodeIdxArray_Insert(graph->nodes[depNodeIdx].connected, 0, target_node_idx);
 }
 
 /**
@@ -349,17 +347,19 @@ void AddFirstEdge(DependencyGraph* graph, NodeIndex_t firstNodeIndex, NodeIndex_
  */
 KPMResult Internal_GetGraphTargetDependencies(KPM* kpm, GraphTarget target, size_t* targetDependencyCount, Dependency** targetDependencies, KPMIO* kpm_io)
 {
-    if (target.type == GT_INSTALL_TARGET)
+    switch (target.type)
     {
+    case GT_DEPENDENCY:
+        unreachable(); // UB
+    case GT_INSTALL_TARGET:
         if (target.target.type == INSTALL_ARTIFACT)
             return KPM_ListArtifactDependencies(kpm, target.target.artifact.repository, target.target.artifact.id, target.target.artifact.url, targetDependencyCount, targetDependencies);
 
         *targetDependencyCount = KPKG_GetDependencies(target.target.file, (KPKG_DependencyEntry**) targetDependencies);
         return KPM_OK;
-    }
-
-    if (target.type == GT_INSTALLED)
+    case GT_INSTALLED:
         return KPM_ListInstalledPackageDependencies(kpm, target.installed.id, targetDependencyCount, targetDependencies);
+    };
 }
 
 void strcat_hd(char* dest, char* src, size_t* length, bool dry)
@@ -369,7 +369,7 @@ void strcat_hd(char* dest, char* src, size_t* length, bool dry)
         strcat(dest, src);
 }
 
-void node2str(DependencyGraph* graph, NodeIndex_t index, char** output, bool declaration)
+void node2str(DependencyGraph* graph, NodeIdx_t index, char** output, bool declaration)
 {
     GraphNode node = graph->nodes[index];
     if (declaration)
@@ -379,25 +379,26 @@ void node2str(DependencyGraph* graph, NodeIndex_t index, char** output, bool dec
             if (node.gt.target.type == INSTALL_ARTIFACT)
             {
                 *output = asprintf_hd(
-                    "%i[\"%s\n%s\n%u.%u.%u\"]",
+                    "%i[\"ART\n%s\n%s\n%u.%u.%u\n(P:%i)\"]",
                     index,
                     node.gt.target.artifact.repository,
                     node.gt.target.artifact.id,
                     node.gt.target.artifact.version.major,
                     node.gt.target.artifact.version.minor,
-                    node.gt.target.artifact.version.patch
+                    node.gt.target.artifact.version.patch,
+                    node.gt.priority
                 );
             }
             else
             {
                 *output = asprintf_hd(
-                    "%i[\"%s\n%s\n%u.%u.%u\"]",
+                    "%i[\"FILE\n(NO REPO)\n%s\n%u.%u.%u\n(P:%i)\"]",
                     index,
-                    NULL,
                     KPKG_GetId(node.gt.target.file),
                     KPKG_GetVersion(node.gt.target.file).major,
                     KPKG_GetVersion(node.gt.target.file).minor,
-                    KPKG_GetVersion(node.gt.target.file).patch
+                    KPKG_GetVersion(node.gt.target.file).patch,
+                    node.gt.priority
                 );
             }
             return;
@@ -408,13 +409,14 @@ void node2str(DependencyGraph* graph, NodeIndex_t index, char** output, bool dec
             if (node.gt.target.type == INSTALL_ARTIFACT)
             {
                 *output = asprintf_hd(
-                    "%i[\"%s\n%s\n%u.%u.%u\"]",
+                    "%i[\"INST\n%s\n%s\n%u.%u.%u\n(P:%i)\"]",
                     index,
                     node.gt.installed.repository,
                     node.gt.installed.id,
                     node.gt.installed.version.major,
                     node.gt.installed.version.minor,
-                    node.gt.installed.version.patch
+                    node.gt.installed.version.patch,
+                    node.gt.priority
                 );
             }
             return;
@@ -448,7 +450,7 @@ int Internal_RenderGraph(DependencyGraph* graph, char* output, bool dry)
     size_t outputLength=0;
     strcat_hd(output, "flowchart TD\n", &outputLength, dry);
 
-    for (NodeIndex_t i=0; i < graph->nodeCount; i++)
+    for (NodeIdx_t i=0; i < graph->nodeCount; i++)
     {
         char* nodeName = NULL;
         node2str(graph, i, &nodeName, true);
@@ -457,11 +459,11 @@ int Internal_RenderGraph(DependencyGraph* graph, char* output, bool dry)
         strcat_hd(output, "\n", &outputLength, dry);
         free(nodeName);
 
-        for (size_t j=0; j < graph->nodes[i].connectedCount; j++)
+        NodeIdxArray_ForEach(graph->nodes[i].connected, connected_idx)
         {
             char* connectedName = NULL;
             node2str(graph, i, &nodeName, false);
-            node2str(graph, graph->nodes[i].connected[j], &connectedName, false);
+            node2str(graph, connected_idx, &connectedName, false);
             strcat_hd(output, "    ", &outputLength, dry);
             strcat_hd(output, nodeName, &outputLength, dry);
             strcat_hd(output, " --> ", &outputLength, dry);
@@ -484,11 +486,10 @@ void RenderGraph(DependencyGraph* graph, char** output)
     Internal_RenderGraph(graph, *output, false);
 }
 
-NodeIndex_t CreateTargetNode(DependencyGraph* graph, InstallTarget target, GraphTargetPriority priority)
+NodeIdx_t CreateTargetNode(DependencyGraph* graph, InstallTarget target, GraphTargetPriority priority)
 {
     return AddNode(graph, (GraphNode) {
-        .connectedCount = 0,
-        .connected = NULL,
+        .connected = NodeIdxArray_Create(),
         .gt = {
             .priority = priority,
             .type = GT_INSTALL_TARGET,
@@ -497,11 +498,10 @@ NodeIndex_t CreateTargetNode(DependencyGraph* graph, InstallTarget target, Graph
     });
 }
 
-NodeIndex_t CreateInstalledNode(DependencyGraph* graph, InstalledPackage installed)
+NodeIdx_t CreateInstalledNode(DependencyGraph* graph, InstalledPackage installed)
 {
     return AddNode(graph, (GraphNode) {
-        .connectedCount = 0,
-        .connected = NULL,
+        .connected = NodeIdxArray_Create(),
         .gt = {
             .priority = GT_PRIORITY_INSTALLED,
             .type = GT_INSTALLED,
@@ -510,11 +510,10 @@ NodeIndex_t CreateInstalledNode(DependencyGraph* graph, InstalledPackage install
     });
 }
 
-NodeIndex_t CreateDependencyNode(DependencyGraph* graph, Dependency dependency)
+NodeIdx_t CreateDependencyNode(DependencyGraph* graph, Dependency dependency)
 {
     return AddNode(graph, (GraphNode) {
-        .connectedCount = 0,
-        .connected = NULL,
+        .connected = NodeIdxArray_Create(),
         .gt = {
             .priority = GT_PRIORITY_NONE,
             .type = GT_DEPENDENCY,
@@ -523,13 +522,12 @@ NodeIndex_t CreateDependencyNode(DependencyGraph* graph, Dependency dependency)
     });
 }
 
-NodeIndex_t Internal_FindDependencyInGraph(DependencyGraph* graph, Dependency dep)
+NodeIdx_t Internal_FindDependencyInGraph(DependencyGraph* graph, Dependency dep)
 {
-    NodeIndex_t* deps_found;
-    int dep_count = Hashmap_Get(graph->depmap, &deps_found, dep.id);
-    for (int i=0; i < dep_count; i++)
+    NodeIdxArray* deps_found_array;
+    Hashmap_Get(graph->depmap, dep.id, &deps_found_array);
+    NodeIdxArray_ForEach(deps_found_array, idx)
     {
-        NodeIndex_t idx = deps_found[i];
         GraphNode node = graph->nodes[idx];
         assert(node.gt.type == GT_DEPENDENCY);
 
@@ -539,62 +537,56 @@ NodeIndex_t Internal_FindDependencyInGraph(DependencyGraph* graph, Dependency de
         if (SemVerCmp(node.gt.dependency.max_version, dep.max_version))
             continue;
 
-        free(deps_found);
         return idx;
     }
     return NODE_NULL;
 }
 
-NodeIndex_t Internal_FindTargetInGraph(DependencyGraph* graph, GraphTarget gt)
+NodeIdx_t Internal_FindTargetInGraph(DependencyGraph* graph, GraphTarget gt)
 {
-    NodeIndex_t* targets_found;
-    int target_count = Hashmap_Get(graph->targetmap, &targets_found, GetGraphTargetId(gt));
-    for (int i=0; i < target_count; i++)
+    NodeIdxArray* targets_found_array;
+    Hashmap_Get(graph->targetmap, GetGraphTargetId(gt), &targets_found_array);
+    NodeIdxArray_ForEach(targets_found_array, idx)
     {
-        NodeIndex_t idx = targets_found[i];
         GraphNode node = graph->nodes[idx];
         assert(node.gt.type != GT_DEPENDENCY);
 
         if (SemVerCmp(GetGraphTargetVersion(gt), GetGraphTargetVersion(node.gt)))
             continue;
 
-        free(targets_found);
         return idx;
     }
 
     return NODE_NULL;
 }
 
-NodeIndex_t Internal_FindArtifactInGraph(DependencyGraph* graph, Artifact artifact)
+NodeIdx_t Internal_FindArtifactInGraph(DependencyGraph* graph, Artifact artifact)
 {
-    NodeIndex_t* targets_found;
-    int target_count = Hashmap_Get(graph->targetmap, &targets_found, artifact.id);
-    for (int i=0; i < target_count; i++)
+    NodeIdxArray* targets_found_array;
+    Hashmap_Get(graph->targetmap, artifact.id, &targets_found_array);
+    NodeIdxArray_ForEach(targets_found_array, idx)
     {
-        NodeIndex_t idx = targets_found[i];
         GraphNode node = graph->nodes[idx];
         assert(node.gt.type != GT_DEPENDENCY);
 
         if (SemVerCmp(artifact.version, GetGraphTargetVersion(node.gt)))
             continue;
 
-        free(targets_found);
         return idx;
     }
 
     return NODE_NULL;
 }
 
-void Internal_AddExistingTargetsToDependency(DependencyGraph* graph, NodeIndex_t dep_idx)
+void Internal_AddExistingTargetsToDependency(DependencyGraph* graph, NodeIdx_t dep_idx)
 {
     assert(graph->nodes[dep_idx].gt.type == GT_DEPENDENCY);
     Dependency dep = graph->nodes[dep_idx].gt.dependency;
 
-    NodeIndex_t* target_node_idS;
-    int node_count = Hashmap_Get(graph->targetmap, &target_node_idS, dep.id);
-    for (int i=0; i < node_count; i++)
+    NodeIdxArray* targets_found_array;
+    Hashmap_Get(graph->targetmap, dep.id, &targets_found_array);
+    NodeIdxArray_ForEach(targets_found_array, target_idx)
     {
-        NodeIndex_t target_idx = target_node_idS[i];
         GraphNode node = graph->nodes[target_idx];
         assert(node.gt.type != GT_DEPENDENCY);
 
@@ -614,16 +606,15 @@ void Internal_AddExistingTargetsToDependency(DependencyGraph* graph, NodeIndex_t
     }
 }
 
-void Internal_AddTargetToExistingDependencies(DependencyGraph* graph, NodeIndex_t target_idx)
+void Internal_AddTargetToExistingDependencies(DependencyGraph* graph, NodeIdx_t target_idx)
 {
     GraphNode target_node = graph->nodes[target_idx];
     assert(target_node.gt.type != GT_DEPENDENCY);
 
-    NodeIndex_t* dep_node_ids;
-    int node_count = Hashmap_Get(graph->depmap, &dep_node_ids, GetGraphTargetId(target_node.gt));
-    for (int i=0; i < node_count; i++)
+    NodeIdxArray* dep_node_ids;
+    Hashmap_Get(graph->depmap, GetGraphTargetId(target_node.gt), &dep_node_ids);
+    NodeIdxArray_ForEach(dep_node_ids, dep_idx)
     {
-        NodeIndex_t dep_idx = dep_node_ids[i];
         GraphNode dep_node = graph->nodes[dep_idx];
 
         if (
@@ -642,7 +633,7 @@ void Internal_AddTargetToExistingDependencies(DependencyGraph* graph, NodeIndex_
     }
 }
 
-bool Internal_FillGraphFromTarget(KPM* kpm, DependencyGraph* graph, NodeIndex_t target_node_id, KPMIO* kpm_io)
+bool Internal_FillGraphFromTarget(KPM* kpm, DependencyGraph* graph, NodeIdx_t target_node_id, KPMIO* kpm_io)
 {
     GraphTarget graph_target = graph->nodes[target_node_id].gt;
     assert(graph_target.type == GT_INSTALL_TARGET);
@@ -661,7 +652,7 @@ bool Internal_FillGraphFromTarget(KPM* kpm, DependencyGraph* graph, NodeIndex_t 
         Dependency dep = dependencies[i];
 
         // Check if this dependency already exists in the graph
-        NodeIndex_t dep_found = Internal_FindDependencyInGraph(graph, dep);
+        NodeIdx_t dep_found = Internal_FindDependencyInGraph(graph, dep);
         if (dep_found != NODE_NULL)
         {
             AddArtifactDep(graph, target_node_id, dep_found);
@@ -669,7 +660,7 @@ bool Internal_FillGraphFromTarget(KPM* kpm, DependencyGraph* graph, NodeIndex_t 
         }
 
         // Gotta make AND POPULATE the dep node ourselves!
-        NodeIndex_t dep_idx = CreateDependencyNode(graph, dep);
+        NodeIdx_t dep_idx = CreateDependencyNode(graph, dep);
 
         // For each target in the graph that fits, add it to our dependency
         Internal_AddExistingTargetsToDependency(graph, dep_idx);
@@ -682,12 +673,12 @@ bool Internal_FillGraphFromTarget(KPM* kpm, DependencyGraph* graph, NodeIndex_t 
 
         for (int j = 0; j < artifact_count; j++)
         {            
-            NodeIndex_t existing_artifact = Internal_FindArtifactInGraph(graph, artifacts[j]);
+            NodeIdx_t existing_artifact = Internal_FindArtifactInGraph(graph, artifacts[j]);
             if (existing_artifact != NODE_NULL)
                 continue;
 
             // This artifact is new, we should add it to the graph...
-            NodeIndex_t idx = CreateTargetNode(
+            NodeIdx_t idx = CreateTargetNode(
                 graph,
                 (InstallTarget) {
                     .type = INSTALL_ARTIFACT,
@@ -714,14 +705,192 @@ bool Internal_FillGraphFromTarget(KPM* kpm, DependencyGraph* graph, NodeIndex_t 
     return true;
 }
 
-void Internal_ArrayAddNode(size_t* traversedNodeCount, NodeIndex_t** traversedNodes, NodeIndex_t node)
+TraversedNodeArray* TraversedNodeArray_Create()
 {
-    (*traversedNodeCount)++;
-    *traversedNodes = realloc(*traversedNodes, (*traversedNodeCount) * sizeof(NodeIndex_t));
-    (*traversedNodes)[*traversedNodeCount - 1] = node;
+    TraversedNodeArray* array = malloc(sizeof(TraversedNodeArray));
+    *array = (TraversedNodeArray) {
+        .count = 0,
+        .items = NULL
+    };
+    return array;
 }
 
-bool Internal_ResolveDependencyGraph(DependencyGraph* graph, NodeIndex_t root, NodeIndex_t currentNode, size_t* traversedNodeCount, NodeIndex_t** traversedNodes, KPMIO* kpmIO)
+void TraversedNodeArray_Free(TraversedNodeArray* array)
 {
+    free(array->items);
+    array->count = 0;
+}
 
+void TraversedNodeArray_Truncate(TraversedNodeArray* array, size_t size)
+{
+    array->items = realloc(array->items, size);
+    array->count = size;
+}
+
+void TraversedNodeArray_Add(TraversedNodeArray* array, struct TraversedNode item)
+{
+    TraversedNodeArray_Truncate(array, ++array->count);
+    array->items[array->count - 1] = item;
+}
+
+int TraversedNodeArray_FindFirstByNodeIdx(TraversedNodeArray* array, size_t node_idx)
+{
+    TraversedNodeArray_ForEachIndex(array, i, current)
+        if (current.node_idx == node_idx)
+            return i;
+    
+    return -1;
+}
+
+int TraversedNodeArray_Size(TraversedNodeArray* array)
+{
+    return array->count;
+}
+
+const struct TraversedNode TraversedNodeArray_Get(TraversedNodeArray* array, size_t idx)
+{
+    return array->items[idx];
+}
+
+bool Resolver_Next(struct ResolverState* state)
+{
+    size_t current_traversed_node_idx = TraversedNodeArray_Size(state->traversed_nodes) - 1;
+    
+    struct TraversedNode current_traversed_node;
+    while ((current_traversed_node = TraversedNodeArray_Get(state->traversed_nodes, current_traversed_node_idx)).traversed_parent_idx != -1)
+    {
+        GraphNode current_node = state->graph->nodes[current_traversed_node.node_idx];
+        if (current_traversed_node.connected_idx == NodeIdxArray_Size(current_node.connected) - 1)
+        {
+            current_traversed_node_idx = current_traversed_node.traversed_parent_idx;
+            continue;
+        }
+
+        // Add node
+        TraversedNodeArray_Add(state->traversed_nodes, (struct TraversedNode) {
+            .connected_idx = current_traversed_node.connected_idx + 1,
+            .node_idx = NodeIdxArray_Get(current_node.connected, current_traversed_node.connected_idx + 1),
+            .traversed_parent_idx = current_traversed_node_idx
+        });
+        return true;
+    }
+
+    return false;
+}
+
+/**
+ * @brief Backtrack the dependency graph, targeting a specific dependency_idx that conflicted
+ * 
+ * @param graph 
+ * @param dependency 
+ * @return true 
+ * @return false 
+ */
+bool Resolver_BacktrackDependencyGraph(struct ResolverState* state, NodeIdx_t dependency_idx)
+{
+    NodeIdx_t dep_traversed_idx = dependency_idx;
+    for (;;)
+    {
+        // Get first instance of the dependency
+        dep_traversed_idx = TraversedNodeArray_FindFirstByNodeIdx(state->traversed_nodes, dependency_idx);
+        struct TraversedNode traversed_dep = TraversedNodeArray_Get(state->traversed_nodes, dep_traversed_idx);
+        struct TraversedNode traversed_picked_target = TraversedNodeArray_Get(state->traversed_nodes, dep_traversed_idx + 1); // First instance of a dep is ALWAYS followed by its picked artifact
+
+        GraphNode dep_node = state->graph->nodes[traversed_dep.node_idx];
+        if (traversed_picked_target.connected_idx == NodeIdxArray_Size(dep_node.connected) - 1)
+        {
+            if (traversed_picked_target.traversed_parent_idx == -1)
+                return false; // It's dependover, there are no more parents
+
+            // Backtrack to that parent dependency!
+            dep_traversed_idx = traversed_picked_target.traversed_parent_idx;
+            continue;
+        }
+
+        // Oh goody, we have backtracked enough
+        NodeIdx_t connected_idx = traversed_picked_target.connected_idx + 1;
+        TraversedNodeArray_Truncate(state->traversed_nodes, dep_traversed_idx + 1);
+        TraversedNodeArray_Add(state->traversed_nodes, (struct TraversedNode) {
+            .node_idx = NodeIdxArray_Get(dep_node.connected, connected_idx),
+            .connected_idx = connected_idx,
+            .traversed_parent_idx = dep_traversed_idx
+        });
+        return true;
+    }
+}
+
+bool Resolver_Resolve(DependencyGraph* graph, NodeIdx_t root, NodeIdx_t currentNode, size_t* traversedNodeCount, NodeIdx_t** traversedNodes, KPMIO* kpmIO)
+{
+    struct ResolverState state = {
+        .graph = graph,
+        .traversed_nodes = TraversedNodeArray_Create()
+    };
+
+    TraversedNodeArray_Add(state.traversed_nodes, (struct TraversedNode) {
+        .node_idx = currentNode,
+        .traversed_parent_idx = -1,
+        .connected_idx = -1
+    });
+
+    for (;;)
+    {
+        size_t current_node_traversed_idx = TraversedNodeArray_Size(state.traversed_nodes) - 1;
+        const struct TraversedNode current_traversed_node = TraversedNodeArray_Get(state.traversed_nodes, current_node_traversed_idx);
+        GraphNode current_node = state.graph->nodes[current_traversed_node.node_idx]; // Current node
+        if (current_node.gt.type == GT_DEPENDENCY)
+        {
+            // Check if an existing resolution to this dependency id exists
+            NodeIdx_t picked_target_idx = NODE_NULL;
+            TraversedNodeArray_ForEach(state.traversed_nodes, traversed)
+            {
+                GraphNode traversed_node = state.graph->nodes[traversed.node_idx];
+                if (traversed_node.gt.type == GT_DEPENDENCY)
+                    continue;
+
+                if (!strcmp(GetGraphTargetId(traversed_node.gt), GetGraphTargetId(current_node.gt)))
+                {
+                    picked_target_idx = traversed.node_idx;
+                    break;
+                }
+            }
+
+            if (picked_target_idx != NODE_NULL)
+            {
+                // Check if previously picked can resolve this dep
+                NodeIdx_t connected_idx = NodeIdxArray_FindFirst(current_node.connected, picked_target_idx);
+                if (connected_idx != -1)
+                {
+                    Resolver_Next(&state); // Move to next node
+                    continue;
+                }
+
+                // Backtrack
+                if (!Resolver_BacktrackDependencyGraph(&state, current_traversed_node.node_idx))
+                    return false; // Could not backtrack, resolution failure
+                continue;
+            }
+            
+            // Pick first target
+            TraversedNodeArray_Add(state.traversed_nodes, (struct TraversedNode) {
+                .node_idx = NodeIdxArray_Get(current_node.connected, 0),
+                .traversed_parent_idx = current_node_traversed_idx,
+                .connected_idx = 0
+            });
+            continue;
+        }
+
+        // Target node
+        if (NodeIdxArray_Size(current_node.connected) > 0)
+        {
+            TraversedNodeArray_Add(state.traversed_nodes, (struct TraversedNode) {
+                .node_idx = NodeIdxArray_Get(current_node.connected, 0),
+                .traversed_parent_idx = current_node_traversed_idx,
+                .connected_idx = 0
+            });
+            continue;
+        }
+
+        // Empty target, move to next
+        Resolver_Next(&state);
+    }
 }

@@ -93,7 +93,7 @@ size_t Internal_DownloadHeaderCallback(char* ptr, size_t size, size_t nitems, vo
  * @param deduplicatedPackages 
  * @return KPMResult 
  */
-KPMResult Internal_DownloadGraphItems(KPM* kpm, DependencyGraph* graph, size_t deduplicatedPackageCount, NodeIndex_t* deduplicatedPackages, KPMIO* kpmIO)
+KPMResult Internal_DownloadGraphItems(KPM* kpm, DependencyGraph* graph, size_t deduplicatedPackageCount, NodeIdx_t* deduplicatedPackages, KPMIO* kpmIO)
 {
     
 
