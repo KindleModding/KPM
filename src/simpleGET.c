@@ -7,9 +7,9 @@
 #include "simpleGET.h"
 #include "curl_helpers.h"
 
-SimpleGETRequest* SimpleGET_Initialise(const char* url)
+SimpleGETRequest *SimpleGET_Initialise(const char *url)
 {
-    SimpleGETRequest* request = malloc(sizeof(SimpleGETRequest));
+    SimpleGETRequest *request = malloc(sizeof(SimpleGETRequest));
     request->ptr = NULL;
     request->buffer = NULL;
     request->size = 0;
@@ -25,7 +25,7 @@ SimpleGETRequest* SimpleGET_Initialise(const char* url)
     return request;
 }
 
-void SimpleGET_SetMaxSize(SimpleGETRequest* request, size_t max_size)
+void SimpleGET_SetMaxSize(SimpleGETRequest *request, size_t max_size)
 {
     request->max_size = max_size;
 }
@@ -44,12 +44,12 @@ CURLcode SimpleGET_Perform(SimpleGETRequest *request)
     return result;
 }
 
-size_t SimpleGET_Callback(char* ptr, size_t size, size_t nmemb, void* userdata)
+size_t SimpleGET_Callback(char *ptr, size_t size, size_t nmemb, void *userdata)
 {
     size_t realsize = size * nmemb;
-    SimpleGETRequest* current = (SimpleGETRequest*) userdata;
+    SimpleGETRequest *current = (SimpleGETRequest*) userdata;
 
-    unsigned char* newBuffer = (unsigned char*) realloc(current->buffer, current->size + realsize + 1);
+    unsigned char *newBuffer = (unsigned char*) realloc(current->buffer, current->size + realsize + 1);
     if (!newBuffer)
         return CURL_WRITEFUNC_ERROR; // OOM
 

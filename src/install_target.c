@@ -1,7 +1,7 @@
 #include "kpm/kpkg.h"
 #include "kpm/kpm.h"
 
-char* KPM_GetInstallTargetId(InstallTarget target)
+char *KPM_GetInstallTargetId(InstallTarget target)
 {
     if (target.type == INSTALL_ARTIFACT)
         return target.artifact.id;
@@ -17,7 +17,7 @@ SemVer KPM_GetInstallTargetVersion(InstallTarget target)
         return KPKG_GetVersion(target.file);
 }
 
-int KPM_GetInstallTargetDependencies(KPM* kpm, InstallTarget target, Dependency** dependencies)
+int KPM_GetInstallTargetDependencies(KPM *kpm, InstallTarget target, Dependency **dependencies)
 {
     size_t dependency_count = 0;
     *dependencies = NULL;

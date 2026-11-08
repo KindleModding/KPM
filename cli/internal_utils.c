@@ -14,9 +14,9 @@
  * @param path The full path to the target folder
  * @param mode See mkdir() docs
  */
-void mkdir_r(char* path, __mode_t mode)
+void mkdir_r(char *path, __mode_t mode)
 {
-    char* current_path = malloc(strlen(path) + 1);
+    char *current_path = malloc(strlen(path) + 1);
     current_path[0] = path[0];
     for (int i=1; i < strlen(path); i++)
     {
@@ -28,7 +28,7 @@ void mkdir_r(char* path, __mode_t mode)
     free(current_path);
 }
 
-int internal_delete(const char* fpath, const struct stat* sb, int typeflag, struct FTW *ftwbuf)
+int internal_delete(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf)
 {
     switch (typeflag)
     {
@@ -50,7 +50,7 @@ int internal_delete(const char* fpath, const struct stat* sb, int typeflag, stru
  * 
  * @param path 
  */
-void rmdir_r(char* path)
+void rmdir_r(char *path)
 {
     nftw(path, &internal_delete, 256, FTW_DEPTH);
     rmdir(path);
@@ -61,14 +61,14 @@ void rmdir_r(char* path)
  * 
  * @param format 
  * @param args
- * @return char* 
+ * @return char*
  */
-char* vasprintf_hd(const char* format, va_list args)
+char *vasprintf_hd(const char *format, va_list args)
 {
     va_list args2;
     va_copy (args2, args);
     int size = vsnprintf(NULL, 0, format, args) + 1;
-    char* str = malloc(size);
+    char *str = malloc(size);
     vsnprintf(str, size, format, args2);
     va_end(args2);
     return str;
@@ -79,13 +79,13 @@ char* vasprintf_hd(const char* format, va_list args)
  * 
  * @param format 
  * @param ... 
- * @return char* 
+ * @return char*
  */
-char* asprintf_hd(const char* format, ...)
+char *asprintf_hd(const char *format, ...)
 {
     va_list args;
     va_start(args, format);
-    char* result = vasprintf_hd(format, args);
+    char *result = vasprintf_hd(format, args);
     va_end(args);
     return result;
 }

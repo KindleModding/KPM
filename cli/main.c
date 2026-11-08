@@ -29,7 +29,7 @@ struct CLIState cli_state = {
 #endif
 };
 
-bool is_path(const char* location) // @TODO: Move this into a shared file
+bool is_path(const char *location) // @TODO: Move this into a shared file
 {
     return location[0] == '/' || location[0] == '.';
 }
@@ -41,7 +41,7 @@ void init_header()
     kpm_io.log(KPM_VERBOSITY_INFO, "Created by Hackerdude (https://hackerdude.tech)\n");
 }
 
-int main(int argc, char* argv[])
+int main(int argc, char *argv[])
 {
     int error = KPM_OK;
 
@@ -58,7 +58,7 @@ int main(int argc, char* argv[])
     int command_index = -1;
     for (int i=1; i < argc; i++)
     {
-        char* arg = argv[i];
+        char *arg = argv[i];
         if (strcmp(arg, "-h") == 0 || strcmp(arg, "--help") == 0)
         {
             init_header();
@@ -161,7 +161,7 @@ int main(int argc, char* argv[])
     else if (strcmp(argv[command_index], "list-repo") == 0)
     {
         size_t repository_count = 0;
-        Repository* repositories;
+        Repository *repositories;
         if ((error = KPM_ListRepositories(&kpm, &repository_count, &repositories)) != KPM_OK)
             goto cleanup;
 
@@ -191,7 +191,7 @@ int main(int argc, char* argv[])
             if (i != argc-1)
                 query_length += 1; // For the space
         }
-        char* query = malloc(query_length + 1);
+        char *query = malloc(query_length + 1);
         query[query_length] = 0;
         size_t cur_len = 0;
         for (int i=command_index+1; i < argc; i++)
@@ -206,7 +206,7 @@ int main(int argc, char* argv[])
         }
 
         size_t package_count;
-        IndexedPackage* packages;
+        IndexedPackage *packages;
         if ((error = KPM_SearchPackages(&kpm, query, &package_count, &packages)) != KPM_OK)
         {
             kpm_io.log(KPM_VERBOSITY_ERROR, "Could not search for '%s' (%i: %s)", query, error, KPM_ErrorToString(error));
@@ -228,7 +228,7 @@ int main(int argc, char* argv[])
         // Update index automatically
         KPM_UpdateIndex(&kpm, &kpm_io);
         
-        InstallTarget* targets = malloc((argc - (command_index+1)) * sizeof(InstallTarget));
+        InstallTarget *targets = malloc((argc - (command_index+1)) * sizeof(InstallTarget));
         for (int i=0; i < argc - (command_index+1); i++)
         {
             if (is_path(argv[command_index+1 + i]))
@@ -283,11 +283,11 @@ int main(int argc, char* argv[])
         KPM_UpdateIndex(&kpm, &kpm_io);
 
         size_t installed_package_count;
-        InstalledPackage* installed_packages;
+        InstalledPackage *installed_packages;
         KPM_ListInstalledPackages(&kpm, &installed_package_count, &installed_packages);
 
         size_t target_count = 0;
-        InstallTarget* targets = malloc(installed_package_count * sizeof(InstallTarget));
+        InstallTarget *targets = malloc(installed_package_count * sizeof(InstallTarget));
         for (int i=0; i < installed_package_count; i++)
         {
             if (installed_packages[i].repository == NULL)
@@ -297,7 +297,7 @@ int main(int argc, char* argv[])
             }
 
             size_t artifact_count;
-            Artifact* artifacts;
+            Artifact *artifacts;
             if (KPM_ListPackageArtifacts(&kpm, installed_packages[i].repository, installed_packages[i].id, &artifact_count, &artifacts) != KPM_OK || artifact_count == 0) // @TODO: Allow cross-repository upgrades?
             {
                 kpm_io.log(KPM_VERBOSITY_WARN, "Could not find an artifact for %s", installed_packages[i].id);
@@ -346,8 +346,8 @@ int main(int argc, char* argv[])
             goto help;
         }
 
-        char* id = argv[command_index+1];
-        char* launch_path = asprintf_hd("%s/%s/launch.sh", KPM_PKG_PATH, id);
+        char *id = argv[command_index+1];
+        char *launch_path = asprintf_hd("%s/%s/launch.sh", KPM_PKG_PATH, id);
         kpm_io.log(KPM_VERBOSITY_DEBUG, "Checking for script at %s", launch_path);
         if (access(launch_path, R_OK) != 0)
         {
@@ -358,7 +358,7 @@ int main(int argc, char* argv[])
         }
         free(launch_path);
 
-        char** launch_args = malloc(sizeof(char*) * (2 + argc - (command_index + 2)) + 1);
+        char **launch_args = malloc(sizeof(char*) * (2 + argc - (command_index + 2)) + 1);
         launch_args[0] = strdup("/bin/sh");
         launch_args[1] = asprintf_hd("%s/%s/launch.sh", KPM_PKG_PATH, id);
         for (int i=0; i < argc - (command_index + 2); i++)
@@ -372,7 +372,7 @@ int main(int argc, char* argv[])
             kpm_io.log(KPM_VERBOSITY_DEBUG, "\t- %s", launch_args[i]);
         }
 
-        char* launch_folder = asprintf_hd("%s/%s", KPM_PKG_PATH, id);
+        char *launch_folder = asprintf_hd("%s/%s", KPM_PKG_PATH, id);
         chdir(launch_folder);
         free(launch_folder);
 

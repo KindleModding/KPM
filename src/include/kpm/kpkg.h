@@ -48,7 +48,7 @@ typedef enum {
 } KPKG_SupportedPlatforms;
 
 typedef struct {
-    char* id;
+    char *id;
     SemVer min_version;
     SemVer max_version;
 } KPKG_DependencyEntry;
@@ -56,14 +56,14 @@ typedef struct {
 // KPKG1 types
 typedef struct
 {
-    char* id; /**< The package ID */
-    char* name; /**< The package name */
-    char* author; /**< The package author */
-    char* description; /**< The package description */
+    char *id; /**< The package ID */
+    char *name; /**< The package name */
+    char *author; /**< The package author */
+    char *description; /**< The package description */
     SemVer package_version; /**< The package version */
     uint8_t supported_platforms; /** Platforms this package supports */
     size_t dependency_count; /**< Number of package dependencies */
-    KPKG_DependencyEntry* dependencies; /**< A list of package dependencies */
+    KPKG_DependencyEntry *dependencies; /**< A list of package dependencies */
 } KPKG1_Payload;
 
 // KPKG3 types
@@ -97,19 +97,19 @@ typedef struct __attribute__ ((packed))
 
 typedef struct
 {
-    void* internal_file; /**< The memory mapped file or NULL */
+    void *internal_file; /**< The memory mapped file or NULL */
     size_t map_size; /**< If file is local and memory mapped, this will indicate the size */
-    KPKG3_Header* header; /**< Local storage of header (always present) */
-    KPKG3_DependencyEntry* dependencies; /**< The package's dependencies */
-    KPKG3_FileEntry* files; /**< The package's files */
-    char* strings; /**< The string section */
+    KPKG3_Header *header; /**< Local storage of header (always present) */
+    KPKG3_DependencyEntry *dependencies; /**< The package's dependencies */
+    KPKG3_FileEntry *files; /**< The package's files */
+    char *strings; /**< The string section */
 } KPKG3_Payload;
 
 // General types
 typedef struct
 {
     int kpkg_version; /**< The KPKG version */
-    char* location; /**< The location of the file, either a URL or path */
+    char *location; /**< The location of the file, either a URL or path */
     union {
         KPKG1_Payload kpkg1_payload; /**< The payload for KPKG1 and KPKG2 files */
         KPKG3_Payload kpkg3_payload; /**< The payload for KPKG3 files */
@@ -117,22 +117,22 @@ typedef struct
 } KPKG_File;
 
 //// General functions
-char* KPKG_ResultStr(KPKG_Result result);
-KPKG_Result KPKG_LoadFile(KPKG_File** file, const char* location, const char* out_path);
-char* KPKG_GetId(KPKG_File* file);
-char* KPKG_GetName(KPKG_File* file);
-char* KPKG_GetAuthor(KPKG_File* file);
-char* KPKG_GetDescription(KPKG_File* file);
-SemVer KPKG_GetVersion(KPKG_File* file);
-size_t KPKG_GetDependencies(KPKG_File* file, KPKG_DependencyEntry** dependencies);
-void KPKG_CloseFile(KPKG_File* file);
+char *KPKG_ResultStr(KPKG_Result result);
+KPKG_Result KPKG_LoadFile(KPKG_File **file, const char *location, const char *out_path);
+char *KPKG_GetId(KPKG_File *file);
+char *KPKG_GetName(KPKG_File *file);
+char *KPKG_GetAuthor(KPKG_File *file);
+char *KPKG_GetDescription(KPKG_File *file);
+SemVer KPKG_GetVersion(KPKG_File *file);
+size_t KPKG_GetDependencies(KPKG_File *file, KPKG_DependencyEntry **dependencies);
+void KPKG_CloseFile(KPKG_File *file);
 
 //// KPKG1-specific functions
-KPKG_Result KPKG1_ExtractTo(KPKG_File* file, char* out_path, KPMIO* kpmio);
+KPKG_Result KPKG1_ExtractTo(KPKG_File *file, char *out_path, KPMIO *kpmio);
 
 //// KPKG3-specific functions
 
-KPKG3_FileEntry* KPKG3_GetFileEntries(KPKG3_Payload* kpkg3_payload, size_t* count);
+KPKG3_FileEntry *KPKG3_GetFileEntries(KPKG3_Payload *kpkg3_payload, size_t *count);
 
 /**
  * @brief Extract a memory-mapped compressed file
@@ -143,4 +143,4 @@ KPKG3_FileEntry* KPKG3_GetFileEntries(KPKG3_Payload* kpkg3_payload, size_t* coun
  * @param out The path of the output file
  * @return KPKG_Result 
  */
-KPKG_Result KPKG3_ExtractData(void* ptr, uint64_t size, uint64_t out_size, char* out_path);
+KPKG_Result KPKG3_ExtractData(void *ptr, uint64_t size, uint64_t out_size, char *out_path);

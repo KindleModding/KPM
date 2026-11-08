@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-void KPM_FreeInstalledPackage(InstalledPackage* package)
+void KPM_FreeInstalledPackage(InstalledPackage *package)
 {
     free(package->id);
     free(package->repository);
@@ -18,16 +18,16 @@ void KPM_FreeInstalledPackage(InstalledPackage* package)
     package->description = NULL;
 }
 
-void KPM_FreeInstalledPackageList(size_t packageCount, InstalledPackage* packages)
+void KPM_FreeInstalledPackageList(size_t package_count, InstalledPackage *packages)
 {
-    for (size_t i=0; i < packageCount; i++)
+    for (size_t i=0; i < package_count; i++)
     {
         KPM_FreeInstalledPackage(&packages[i]);
     }
     free(packages);
 }
 
-KPMResult KPM_GetInstalledPackage(KPM* kpm, const char* packageId, InstalledPackage* package)
+KPMResult KPM_GetInstalledPackage(KPM *kpm, const char *package_id, InstalledPackage *package)
 {
     if (package != NULL)
     {
@@ -38,10 +38,10 @@ KPMResult KPM_GetInstalledPackage(KPM* kpm, const char* packageId, InstalledPack
         package->description = NULL;
     }
 
-    sqlite3_stmt* statement;
-    const char* zSQL = "SELECT id, repository, name, author, description, version_major, version_minor, version_patch, installed_as_dependency FROM installed_packages WHERE id=? LIMIT 1;";
+    sqlite3_stmt *statement;
+    const char *zSQL = "SELECT id, repository, name, author, description, version_major, version_minor, version_patch, installed_as_dependency FROM installed_packages WHERE id=? LIMIT 1;";
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
-    sqlite3_bind_text(statement, 1, packageId, -1, SQLITE_STATIC);
+    sqlite3_bind_text(statement, 1, package_id, -1, SQLITE_STATIC);
 
     if (sqlite3_step(statement) == SQLITE_ROW)
     {
@@ -68,14 +68,14 @@ KPMResult KPM_GetInstalledPackage(KPM* kpm, const char* packageId, InstalledPack
     return KPM_OK;
 }
 
-KPMResult KPM_ListInstalledPackages(KPM* kpm, size_t* packageCount, InstalledPackage** packages)
+KPMResult KPM_ListInstalledPackages(KPM *kpm, size_t *package_count, InstalledPackage **packages)
 {
-    *packageCount = 0;
+    *package_count = 0;
     if (packages != NULL)
         *packages = NULL;
 
-    const char* zSQL = "SELECT (SELECT COUNT() FROM installed_packages), id, repository, name, author, description, version_major, version_minor, version_patch, installed_as_dependency FROM installed_packages;";
-    sqlite3_stmt* statement;
+    const char *zSQL = "SELECT (SELECT COUNT() FROM installed_packages), id, repository, name, author, description, version_major, version_minor, version_patch, installed_as_dependency FROM installed_packages;";
+    sqlite3_stmt *statement;
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
 
     int status;
@@ -83,14 +83,14 @@ KPMResult KPM_ListInstalledPackages(KPM* kpm, size_t* packageCount, InstalledPac
     {
         if (i == 0)
         {
-            *packageCount = sqlite3_column_int64(statement, 0);
+            *package_count = sqlite3_column_int64(statement, 0);
         }
 
-        if (packages != NULL && *packageCount > 0)
+        if (packages != NULL && *package_count > 0)
         {
             if (!*packages)
             {
-                *packages = malloc(*packageCount * sizeof(InstalledPackage));
+                *packages = malloc(*package_count * sizeof(InstalledPackage));
             }
 
             (*packages)[i].id = strdup((const char*) sqlite3_column_text(statement, 1));
@@ -119,14 +119,14 @@ KPMResult KPM_ListInstalledPackages(KPM* kpm, size_t* packageCount, InstalledPac
 }
 
 
-KPMResult KPM_ListInstalledPackageDependencies(KPM* kpm, const char* id, size_t* dependencyCount, Dependency** dependencies)
+KPMResult KPM_ListInstalledPackageDependencies(KPM *kpm, const char *id, size_t *dependency_count, Dependency **dependencies)
 {
-    *dependencyCount = 0;
+    *dependency_count = 0;
     if (dependencies != NULL)
         *dependencies = NULL;
     
-    const char* zSQL = "SELECT (SELECT COUNT() FROM current_dependencies WHERE dependent=?), dependency_id, min_version_major, min_version_minor, min_version_patch, max_version_major, max_version_minor, max_version_patch FROM current_dependencies WHERE dependent=?;";
-    sqlite3_stmt* statement;
+    const char *zSQL = "SELECT (SELECT COUNT() FROM current_dependencies WHERE dependent=?), dependency_id, min_version_major, min_version_minor, min_version_patch, max_version_major, max_version_minor, max_version_patch FROM current_dependencies WHERE dependent=?;";
+    sqlite3_stmt *statement;
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
     sqlite3_bind_text(statement, 1, id, -1, SQLITE_STATIC);
     sqlite3_bind_text(statement, 2, id, -1, SQLITE_STATIC);
@@ -136,14 +136,14 @@ KPMResult KPM_ListInstalledPackageDependencies(KPM* kpm, const char* id, size_t*
     {
         if (i == 0)
         {
-            *dependencyCount = sqlite3_column_int64(statement, 0);
+            *dependency_count = sqlite3_column_int64(statement, 0);
         }
         
-        if (dependencies != NULL && *dependencyCount > 0)
+        if (dependencies != NULL && *dependency_count > 0)
         {
             if (!*dependencies)
             {
-                *dependencies = malloc(*dependencyCount * sizeof(Dependency));
+                *dependencies = malloc(*dependency_count * sizeof(Dependency));
             }
 
             (*dependencies)[i].id = strdup((const char*) sqlite3_column_text(statement, 1));
@@ -166,14 +166,14 @@ KPMResult KPM_ListInstalledPackageDependencies(KPM* kpm, const char* id, size_t*
     return KPM_OK;
 }
 
-KPMResult KPM_ListInstalledPackageDependents(KPM* kpm, const char* id, size_t* dependentCount, Dependency** dependents)
+KPMResult KPM_ListInstalledPackageDependents(KPM *kpm, const char *id, size_t *dependent_count, Dependency **dependents)
 { // @TODO: Rework
-    *dependentCount = 0;
+    *dependent_count = 0;
     if (dependents != NULL)
         *dependents = NULL;
     
-    const char* zSQL = "SELECT (SELECT COUNT() FROM current_dependencies WHERE dependancy_id=?), dependent, min_version_major, min_version_minor, min_version_patch, max_version_major, max_version_minor, max_version_patch FROM current_dependencies WHERE dependency_id=?;";
-    sqlite3_stmt* statement;
+    const char *zSQL = "SELECT (SELECT COUNT() FROM current_dependencies WHERE dependancy_id=?), dependent, min_version_major, min_version_minor, min_version_patch, max_version_major, max_version_minor, max_version_patch FROM current_dependencies WHERE dependency_id=?;";
+    sqlite3_stmt *statement;
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
     sqlite3_bind_text(statement, 1, id, -1, SQLITE_STATIC);
     sqlite3_bind_text(statement, 2, id, -1, SQLITE_STATIC);
@@ -183,14 +183,14 @@ KPMResult KPM_ListInstalledPackageDependents(KPM* kpm, const char* id, size_t* d
     {
         if (i == 0)
         {
-            *dependentCount = sqlite3_column_int64(statement, 0);
+            *dependent_count = sqlite3_column_int64(statement, 0);
         }
         
-        if (dependents != NULL && *dependentCount > 0)
+        if (dependents != NULL && *dependent_count > 0)
         {
             if (!*dependents)
             {
-                *dependents = malloc(*dependentCount * sizeof(Dependency));
+                *dependents = malloc(*dependent_count * sizeof(Dependency));
             }
 
             (*dependents)[i].id = strdup((const char*) sqlite3_column_text(statement, 1));

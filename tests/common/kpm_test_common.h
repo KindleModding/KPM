@@ -5,8 +5,8 @@
 
 KPM initialise_kpm();
 
-char* vasprintf_hd(const char* format, va_list args);
-char* asprintf_hd(const char* format, ...);
+char *vasprintf_hd(const char *format, va_list args);
+char *asprintf_hd(const char *format, ...);
 
 void assert_hd(bool assertion)
 {

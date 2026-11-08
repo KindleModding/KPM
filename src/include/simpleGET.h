@@ -4,32 +4,32 @@
 
 typedef struct
 {
-    CURL* curl; /**< The internal CURL object backing this request */
+    CURL *curl; /**< The internal CURL object backing this request */
     long response_code; /**< The received response code */
-    unsigned char* buffer; /**< The buffer of data from this request */
+    unsigned char *buffer; /**< The buffer of data from this request */
     size_t size; /**< The current size of the buffer */
     size_t max_size; /**< The maximum size of the response before the request is terminated */
-    void* ptr; /**< Additional data to provide in the callback */
+    void *ptr; /**< Additional data to provide in the callback */
 } SimpleGETRequest;
 
-size_t SimpleGET_Callback(char* ptr, size_t size, size_t nmemb, void* userdata);
+size_t SimpleGET_Callback(char *ptr, size_t size, size_t nmemb, void *userdata);
 
 /**
  * @brief Create a SimpleGETRequest
  * 
  * @param url The URL to request
- * @return SimpleGETRequest* A pointer to the created SimpleGETRequest object
+ * @return SimpleGETRequest *A pointer to the created SimpleGETRequest object
  */
-SimpleGETRequest* SimpleGET_Initialise(const char* url);
+SimpleGETRequest *SimpleGET_Initialise(const char *url);
 
-void SimpleGET_SetMaxSize(SimpleGETRequest* request, size_t max_size);
+void SimpleGET_SetMaxSize(SimpleGETRequest *request, size_t max_size);
 
 /**
  * @brief Frees a SimpleGETRequest object
  * 
  * @param request The SimpleGetRequest object to free
  */
-void SimpleGET_Cleanup(SimpleGETRequest* request);
+void SimpleGET_Cleanup(SimpleGETRequest *request);
 
 /**
  * @brief Perform the request
@@ -37,4 +37,4 @@ void SimpleGET_Cleanup(SimpleGETRequest* request);
  * @param request The SimpleGETRequest to perform
  * @return CURLcode The internal CURL result of the request, given by curl_easy_perform
  */
-CURLcode SimpleGET_Perform(SimpleGETRequest* request);
+CURLcode SimpleGET_Perform(SimpleGETRequest *request);

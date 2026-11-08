@@ -17,11 +17,11 @@
 
 #include "zstd.h"
 
-char* KPKG1_GetManifest(FILE* file)
+char *KPKG1_GetManifest(FILE *file)
 {
     // Read the file
-    struct archive_entry* entry;
-    struct archive* a = archive_read_new();
+    struct archive_entry *entry;
+    struct archive *a = archive_read_new();
     int r;
     archive_read_support_format_all(a);
     archive_read_support_filter_all(a);
@@ -44,9 +44,9 @@ char* KPKG1_GetManifest(FILE* file)
         if (strcmp(archive_entry_pathname(entry), "manifest.json") && strcmp(archive_entry_pathname(entry), "/manifest.json") && strcmp(archive_entry_pathname(entry), "./manifest.json"))
             continue;
 
-        char* out = malloc(archive_entry_size(entry) + 1);
+        char *out = malloc(archive_entry_size(entry) + 1);
         memset(out, 0, archive_entry_size(entry) + 1);
-        const void* blockBuffer;
+        const void *blockBuffer;
         size_t blockSize = 0;
         la_int64_t offset = 0;
         int r = 0;
@@ -73,12 +73,12 @@ char* KPKG1_GetManifest(FILE* file)
     return NULL;
 }
 
-KPKG_Result KPKG1_LoadFile(KPKG_File* kpkg_file, const char* location, FILE* in_file)
+KPKG_Result KPKG1_LoadFile(KPKG_File *kpkg_file, const char *location, FILE *in_file)
 {
-    char* raw_manifest = KPKG1_GetManifest(in_file);
+    char *raw_manifest = KPKG1_GetManifest(in_file);
     if (!raw_manifest)
         return KPKG_UNKNOWN_FORMAT;
-    cJSON* json = cJSON_Parse(raw_manifest);
+    cJSON *json = cJSON_Parse(raw_manifest);
     if (!json)
     {
         free(raw_manifest);
@@ -134,7 +134,7 @@ KPKG_Result KPKG1_LoadFile(KPKG_File* kpkg_file, const char* location, FILE* in_
         }
     };
 
-    cJSON* platform;
+    cJSON *platform;
     cJSON_ArrayForEach(platform, json)
     {
         if (!cJSON_IsString(platform))
@@ -145,7 +145,7 @@ KPKG_Result KPKG1_LoadFile(KPKG_File* kpkg_file, const char* location, FILE* in_
             return KPKG_VALIDATION_ERROR;
         }
 
-        char* platform_str = cJSON_GetStringValue(platform);
+        char *platform_str = cJSON_GetStringValue(platform);
         if (!strcmp(platform_str, "kindle"))
             (*kpkg_file).kpkg1_payload.supported_platforms |= PLATFORM_KINDLE;
         else if (!strcmp(platform_str, "kindle5"))
@@ -167,9 +167,9 @@ KPKG_Result KPKG1_LoadFile(KPKG_File* kpkg_file, const char* location, FILE* in_
 
     for (int i=0; i < (*kpkg_file).kpkg1_payload.dependency_count; i++)
     {
-        cJSON* el = cJSON_GetArrayItem(cJSON_GetObjectItem(json, "dependencies"), i);
-        cJSON* min = cJSON_GetObjectItem(el, "min");
-        cJSON* max = cJSON_GetObjectItem(el, "max");
+        cJSON *el = cJSON_GetArrayItem(cJSON_GetObjectItem(json, "dependencies"), i);
+        cJSON *min = cJSON_GetObjectItem(el, "min");
+        cJSON *max = cJSON_GetObjectItem(el, "max");
         if (
             !cJSON_IsString(cJSON_GetObjectItem(el, "id")) ||
             (
@@ -203,9 +203,9 @@ KPKG_Result KPKG1_LoadFile(KPKG_File* kpkg_file, const char* location, FILE* in_
 
     for (int i=0; i < (*kpkg_file).kpkg1_payload.dependency_count; i++)
     {
-        cJSON* el = cJSON_GetArrayItem(cJSON_GetObjectItem(json, "dependencies"), i);
-        cJSON* min = cJSON_GetObjectItem(el, "min");
-        cJSON* max = cJSON_GetObjectItem(el, "max");
+        cJSON *el = cJSON_GetArrayItem(cJSON_GetObjectItem(json, "dependencies"), i);
+        cJSON *min = cJSON_GetObjectItem(el, "min");
+        cJSON *max = cJSON_GetObjectItem(el, "max");
         (*kpkg_file).kpkg1_payload.dependencies[i].id = strdup(cJSON_GetStringValue(cJSON_GetObjectItem(el, "id")));
         if (!min)
             (*kpkg_file).kpkg1_payload.dependencies[i].min_version = (SemVer) {
@@ -266,7 +266,7 @@ static int copy_data(struct archive *ar, struct archive *aw)
 }
 
 // @TODO: Implement progress monitoring
-KPKG_Result KPKG1_ExtractTo(KPKG_File* file, char* out_path, KPMIO* kpmIO)
+KPKG_Result KPKG1_ExtractTo(KPKG_File *file, char *out_path, KPMIO *kpm_io)
 {
     assert(file->kpkg_version == 1 || file->kpkg_version == 2);
     // location is ALWAYS guaranteed to be a path for KPKG1 (see KPKG_CURLCallback)
@@ -276,7 +276,7 @@ KPKG_Result KPKG1_ExtractTo(KPKG_File* file, char* out_path, KPMIO* kpmIO)
     }
 
     // Read the file
-    struct archive_entry* entry;
+    struct archive_entry *entry;
 
     int flags = ARCHIVE_EXTRACT_TIME;
     flags |= ARCHIVE_EXTRACT_PERM;
@@ -284,8 +284,8 @@ KPKG_Result KPKG1_ExtractTo(KPKG_File* file, char* out_path, KPMIO* kpmIO)
     flags |= ARCHIVE_EXTRACT_FFLAGS;
     flags |= ARCHIVE_EXTRACT_SECURE_NODOTDOT;
 
-    struct archive* a = archive_read_new();
-    struct archive* ext = archive_write_disk_new();
+    struct archive *a = archive_read_new();
+    struct archive *ext = archive_write_disk_new();
     int r;
 
     archive_read_support_format_all(a);
@@ -295,7 +295,7 @@ KPKG_Result KPKG1_ExtractTo(KPKG_File* file, char* out_path, KPMIO* kpmIO)
 
     if ((r = archive_read_open_filename(a, file->location, 10240)))
     {
-        kpmIO->log(KPM_VERBOSITY_ERROR, "Could not open file %s", file->location);
+        kpm_io->log(KPM_VERBOSITY_ERROR, "Could not open file %s", file->location);
         goto libarchive_error;
     }
 
@@ -309,28 +309,28 @@ KPKG_Result KPKG1_ExtractTo(KPKG_File* file, char* out_path, KPMIO* kpmIO)
 
         if (r < ARCHIVE_OK)
         {
-            kpmIO->log(KPM_VERBOSITY_ERROR, "Libarchive error: %s", archive_error_string(a));
+            kpm_io->log(KPM_VERBOSITY_ERROR, "Libarchive error: %s", archive_error_string(a));
         }
         if (r < ARCHIVE_WARN)
         {
             goto libarchive_error;
         }
 
-        char* entryPath = asprintf_hd("%s/%s", out_path, archive_entry_pathname(entry));
+        char *entryPath = asprintf_hd("%s/%s", out_path, archive_entry_pathname(entry));
         archive_entry_set_pathname(entry, entryPath);
         r = archive_write_header(ext, entry);
         free(entryPath);
 
         if (r < ARCHIVE_OK)
         {
-            kpmIO->log(KPM_VERBOSITY_ERROR, "Libarchive error: %s", archive_error_string(a));
+            kpm_io->log(KPM_VERBOSITY_ERROR, "Libarchive error: %s", archive_error_string(a));
         }
         else if (archive_entry_size(entry) > 0)
         {
             r = copy_data(a, ext);
             if (r < ARCHIVE_OK)
             {
-                kpmIO->log(KPM_VERBOSITY_ERROR, "Libarchive error: %s", archive_error_string(a));
+                kpm_io->log(KPM_VERBOSITY_ERROR, "Libarchive error: %s", archive_error_string(a));
             }
             if (r < ARCHIVE_WARN)
             {
@@ -352,7 +352,7 @@ libarchive_error:
     return KPKG_LIBARCHIVE_ERROR;
 }
 
-bool KPKG3_ValidateFile(KPKG_File* file, int file_size)
+bool KPKG3_ValidateFile(KPKG_File *file, int file_size)
 {
     if (file->kpkg3_payload.internal_file && file->kpkg3_payload.map_size != file_size) // Shouldn't be possible
         return false;
@@ -397,7 +397,7 @@ bool KPKG3_ValidateFile(KPKG_File* file, int file_size)
     return true;
 }
 
-KPKG_Result KPKG3_LoadFile(KPKG_File* kpkg_file, const char* location, FILE* in_file)
+KPKG_Result KPKG3_LoadFile(KPKG_File *kpkg_file, const char *location, FILE *in_file)
 {
     struct stat stats;
     fstat(fileno(in_file), &stats);
@@ -439,7 +439,7 @@ KPKG_Result KPKG3_LoadFile(KPKG_File* kpkg_file, const char* location, FILE* in_
     return KPKG_OK;
 }
 
-char* KPKG_ResultStr(KPKG_Result result)
+char *KPKG_ResultStr(KPKG_Result result)
 {
     switch (result)
     {
@@ -479,22 +479,22 @@ enum KPKG_CURLBufType
 
 typedef struct
 {
-    char* location;
-    char* out_path; /**< For KPKG1, stores path of the output file */
+    char *location;
+    char *out_path; /**< For KPKG1, stores path of the output file */
     KPKG_Result error;
     enum KPKG_CURLBufType type; /**< Identify what we're storing */
     union {
-        unsigned char* buf; /**< Stores a buffer for KPKG3+ files to load the header */
-        FILE* out_file; /**< We cannot stream KPKG1/2 files, so we write it out instead */
+        unsigned char *buf; /**< Stores a buffer for KPKG3+ files to load the header */
+        FILE *out_file; /**< We cannot stream KPKG1/2 files, so we write it out instead */
     };
     size_t buf_alloc;
     size_t downloaded;
-    KPKG_File* file; /**< Populated once parsed */
+    KPKG_File *file; /**< Populated once parsed */
 } KPKG_CURLData;
 
-KPKG_CURLData* KPKG_InitCURLData(KPKG_File* file, const char* location, const char* out_path)
+KPKG_CURLData *KPKG_InitCURLData(KPKG_File *file, const char *location, const char *out_path)
 {
-    KPKG_CURLData* data = malloc(sizeof(KPKG_CURLData));
+    KPKG_CURLData *data = malloc(sizeof(KPKG_CURLData));
     *data = (KPKG_CURLData) {
         .location = strdup(location),
         .out_path = strdup(out_path),
@@ -524,9 +524,9 @@ void KPKG_FreeCURLData(KPKG_CURLData** data)
     *data = NULL;
 }
 
-size_t KPKG_CURLCallback(char* ptr, size_t size, size_t nmemb, void* userdata)
+size_t KPKG_CURLCallback(char *ptr, size_t size, size_t nmemb, void *userdata)
 {
-    KPKG_CURLData* data = (KPKG_CURLData*) ptr;
+    KPKG_CURLData *data = (KPKG_CURLData*) ptr;
     if (data->type == KPKG_CURLTypeKPKG1)
         return fwrite(ptr, size, nmemb, data->out_file);
     
@@ -553,7 +553,7 @@ size_t KPKG_CURLCallback(char* ptr, size_t size, size_t nmemb, void* userdata)
         {
             // For KPKG1/2 we want to download to the FS to unpack later (@TODO: Progress reporting from here)
             data->type = KPKG_CURLTypeKPKG1;
-            FILE* out_file = fopen(data->out_path, "w");
+            FILE *out_file = fopen(data->out_path, "w");
             size_t written = fwrite(data->buf, 1, data->downloaded, out_file);
             free(data->buf);
             data->buf_alloc = 0;
@@ -580,13 +580,13 @@ size_t KPKG_CURLCallback(char* ptr, size_t size, size_t nmemb, void* userdata)
 
     if (data->type == KPKG_CURLTypeKPKG3 && data->downloaded >= sizeof(KPKG3_Header))
     {
-        KPKG3_Header* header = (KPKG3_Header*) data->buf;
+        KPKG3_Header *header = (KPKG3_Header*) data->buf;
         size_t target_size = sizeof(KPKG3_Header) + header->dependency_count * sizeof(KPKG3_DependencyEntry) + header->file_count * sizeof(KPKG3_FileEntry) + header->strings_size;
         if (data->downloaded < target_size)
             return realsize; // Haven't read full header yet
         
         
-        void* internal_file = malloc(target_size);
+        void *internal_file = malloc(target_size);
         memcpy(internal_file, data->buf, target_size);
         data->file->kpkg_version = *((int*) &(internal_file[4])); // @FIXME
         data->file->location = strdup(data->location);
@@ -609,12 +609,12 @@ size_t KPKG_CURLCallback(char* ptr, size_t size, size_t nmemb, void* userdata)
     return realsize;
 }
 
-KPKG_Result KPKG_LoadFile(KPKG_File** kpkg_file, const char* location, const char* out_path)
+KPKG_Result KPKG_LoadFile(KPKG_File **kpkg_file, const char *location, const char *out_path)
 {
     *kpkg_file = NULL;
     if (is_path(location))
     {
-        FILE* in_file = fopen(location, O_RDONLY);
+        FILE *in_file = fopen(location, O_RDONLY);
         if (!in_file)
             return KPKG_IO_ERROR;
 
@@ -651,9 +651,9 @@ KPKG_Result KPKG_LoadFile(KPKG_File** kpkg_file, const char* location, const cha
     **kpkg_file = (KPKG_File) {
         .kpkg_version = -1
     };
-    KPKG_CURLData* curl_data = KPKG_InitCURLData(*kpkg_file, location, out_path);
+    KPKG_CURLData *curl_data = KPKG_InitCURLData(*kpkg_file, location, out_path);
 
-    CURL* curl = curl_easy_init();
+    CURL *curl = curl_easy_init();
     curl_easy_setopt(curl, CURLOPT_URL, location);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, SimpleGET_Callback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)KPKG_CURLCallback); // This _should_ work
@@ -703,12 +703,12 @@ KPKG_Result KPKG_LoadFile(KPKG_File** kpkg_file, const char* location, const cha
     return KPKG_OK;
 }
 
-char* KPKG3_GetString(KPKG3_Payload* payload, uint64_t offset)
+char *KPKG3_GetString(KPKG3_Payload *payload, uint64_t offset)
 {
     return payload->strings + offset;
 }
 
-char* KPKG_GetId(KPKG_File* file)
+char *KPKG_GetId(KPKG_File *file)
 {
     if (file->kpkg_version == KPKG_VERSION_1 || file->kpkg_version == KPKG_VERSION_2)
         return file->kpkg1_payload.id;
@@ -716,7 +716,7 @@ char* KPKG_GetId(KPKG_File* file)
         return file->kpkg3_payload.strings;
 }
 
-char* KPKG_GetName(KPKG_File* file)
+char *KPKG_GetName(KPKG_File *file)
 {
     if (file->kpkg_version == KPKG_VERSION_1 || file->kpkg_version == KPKG_VERSION_2)
     {
@@ -731,7 +731,7 @@ char* KPKG_GetName(KPKG_File* file)
     }
 }
 
-char* KPKG_GetAuthor(KPKG_File* file)
+char *KPKG_GetAuthor(KPKG_File *file)
 {
     if (file->kpkg_version == KPKG_VERSION_1 || file->kpkg_version == KPKG_VERSION_2)
     {
@@ -746,7 +746,7 @@ char* KPKG_GetAuthor(KPKG_File* file)
     }
 }
 
-char* KPKG_GetDescription(KPKG_File* file)
+char *KPKG_GetDescription(KPKG_File *file)
 {
     if (file->kpkg_version == KPKG_VERSION_1 || file->kpkg_version == KPKG_VERSION_2)
     {
@@ -761,7 +761,7 @@ char* KPKG_GetDescription(KPKG_File* file)
     }
 }
 
-SemVer KPKG_GetVersion(KPKG_File* file)
+SemVer KPKG_GetVersion(KPKG_File *file)
 {
     if (file->kpkg_version == KPKG_VERSION_1 || file->kpkg_version == KPKG_VERSION_2)
     {
@@ -773,7 +773,7 @@ SemVer KPKG_GetVersion(KPKG_File* file)
     }
 }
 
-size_t KPKG_GetDependencies(KPKG_File* file, KPKG_DependencyEntry** dependencies)
+size_t KPKG_GetDependencies(KPKG_File *file, KPKG_DependencyEntry **dependencies)
 {
     if (file->kpkg_version == KPKG_VERSION_1 || file->kpkg_version == KPKG_VERSION_2)
     {
@@ -789,7 +789,7 @@ size_t KPKG_GetDependencies(KPKG_File* file, KPKG_DependencyEntry** dependencies
     }
 }
 
-void KPKG_CloseFile(KPKG_File* file)
+void KPKG_CloseFile(KPKG_File *file)
 {
     if (file == NULL)
         return;
@@ -830,19 +830,19 @@ void KPKG_CloseFile(KPKG_File* file)
     free(file);
 }
 
-KPKG3_DependencyEntry* KPKG3_GetDependencies(KPKG3_Payload* payload, size_t* count)
+KPKG3_DependencyEntry *KPKG3_GetDependencies(KPKG3_Payload *payload, size_t *count)
 {
     *count = payload->header->dependency_count;
     return payload->dependencies;
 }
 
-KPKG3_FileEntry* KPKG3_GetFileEntries(KPKG3_Payload* payload, size_t* count)
+KPKG3_FileEntry *KPKG3_GetFileEntries(KPKG3_Payload *payload, size_t *count)
 {
     *count = payload->header->file_count;
     return payload->files;
 }
 
-KPKG_Result KPKG3_ExtractData(void* ptr, uint64_t size, uint64_t out_size, char* out_path)
+KPKG_Result KPKG3_ExtractData(void *ptr, uint64_t size, uint64_t out_size, char *out_path)
 {
     int fd = open(out_path, O_WRONLY);
     AssertOrReturn(fd != 0, 0, KPKG_IO_ERROR);
@@ -852,7 +852,7 @@ KPKG_Result KPKG3_ExtractData(void* ptr, uint64_t size, uint64_t out_size, char*
         return KPKG_IO_ERROR;
     }
 
-    void* file = mmap(NULL, out_size, PROT_WRITE, MAP_PRIVATE, fd, 0);
+    void *file = mmap(NULL, out_size, PROT_WRITE, MAP_PRIVATE, fd, 0);
     if (file == NULL)
     {
         close(fd);

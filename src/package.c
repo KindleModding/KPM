@@ -6,7 +6,7 @@
 #include <string.h>
 #include "internal_utils.h"
 
-void KPM_FreeIndexedPackage(IndexedPackage* package)
+void KPM_FreeIndexedPackage(IndexedPackage *package)
 {
     free(package->repository);
     free(package->id);
@@ -21,15 +21,15 @@ void KPM_FreeIndexedPackage(IndexedPackage* package)
     package->author = NULL;
 }
 
-void KPM_FreeIndexedPackageList(size_t packageCount, IndexedPackage* packages)
+void KPM_FreeIndexedPackageList(size_t package_count, IndexedPackage *packages)
 {
-    for (size_t i=0; i < packageCount; i++)
+    for (size_t i=0; i < package_count; i++)
         KPM_FreeIndexedPackage(&packages[i]);
         
     free(packages);
 }
 
-KPMResult KPM_GetPackage(KPM* kpm, const char* repository, const char* id, IndexedPackage* package)
+KPMResult KPM_GetPackage(KPM *kpm, const char *repository, const char *id, IndexedPackage *package)
 {
     package->repository = NULL;
     package->id = NULL;
@@ -37,15 +37,15 @@ KPMResult KPM_GetPackage(KPM* kpm, const char* repository, const char* id, Index
     package->description = NULL;
     package->author = NULL;
 
-    sqlite3_stmt* statement;
+    sqlite3_stmt *statement;
     if (repository == NULL)
     {
-        const char* zSQL = "SELECT repository, id, name, author, description FROM packages WHERE AND id=? LIMIT 1;";
+        const char *zSQL = "SELECT repository, id, name, author, description FROM packages WHERE AND id=? LIMIT 1;";
         sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
         sqlite3_bind_text(statement, 1, id, -1, SQLITE_STATIC);
     }
     else {
-        const char* zSQL = "SELECT repository, id, name, author, description FROM packages WHERE repository=? AND id=? LIMIT 1;";
+        const char *zSQL = "SELECT repository, id, name, author, description FROM packages WHERE repository=? AND id=? LIMIT 1;";
         sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
         sqlite3_bind_text(statement, 1, repository, -1, SQLITE_STATIC);
         sqlite3_bind_text(statement, 2, id, -1, SQLITE_STATIC);
@@ -66,14 +66,14 @@ KPMResult KPM_GetPackage(KPM* kpm, const char* repository, const char* id, Index
     return KPM_OK;
 }
 
-KPMResult KPM_GetPackages(KPM* kpm, const char* id, size_t* packageCount, IndexedPackage** packages)
+KPMResult KPM_GetPackages(KPM *kpm, const char *id, size_t *package_count, IndexedPackage **packages)
 {
-    *packageCount = 0;
+    *package_count = 0;
     if (packages != NULL)
         *packages = NULL;
 
-    const char* zSQL = "SELECT (SELECT COUNT() FROM packages WHERE id=?), repository, id, name, author, description FROM packages WHERE id=?;";
-    sqlite3_stmt* statement;
+    const char *zSQL = "SELECT (SELECT COUNT() FROM packages WHERE id=?), repository, id, name, author, description FROM packages WHERE id=?;";
+    sqlite3_stmt *statement;
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
     sqlite3_bind_text(statement, 1, id, -1, SQLITE_STATIC);
     sqlite3_bind_text(statement, 2, id, -1, SQLITE_STATIC);
@@ -83,14 +83,14 @@ KPMResult KPM_GetPackages(KPM* kpm, const char* id, size_t* packageCount, Indexe
     {
         if (i == 0)
         {
-            *packageCount = sqlite3_column_int64(statement, 0);
+            *package_count = sqlite3_column_int64(statement, 0);
         }
 
-        if (packages != NULL && *packageCount > 0)
+        if (packages != NULL && *package_count > 0)
         {
             if (!*packages)
             {
-                *packages = malloc(*packageCount * sizeof(IndexedPackage));
+                *packages = malloc(*package_count * sizeof(IndexedPackage));
             }
 
             (*packages)[i].repository = strdup((const char*) sqlite3_column_text(statement, 1));
@@ -111,16 +111,16 @@ KPMResult KPM_GetPackages(KPM* kpm, const char* id, size_t* packageCount, Indexe
     return KPM_OK;
 }
 
-KPMResult KPM_SearchPackages(KPM* kpm, const char* query, size_t* packageCount, IndexedPackage** packages)
+KPMResult KPM_SearchPackages(KPM *kpm, const char *query, size_t *package_count, IndexedPackage **packages)
 {
-    *packageCount = 0;
+    *package_count = 0;
     if (packages != NULL)
         *packages = NULL;
 
-    char* paddedQuery = asprintf_hd("%%%s%%", query);    
+    char *paddedQuery = asprintf_hd("%%%s%%", query);    
 
-    const char* zSQL = "SELECT (SELECT COUNT() FROM packages WHERE id LIKE ? OR name LIKE ?), repository, id, name, author, description FROM packages WHERE id LIKE ? OR name LIKE ?;";
-    sqlite3_stmt* statement;
+    const char *zSQL = "SELECT (SELECT COUNT() FROM packages WHERE id LIKE ? OR name LIKE ?), repository, id, name, author, description FROM packages WHERE id LIKE ? OR name LIKE ?;";
+    sqlite3_stmt *statement;
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
     sqlite3_bind_text(statement, 1, paddedQuery, -1, SQLITE_STATIC);
     sqlite3_bind_text(statement, 2, paddedQuery, -1, SQLITE_STATIC);
@@ -132,14 +132,14 @@ KPMResult KPM_SearchPackages(KPM* kpm, const char* query, size_t* packageCount, 
     {
         if (i == 0)
         {
-            *packageCount = sqlite3_column_int64(statement, 0);
+            *package_count = sqlite3_column_int64(statement, 0);
         }
 
-        if (packages != NULL && *packageCount > 0)
+        if (packages != NULL && *package_count > 0)
         {
             if (!*packages)
             {
-                *packages = malloc(*packageCount * sizeof(IndexedPackage));
+                *packages = malloc(*package_count * sizeof(IndexedPackage));
             }
 
             (*packages)[i].repository = strdup((const char*) sqlite3_column_text(statement, 1));
@@ -162,14 +162,14 @@ KPMResult KPM_SearchPackages(KPM* kpm, const char* query, size_t* packageCount, 
     return KPM_OK;
 }
 
-KPMResult KPM_ListPackageArtifacts(KPM* kpm, const char* repositoryId, const char* packageId, size_t* artifactCount, Artifact** artifacts)
+KPMResult KPM_ListPackageArtifacts(KPM *kpm, const char *repository_id, const char *package_id, size_t *artifact_count, Artifact **artifacts)
 {
-    *artifactCount = 0;
+    *artifact_count = 0;
     if (artifacts != NULL)
         *artifacts = NULL;
     
-    const char* zSQL;
-    if (repositoryId == NULL)
+    const char *zSQL;
+    if (repository_id == NULL)
     {
         zSQL = "SELECT (SELECT COUNT() FROM artifacts WHERE id=?), url, repository, id, version_major, version_minor, version_patch FROM artifacts WHERE id=? ORDER BY version_major DESC, version_minor DESC, version_patch DESC;";
     }
@@ -178,20 +178,20 @@ KPMResult KPM_ListPackageArtifacts(KPM* kpm, const char* repositoryId, const cha
         zSQL = "SELECT (SELECT COUNT() FROM artifacts WHERE repository=? AND id=?), url, repository, id, version_major, version_minor, version_patch FROM artifacts WHERE repository=? AND id=? ORDER BY version_major DESC, version_minor DESC, version_patch DESC;";
     }
     
-    sqlite3_stmt* statement;
+    sqlite3_stmt *statement;
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
 
-    if (repositoryId == NULL)
+    if (repository_id == NULL)
     {
-        sqlite3_bind_text(statement, 1, packageId, -1, SQLITE_STATIC);
-        sqlite3_bind_text(statement, 2, packageId, -1, SQLITE_STATIC);
+        sqlite3_bind_text(statement, 1, package_id, -1, SQLITE_STATIC);
+        sqlite3_bind_text(statement, 2, package_id, -1, SQLITE_STATIC);
     }
     else
     {
-        sqlite3_bind_text(statement, 1, repositoryId, -1, SQLITE_STATIC);
-        sqlite3_bind_text(statement, 2, packageId, -1, SQLITE_STATIC);
-        sqlite3_bind_text(statement, 3, repositoryId, -1, SQLITE_STATIC);
-        sqlite3_bind_text(statement, 4, packageId, -1, SQLITE_STATIC);
+        sqlite3_bind_text(statement, 1, repository_id, -1, SQLITE_STATIC);
+        sqlite3_bind_text(statement, 2, package_id, -1, SQLITE_STATIC);
+        sqlite3_bind_text(statement, 3, repository_id, -1, SQLITE_STATIC);
+        sqlite3_bind_text(statement, 4, package_id, -1, SQLITE_STATIC);
     }
 
     int status;
@@ -199,14 +199,14 @@ KPMResult KPM_ListPackageArtifacts(KPM* kpm, const char* repositoryId, const cha
     {
         if (i == 0)
         {
-            *artifactCount = sqlite3_column_int64(statement, 0);
+            *artifact_count = sqlite3_column_int64(statement, 0);
         }
         
-        if (artifacts != NULL && *artifactCount > 0)
+        if (artifacts != NULL && *artifact_count > 0)
         {
             if (!*artifacts)
             {
-                *artifacts = malloc(*artifactCount * sizeof(Artifact));
+                *artifacts = malloc(*artifact_count * sizeof(Artifact));
             }
 
             (*artifacts)[i].url = strdup((const char*) sqlite3_column_text(statement, 1));

@@ -10,16 +10,16 @@ typedef enum
 } KPMVerbosity;
 
 typedef void KPMStream(char c);
-typedef void KPMLog(KPMVerbosity, const char* format, ...) __attribute__((format(printf, 2, 3)));
-typedef void KPMLogProgress(unsigned int progress, const char* format, ...) __attribute__((format(printf, 2, 3)));
-typedef bool KPMGetInput(const char* format, ...) __attribute__((format(printf, 1, 2)));
+typedef void KPMLog(KPMVerbosity, const char *format, ...) __attribute__((format(printf, 2, 3)));
+typedef void KPMLogProgress(unsigned int progress, const char *format, ...) __attribute__((format(printf, 2, 3)));
+typedef bool KPMGetInput(const char *format, ...) __attribute__((format(printf, 1, 2)));
 
 typedef struct
 {
-    KPMLog* log;
-    KPMStream* stream;
-    KPMLogProgress* logProgress;
-    KPMGetInput* getInput;
+    KPMLog *log;
+    KPMStream *stream;
+    KPMLogProgress *logProgress;
+    KPMGetInput *getInput;
 } KPMIO;
 
 #endif

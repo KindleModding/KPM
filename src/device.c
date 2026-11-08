@@ -8,7 +8,7 @@
  * @param deviceCode 2 or 3 character code
  * @return int 
  */
-int getDeviceCodeFromStringHD(char* deviceCode)
+int getDeviceCodeFromStringHD(char *deviceCode)
 {
   if (strlen(deviceCode) == 2)
   {
@@ -20,10 +20,10 @@ int getDeviceCodeFromStringHD(char* deviceCode)
     return 0;
   }
 
-  char* converted = malloc(4);
+  char *converted = malloc(4);
   converted[3] = '\0';
 
-  char* currentConvertedChar = converted;
+  char *currentConvertedChar = converted;
   for (int i=0; i < 3; i++)
   {
     // We do a little hackerdude logic

@@ -18,22 +18,22 @@ void KPM_FreeRepository(Repository *repository)
     repository->description = NULL;
 }
 
-void KPM_FreeRepositoryList(size_t repositoryCount, Repository* repositories)
+void KPM_FreeRepositoryList(size_t repository_count, Repository *repositories)
 {
-    for (size_t i=0; i < repositoryCount; i++)
+    for (size_t i=0; i < repository_count; i++)
         KPM_FreeRepository(&repositories[i]);
 
     free(repositories);
 }
 
-KPMResult KPM_ListRepositories(KPM* kpm, size_t* repositoryCount, Repository** repositories)
+KPMResult KPM_ListRepositories(KPM *kpm, size_t *repository_count, Repository **repositories)
 {
-    *repositoryCount = 0;
+    *repository_count = 0;
     if (repositories != NULL)
         *repositories = NULL;
     
-    const char* zSQL = "SELECT (SELECT COUNT() FROM repositories), id, url, name, description FROM repositories;";
-    sqlite3_stmt* statement;
+    const char *zSQL = "SELECT (SELECT COUNT() FROM repositories), id, url, name, description FROM repositories;";
+    sqlite3_stmt *statement;
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
   
     int status;
@@ -41,14 +41,14 @@ KPMResult KPM_ListRepositories(KPM* kpm, size_t* repositoryCount, Repository** r
     {
         if (i == 0)
         {
-            *repositoryCount = sqlite3_column_int64(statement, 0);
+            *repository_count = sqlite3_column_int64(statement, 0);
         }
 
-        if (repositories != NULL && *repositoryCount > 0)
+        if (repositories != NULL && *repository_count > 0)
         {
             if (*repositories == NULL)
             {
-                *repositories = malloc(*repositoryCount * sizeof(Repository));
+                *repositories = malloc(*repository_count * sizeof(Repository));
             }
 
             (*repositories)[i].id = strdup((char*) sqlite3_column_text(statement, 1));
@@ -69,7 +69,7 @@ KPMResult KPM_ListRepositories(KPM* kpm, size_t* repositoryCount, Repository** r
     return KPM_OK;
 }
 
-KPMResult KPM_GetRepository(KPM *kpm, const char *repositoryId, Repository* repository)
+KPMResult KPM_GetRepository(KPM *kpm, const char *repository_id, Repository *repository)
 {
     if (repository != NULL)
     {
@@ -79,10 +79,10 @@ KPMResult KPM_GetRepository(KPM *kpm, const char *repositoryId, Repository* repo
         repository->description = NULL;
     }
 
-    const char* zSQL = "SELECT id, url, name, description FROM repositories WHERE id=? LIMIT 1;";
-    sqlite3_stmt* statement;
+    const char *zSQL = "SELECT id, url, name, description FROM repositories WHERE id=? LIMIT 1;";
+    sqlite3_stmt *statement;
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
-    sqlite3_bind_text(statement, 1, repositoryId, -1, SQLITE_STATIC);
+    sqlite3_bind_text(statement, 1, repository_id, -1, SQLITE_STATIC);
 
     if (sqlite3_step(statement) == SQLITE_ROW)
     {
@@ -102,9 +102,9 @@ KPMResult KPM_GetRepository(KPM *kpm, const char *repositoryId, Repository* repo
     return KPM_OK;
 }
 
-KPMResult KPM_AddRepository(KPM *kpm, const char *url, Repository* repository, KPMIO* kpm_io)
+KPMResult KPM_AddRepository(KPM *kpm, const char *url, Repository *repository, KPMIO *kpm_io)
 {
-    SimpleGETRequest* request = SimpleGET_Initialise(url);
+    SimpleGETRequest *request = SimpleGET_Initialise(url);
     if (SimpleGET_Perform(request) != CURLE_OK)
     {
         SimpleGET_Cleanup(request);
@@ -119,7 +119,7 @@ KPMResult KPM_AddRepository(KPM *kpm, const char *url, Repository* repository, K
 
 
     kpm_io->log(KPM_VERBOSITY_DEBUG, "Got JSON:\n%s", request->buffer);
-    cJSON* json = cJSON_Parse((char*) request->buffer);
+    cJSON *json = cJSON_Parse((char*) request->buffer);
 
     if (
         !cJSON_IsString(cJSON_GetObjectItem(json, "id")) ||
@@ -133,7 +133,7 @@ KPMResult KPM_AddRepository(KPM *kpm, const char *url, Repository* repository, K
         return KPM_INVALID_RESPONSE_CONTENT;
     }
 
-    char* repo_id = cJSON_GetStringValue(cJSON_GetObjectItem(json, "id"));
+    char *repo_id = cJSON_GetStringValue(cJSON_GetObjectItem(json, "id"));
     kpm_io->log(KPM_VERBOSITY_DEBUG, "ID: %s", repo_id);
     kpm_io->log(KPM_VERBOSITY_DEBUG, "URL: %s", url);
     kpm_io->log(KPM_VERBOSITY_DEBUG, "NAME: %s", cJSON_GetStringValue(cJSON_GetObjectItem(json, "name")));
@@ -146,8 +146,8 @@ KPMResult KPM_AddRepository(KPM *kpm, const char *url, Repository* repository, K
     }
 
     sqlite3_exec(kpm->db, "BEGIN", NULL, NULL, NULL);
-    const char* zSQL = "INSERT INTO repositories (id, url, name, description) VALUES (?, ?, ?, ?);";
-    sqlite3_stmt* statement;
+    const char *zSQL = "INSERT INTO repositories (id, url, name, description) VALUES (?, ?, ?, ?);";
+    sqlite3_stmt *statement;
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
     sqlite3_bind_text(statement, 1, repo_id, -1, SQLITE_STATIC);
     sqlite3_bind_text(statement, 2, url, -1, SQLITE_STATIC);
@@ -180,13 +180,13 @@ KPMResult KPM_AddRepository(KPM *kpm, const char *url, Repository* repository, K
     return KPM_OK;
 }
 
-KPMResult KPM_RemoveRepository(KPM *kpm, const char* repositoryId)
+KPMResult KPM_RemoveRepository(KPM *kpm, const char *repository_id)
 {
     sqlite3_exec(kpm->db, "BEGIN", NULL, NULL, NULL);
-    const char* zSQL = "DELETE FROM repositories WHERE id=?;";
-    sqlite3_stmt* statement;
+    const char *zSQL = "DELETE FROM repositories WHERE id=?;";
+    sqlite3_stmt *statement;
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
-    sqlite3_bind_text(statement, 1, repositoryId, -1, SQLITE_STATIC);
+    sqlite3_bind_text(statement, 1, repository_id, -1, SQLITE_STATIC);
 
     if (sqlite3_step(statement) != SQLITE_DONE)
     {
@@ -200,31 +200,31 @@ KPMResult KPM_RemoveRepository(KPM *kpm, const char* repositoryId)
     return KPM_OK;
 }
 
-KPMResult KPM_ListRepositoryPackages(KPM* kpm, const char* repositoryId, size_t* packageCount, IndexedPackage** packages)
+KPMResult KPM_ListRepositoryPackages(KPM *kpm, const char *repository_id, size_t *package_count, IndexedPackage **packages)
 {
-    *packageCount = 0;
+    *package_count = 0;
     if (packages != NULL)
         *packages = NULL;
     
-    const char* zSQL = "SELECT (SELECT COUNT() FROM packages WHERE repository=?), repository, id, name, author, description FROM packages WHERE repository=?;";
-    sqlite3_stmt* statement;
+    const char *zSQL = "SELECT (SELECT COUNT() FROM packages WHERE repository=?), repository, id, name, author, description FROM packages WHERE repository=?;";
+    sqlite3_stmt *statement;
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
-    sqlite3_bind_text(statement, 1, repositoryId, -1, SQLITE_STATIC);
-    sqlite3_bind_text(statement, 2, repositoryId, -1, SQLITE_STATIC);
+    sqlite3_bind_text(statement, 1, repository_id, -1, SQLITE_STATIC);
+    sqlite3_bind_text(statement, 2, repository_id, -1, SQLITE_STATIC);
 
     int status;
     for (int i=0; (status = sqlite3_step(statement)) == SQLITE_ROW; i++)
     {
         if (i == 0)
         {
-            *packageCount = sqlite3_column_int64(statement, 0);
+            *package_count = sqlite3_column_int64(statement, 0);
         }
 
-        if (packages != NULL && *packageCount > 0)
+        if (packages != NULL && *package_count > 0)
         {
             if (!*packages)
             {
-                *packages = malloc(*packageCount * sizeof(IndexedPackage));
+                *packages = malloc(*package_count * sizeof(IndexedPackage));
             }
 
             (*packages)[i].repository = strdup((const char*) sqlite3_column_text(statement, 1));

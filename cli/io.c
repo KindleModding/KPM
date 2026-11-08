@@ -59,20 +59,20 @@ void io_cleanup()
     }
 }
 
-void vkpm_fbink_printf(const char* format, va_list args)
+void vkpm_fbink_printf(const char *format, va_list args)
 {
 	// Initial init to pull info
 	int r = fbink_init(io_state.framebuffer, &fbink_config);
     if (r >= 0)
     {
         int rows;
-        char* string = vasprintf_hd(format, args);
+        char *string = vasprintf_hd(format, args);
         if ((rows = fbink_print(io_state.framebuffer, string, &fbink_config)) > 0)
             fbink_config.row += rows;
     }
 }
 
-__attribute__((format(printf, 1, 2))) void kpm_fbink_printf(const char* format, ...)
+__attribute__((format(printf, 1, 2))) void kpm_fbink_printf(const char *format, ...)
 {
     va_list args;
     va_start(args, format);
@@ -85,13 +85,13 @@ void kpm_stream(char c)
     printf("%c", c);
 }
 
-void vhd_log(const char* format, va_list args)
+void vhd_log(const char *format, va_list args)
 {
     vfprintf(stderr, format, args);
     fprintf(stderr, "\n");
 }
 
-void hd_log(const char* format, ...)
+void hd_log(const char *format, ...)
 {
     va_list args;
     va_start(args, format);
@@ -99,10 +99,10 @@ void hd_log(const char* format, ...)
     va_end(args);
 }
 
-void kpm_log(KPMVerbosity verbosity, const char* format, ...)
+void kpm_log(KPMVerbosity verbosity, const char *format, ...)
 {
-    char* prefixed_format;
-    char* prefixed_format_fbink;
+    char *prefixed_format;
+    char *prefixed_format_fbink;
     switch (verbosity)
     {
         case KPM_VERBOSITY_DEBUG:
@@ -141,7 +141,7 @@ void kpm_log(KPMVerbosity verbosity, const char* format, ...)
     free(prefixed_format_fbink);
 }
 
-void kpm_log_progress(unsigned int progress, const char* format, ...)
+void kpm_log_progress(unsigned int progress, const char *format, ...)
 {
     va_list args;
     va_start(args, format);
@@ -150,7 +150,7 @@ void kpm_log_progress(unsigned int progress, const char* format, ...)
     va_end(args);
 }
 
-bool kpm_get_input(const char* format, ...)
+bool kpm_get_input(const char *format, ...)
 {
     if (cli_state.fbink || !cli_state.confirm)
         return true;

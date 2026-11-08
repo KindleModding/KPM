@@ -6,27 +6,27 @@
 #include "internal_utils.h"
 #include "uninstall.h"
 
-KPMResult Internal_RunUninstallHook(const char* outPath, const char* packageId, bool upgrading, KPMIO* kpm_io)
+KPMResult Internal_RunUninstallHook(const char *outPath, const char *package_id, bool upgrading, KPMIO *kpm_io)
 {
-    char* uninstallScriptPath = asprintf_hd( "%suninstall.sh", outPath);
+    char *uninstallScriptPath = asprintf_hd( "%suninstall.sh", outPath);
 
     if (access(uninstallScriptPath, R_OK) == 0)
     {
         free(uninstallScriptPath);
-        kpm_io->log(KPM_VERBOSITY_DEBUG, "Running uninstall script for [%s]", packageId);
+        kpm_io->log(KPM_VERBOSITY_DEBUG, "Running uninstall script for [%s]", package_id);
         // Run uninstall script
         int result = -1;
 
-        char* uninstallCommand;
+        char *uninstallCommand;
         if (upgrading)
             uninstallCommand = asprintf_hd("KPM_VERSION_MAJOR=%i KPM_VERSION_MINOR=%i KPM_VERSION_PATCH=%i KPM_PLATFORM=\"%s\" sh uninstall.sh upgrade 2>&1", KPM_VERSION_MAJOR, KPM_VERSION_MINOR, KPM_VERSION_PATCH, KPM_PLATFORM);
         else
             uninstallCommand = asprintf_hd("KPM_VERSION_MAJOR=%i KPM_VERSION_MINOR=%i KPM_VERSION_PATCH=%i KPM_PLATFORM=\"%s\" sh uninstall.sh 2>&1", KPM_VERSION_MAJOR, KPM_VERSION_MINOR, KPM_VERSION_PATCH, KPM_PLATFORM);
 
-        char* old_path = getcwd(NULL, 0);
+        char *old_path = getcwd(NULL, 0);
         chdir(outPath);
-        kpm_io->log(KPM_VERBOSITY_INFO, "Running uninstall hooks for %s", packageId);
-        FILE* stream = popen(uninstallCommand, "r");
+        kpm_io->log(KPM_VERBOSITY_INFO, "Running uninstall hooks for %s", package_id);
+        FILE *stream = popen(uninstallCommand, "r");
         free(uninstallCommand);
         if (stream != NULL)
         {
@@ -47,7 +47,7 @@ KPMResult Internal_RunUninstallHook(const char* outPath, const char* packageId, 
         if (result != 0)
         {
             // The uninstall hook failed
-            kpm_io->log(KPM_VERBOSITY_ERROR, "Could not execute uninstall hook for [%s]", packageId);
+            kpm_io->log(KPM_VERBOSITY_ERROR, "Could not execute uninstall hook for [%s]", package_id);
             return KPM_GENERIC_ERROR;
         }
     }
@@ -55,23 +55,23 @@ KPMResult Internal_RunUninstallHook(const char* outPath, const char* packageId, 
     return KPM_OK;
 }
 
-KPMResult Internal_UninstallPackage(KPM* kpm, const char* packageId, bool upgrading, KPMIO* kpm_io)
+KPMResult Internal_UninstallPackage(KPM *kpm, const char *package_id, bool upgrading, KPMIO *kpm_io)
 {
-    char* outPath = asprintf_hd("%s/%s/", kpm->pkgPath, packageId);
+    char *outPath = asprintf_hd("%s/%s/", kpm->pkgPath, package_id);
     
     KPMResult result;
-    if ((result = Internal_RunUninstallHook(outPath, packageId, upgrading, kpm_io)) != KPM_OK)
+    if ((result = Internal_RunUninstallHook(outPath, package_id, upgrading, kpm_io)) != KPM_OK)
         return result;
 
-    kpm_io->log(KPM_VERBOSITY_DEBUG, "Deleting [%s] files", packageId);
+    kpm_io->log(KPM_VERBOSITY_DEBUG, "Deleting [%s] files", package_id);
     rmdir_r(outPath);
     free(outPath);
 
     // Remove installed item from the database
-    const char* zSQL = "DELETE FROM installed_packages WHERE id=?";
-    sqlite3_stmt* statement;
+    const char *zSQL = "DELETE FROM installed_packages WHERE id=?";
+    sqlite3_stmt *statement;
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
-    sqlite3_bind_text(statement, 1, packageId, -1, SQLITE_STATIC);
+    sqlite3_bind_text(statement, 1, package_id, -1, SQLITE_STATIC);
     if (sqlite3_step(statement) != SQLITE_DONE)
     {
         sqlite3_finalize(statement);
@@ -83,41 +83,41 @@ KPMResult Internal_UninstallPackage(KPM* kpm, const char* packageId, bool upgrad
     return KPM_OK;
 }
 
-KPMResult KPM_UninstallPackages(KPM* kpm, size_t packageCount, const char* packageIds[], KPMIO* kpmIO)
+KPMResult KPM_UninstallPackages(KPM *kpm, size_t package_count, const char *package_ids[], KPMIO *kpm_io)
 {
-    kpmIO->log(KPM_VERBOSITY_INFO, "Uninstalling %zu packages.", packageCount);
+    kpm_io->log(KPM_VERBOSITY_INFO, "Uninstalling %zu packages.", package_count);
 
-    for (int i=0; i < packageCount; i++)
+    for (int i=0; i < package_count; i++)
     {
-        if (KPM_GetInstalledPackage(kpm, packageIds[i], NULL) != KPM_OK)
+        if (KPM_GetInstalledPackage(kpm, package_ids[i], NULL) != KPM_OK)
         {
-            kpmIO->log(KPM_VERBOSITY_ERROR, "Package [%s] is not installed", packageIds[i]);
+            kpm_io->log(KPM_VERBOSITY_ERROR, "Package [%s] is not installed", package_ids[i]);
             return KPM_GENERIC_ERROR;
         }
     }
 
-    for (int i=0; i < packageCount; i++)
+    for (int i=0; i < package_count; i++)
     {
-        size_t dependentCount;
-        Dependency* dependents;
-        KPM_ListInstalledPackageDependents(kpm, packageIds[i], &dependentCount, &dependents);
+        size_t dependent_count;
+        Dependency *dependents;
+        KPM_ListInstalledPackageDependents(kpm, package_ids[i], &dependent_count, &dependents);
 
-        size_t unaccountedDependencies = dependentCount;
-        for (int j=0; j < packageCount; j++)
-            for (int k=0; k < dependentCount; k++)
-                if (strcmp(packageIds[j], dependents[k].id) == 0)
+        size_t unaccountedDependencies = dependent_count;
+        for (int j=0; j < package_count; j++)
+            for (int k=0; k < dependent_count; k++)
+                if (strcmp(package_ids[j], dependents[k].id) == 0)
                     unaccountedDependencies--;
 
         if (unaccountedDependencies > 0)
         {
-            kpmIO->log(KPM_VERBOSITY_ERROR, "Packages depend on [%s]", packageIds[i]);
-            for (int i=0; i < dependentCount; i++)
+            kpm_io->log(KPM_VERBOSITY_ERROR, "Packages depend on [%s]", package_ids[i]);
+            for (int i=0; i < dependent_count; i++)
             {
-                for (int j=0; j < packageCount; j++)
-                    if (strcmp(packageIds[j], dependents[i].id) == 0)
+                for (int j=0; j < package_count; j++)
+                    if (strcmp(package_ids[j], dependents[i].id) == 0)
                         continue;
 
-                kpmIO->log(KPM_VERBOSITY_ERROR, "- %s (%u.%u.%u - %u.%u.%u)", dependents[i].id, dependents[i].min_version.major, dependents[i].min_version.minor, dependents[i].min_version.patch, dependents[i].max_version.major, dependents[i].max_version.minor, dependents[i].max_version.patch);
+                kpm_io->log(KPM_VERBOSITY_ERROR, "- %s (%u.%u.%u - %u.%u.%u)", dependents[i].id, dependents[i].min_version.major, dependents[i].min_version.minor, dependents[i].min_version.patch, dependents[i].max_version.major, dependents[i].max_version.minor, dependents[i].max_version.patch);
             }
             return KPM_GENERIC_ERROR;
         }
@@ -125,10 +125,10 @@ KPMResult KPM_UninstallPackages(KPM* kpm, size_t packageCount, const char* packa
     // @TODO: Sort uninstall list by dependents first
 
     int result = KPM_OK;
-    for (int i=0; i < packageCount; i++)
+    for (int i=0; i < package_count; i++)
     {
-        kpmIO->log(KPM_VERBOSITY_DEBUG, "Uninstalling %s", packageIds[i]);
-        if ((result = Internal_UninstallPackage(kpm, packageIds[i], false, kpmIO)) != KPM_OK)
+        kpm_io->log(KPM_VERBOSITY_DEBUG, "Uninstalling %s", package_ids[i]);
+        if ((result = Internal_UninstallPackage(kpm, package_ids[i], false, kpm_io)) != KPM_OK)
             break;
     }
 

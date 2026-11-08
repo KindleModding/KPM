@@ -8,13 +8,13 @@ void kpm_stream(char c)
     printf("%c", c);
 }
 
-void vhd_log(const char* format, va_list args)
+void vhd_log(const char *format, va_list args)
 {
     vfprintf(stderr, format, args);
     fprintf(stderr, "\n");
 }
 
-void hd_log(const char* format, ...)
+void hd_log(const char *format, ...)
 {
     va_list args;
     va_start(args, format);
@@ -22,9 +22,9 @@ void hd_log(const char* format, ...)
     va_end(args);
 }
 
-void kpm_log(KPMVerbosity verbosity, const char* format, ...)
+void kpm_log(KPMVerbosity verbosity, const char *format, ...)
 {
-    char* prefixed_format;
+    char *prefixed_format;
     switch (verbosity)
     {
         case KPM_VERBOSITY_DEBUG:
@@ -49,7 +49,7 @@ void kpm_log(KPMVerbosity verbosity, const char* format, ...)
     free(prefixed_format);
 }
 
-void kpm_log_progress(unsigned int progress, const char* format, ...)
+void kpm_log_progress(unsigned int progress, const char *format, ...)
 {
     va_list args;
     va_start(args, format);
@@ -58,7 +58,7 @@ void kpm_log_progress(unsigned int progress, const char* format, ...)
     va_end(args);
 }
 
-bool kpm_get_input(const char* format, ...)
+bool kpm_get_input(const char *format, ...)
 {
     return true;
 }

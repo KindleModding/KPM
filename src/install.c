@@ -28,17 +28,17 @@
 
 struct DownloadData
 {
-    KPMIO* kpm_io;
+    KPMIO *kpm_io;
     long int total_size;
     long int downloaded;
     int reported_progress;
-    EVP_MD_CTX* evp_ctx;
+    EVP_MD_CTX *evp_ctx;
     int fd;
 };
 
-size_t Internal_DownloadWriteCallback(char* ptr, size_t size, size_t nmemb, void* userdata)
+size_t Internal_DownloadWriteCallback(char *ptr, size_t size, size_t nmemb, void *userdata)
 {
-    struct DownloadData* downloadData = (struct DownloadData*) userdata;
+    struct DownloadData *downloadData = (struct DownloadData*) userdata;
     if (downloadData->total_size != 0)
     {
         int calculated_progress = 100 * (float) (downloadData->downloaded)/((float) downloadData->total_size);
@@ -56,10 +56,10 @@ size_t Internal_DownloadWriteCallback(char* ptr, size_t size, size_t nmemb, void
     return write(downloadData->fd, ptr, size * nmemb);
 }
 
-size_t Internal_DownloadHeaderCallback(char* ptr, size_t size, size_t nitems, void* userdata)
+size_t Internal_DownloadHeaderCallback(char *ptr, size_t size, size_t nitems, void *userdata)
 {
-    char* key = malloc(size*nitems + 1);
-    char* value = malloc(size*nitems + 1);
+    char *key = malloc(size*nitems + 1);
+    char *value = malloc(size*nitems + 1);
     key[0] = 0;
     value[0] = 0;
     for (size_t i=0; i < size*nitems; i++)
@@ -93,7 +93,7 @@ size_t Internal_DownloadHeaderCallback(char* ptr, size_t size, size_t nitems, vo
  * @param deduplicatedPackages 
  * @return KPMResult 
  */
-KPMResult Internal_DownloadGraphItems(KPM* kpm, DependencyGraph* graph, size_t deduplicatedPackageCount, NodeIdx_t* deduplicatedPackages, KPMIO* kpmIO)
+KPMResult Internal_DownloadGraphItems(KPM *kpm, DependencyGraph *graph, size_t deduplicatedPackageCount, NodeIdx_t *deduplicatedPackages, KPMIO *kpm_io)
 {
     
 
@@ -105,57 +105,57 @@ KPMResult Internal_DownloadGraphItems(KPM* kpm, DependencyGraph* graph, size_t d
  * 
  * @param kpm 
  * @param path 
- * @param kpmIO 
+ * @param kpm_io 
  * @return true 
  * @return false 
  */
-bool Internal_InstallItem(KPM* kpm, char* repository, char* path, bool installed_as_dependency, bool upgrading, KPMIO* kpmIO)
+bool Internal_InstallItem(KPM *kpm, char *repository, char *path, bool installed_as_dependency, bool upgrading, KPMIO *kpm_io)
 {
-    char* id = "";
+    char *id = "";
 
-    kpmIO->log(KPM_VERBOSITY_DEBUG, "Installing item with id: '%s'", id);
+    kpm_io->log(KPM_VERBOSITY_DEBUG, "Installing item with id: '%s'", id);
 
-    char* outPath = asprintf_hd("%s/%s/", kpm->pkgPath, id);
+    char *outPath = asprintf_hd("%s/%s/", kpm->pkgPath, id);
     rmdir_r(outPath); // Just in case it exists
 
     // First unpack the .kpkg file
-    kpmIO->log(KPM_VERBOSITY_INFO, "Extracting archive");
-    //Internal_ExtractArchive(path, outPath, kpmIO);
+    kpm_io->log(KPM_VERBOSITY_INFO, "Extracting archive");
+    //Internal_ExtractArchive(path, outPath, kpm_io);
 
-    char* installScriptPath = asprintf_hd( "%sinstall.sh", outPath);
+    char *installScriptPath = asprintf_hd( "%sinstall.sh", outPath);
 
     // Check if an install.sh file exists
     // If so, run it
     if (access(installScriptPath, R_OK) == 0)
     {
         free(installScriptPath);
-        kpmIO->log(KPM_VERBOSITY_DEBUG, "Running install script for [%s]", id);
+        kpm_io->log(KPM_VERBOSITY_DEBUG, "Running install script for [%s]", id);
         // Run install script
         int result = -1;
-        char* installCommand;
+        char *installCommand;
         if (upgrading)
             installCommand = asprintf_hd("KPM_VERSION_MAJOR=%i KPM_VERSION_MINOR=%i KPM_VERSION_PATCH=%i KPM_PLATFORM=\"%s\" sh install.sh upgrade 2>&1", KPM_VERSION_MAJOR, KPM_VERSION_MINOR, KPM_VERSION_PATCH, KPM_PLATFORM);
         else
             installCommand = asprintf_hd("KPM_VERSION_MAJOR=%i KPM_VERSION_MINOR=%i KPM_VERSION_PATCH=%i KPM_PLATFORM=\"%s\" sh install.sh 2>&1", KPM_VERSION_MAJOR, KPM_VERSION_MINOR, KPM_VERSION_PATCH, KPM_PLATFORM);
 
-        char* old_path = getcwd(NULL, 0);
+        char *old_path = getcwd(NULL, 0);
         chdir(outPath);
-        kpmIO->log(KPM_VERBOSITY_INFO, "Running install hooks for %s", id);
-        kpmIO->log(KPM_VERBOSITY_DEBUG, "Running: %s", installCommand);
-        FILE* stream = popen(installCommand, "r");
+        kpm_io->log(KPM_VERBOSITY_INFO, "Running install hooks for %s", id);
+        kpm_io->log(KPM_VERBOSITY_DEBUG, "Running: %s", installCommand);
+        FILE *stream = popen(installCommand, "r");
         free(installCommand);
         if (stream != NULL)
         {
             int c;
             while ((c = fgetc(stream)) != EOF)
             {
-                kpmIO->stream((char) c);
+                kpm_io->stream((char) c);
             }
             result = pclose(stream);
         }
         else
         {
-            kpmIO->log(KPM_VERBOSITY_ERROR, "Could not run script - POPEN FAILURE");
+            kpm_io->log(KPM_VERBOSITY_ERROR, "Could not run script - POPEN FAILURE");
         }
 
         chdir(old_path);
@@ -163,8 +163,8 @@ bool Internal_InstallItem(KPM* kpm, char* repository, char* path, bool installed
         if (result != 0)
         {
             // The install hook failed
-            kpmIO->log(KPM_VERBOSITY_ERROR, "Could not execute install hook for [%s]", id);
-            Internal_RunUninstallHook(outPath, id, false, kpmIO);
+            kpm_io->log(KPM_VERBOSITY_ERROR, "Could not execute install hook for [%s]", id);
+            Internal_RunUninstallHook(outPath, id, false, kpm_io);
             rmdir_r(outPath);
             free(outPath);
             return false;
@@ -173,8 +173,8 @@ bool Internal_InstallItem(KPM* kpm, char* repository, char* path, bool installed
     }
 
     // Add installed item to the database
-    /*sqlite3_stmt* statement;
-    const char* zSQL = "INSERT OR REPLACE INTO installed_packages (id, repository, name, author, description, version_major, version_minor, version_patch, installed_as_dependency) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);";
+    /*sqlite3_stmt *statement;
+    const char *zSQL = "INSERT OR REPLACE INTO installed_packages (id, repository, name, author, description, version_major, version_minor, version_patch, installed_as_dependency) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);";
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
     sqlite3_bind_text(statement, 1, id, -1, SQLITE_STATIC);
     if (repository != NULL)
@@ -202,7 +202,7 @@ bool Internal_InstallItem(KPM* kpm, char* repository, char* path, bool installed
     return true;
 }
 
-KPMResult KPM_InstallPackages(KPM* kpm, size_t targetCount, InstallTarget* targets, KPMIO* kpm_io)
+KPMResult KPM_InstallPackages(KPM *kpm, size_t target_count, InstallTarget *targets, KPMIO *kpm_io)
 {
     if (kpm_io == NULL)
         kpm_io = &dummyKPMStub;

@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-void KPM_FreeIndexedArtifact(Artifact* artifact)
+void KPM_FreeIndexedArtifact(Artifact *artifact)
 {
      free(artifact->repository);
      free(artifact->id);
@@ -15,25 +15,25 @@ void KPM_FreeIndexedArtifact(Artifact* artifact)
      artifact->url = NULL;
 }
  
-void KPM_FreeIndexedArtifactList(size_t artifactCount, Artifact* artifacts)
+void KPM_FreeIndexedArtifactList(size_t artifact_count, Artifact *artifacts)
 {
-     for (size_t i=0; i < artifactCount; i++)
+     for (size_t i=0; i < artifact_count; i++)
         KPM_FreeIndexedArtifact(&artifacts[i]);
 
      free(artifacts);
 }
 
-KPMResult KPM_GetArtifact(KPM* kpm, const char* repositoryId, const char* packageId, SemVer version, Artifact* artifact)
+KPMResult KPM_GetArtifact(KPM *kpm, const char *repository_id, const char *package_id, SemVer version, Artifact *artifact)
 {
-    const char* zSQL;
-    sqlite3_stmt* statement;
+    const char *zSQL;
+    sqlite3_stmt *statement;
 
-    if (repositoryId != NULL)
+    if (repository_id != NULL)
     {
         zSQL = "SELECT url, repository, id, version_major, version_minor, version_patch FROM artifacts WHERE repository=? AND id=? AND version_major=? AND version_minor=? AND version_patch=? LIMIT 1;";
         sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
-        sqlite3_bind_text(statement, 1, repositoryId, -1, SQLITE_STATIC);
-        sqlite3_bind_text(statement, 2, packageId, -1, SQLITE_STATIC);
+        sqlite3_bind_text(statement, 1, repository_id, -1, SQLITE_STATIC);
+        sqlite3_bind_text(statement, 2, package_id, -1, SQLITE_STATIC);
         sqlite3_bind_int(statement, 3, version.major);
         sqlite3_bind_int(statement, 4, version.minor);
         sqlite3_bind_int(statement, 5, version.patch);
@@ -42,7 +42,7 @@ KPMResult KPM_GetArtifact(KPM* kpm, const char* repositoryId, const char* packag
     {
         zSQL = "SELECT url, repository, id, version_major, version_minor, version_patch FROM artifacts WHERE id=? AND version_major=? AND version_minor=? AND version_patch=? LIMIT 1;";
         sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
-        sqlite3_bind_text(statement, 1, packageId, -1, SQLITE_STATIC);
+        sqlite3_bind_text(statement, 1, package_id, -1, SQLITE_STATIC);
         sqlite3_bind_int(statement, 2, version.major);
         sqlite3_bind_int(statement, 3, version.minor);
         sqlite3_bind_int(statement, 4, version.patch);
@@ -64,14 +64,14 @@ KPMResult KPM_GetArtifact(KPM* kpm, const char* repositoryId, const char* packag
     return KPM_OK;
 }
 
-KPMResult KPM_ListArtifactDependencies(KPM* kpm, const char* repository, const char* id, const char* url, size_t* dependencyCount, Dependency** dependencies)
+KPMResult KPM_ListArtifactDependencies(KPM *kpm, const char *repository, const char *id, const char *url, size_t *dependency_count, Dependency **dependencies)
 {
-    *dependencyCount = 0;
+    *dependency_count = 0;
     if (dependencies != NULL)
         *dependencies = NULL;
     
-    const char* zSQL = "SELECT (SELECT COUNT() FROM artifact_dependencies WHERE artifact_repository=? AND artifact_id=? AND artifact_url=?), id, min_version_major, min_version_minor, min_version_patch, max_version_major, max_version_minor, max_version_patch FROM artifact_dependencies WHERE artifact_repository=? AND artifact_id=? AND artifact_url=?;";
-    sqlite3_stmt* statement;
+    const char *zSQL = "SELECT (SELECT COUNT() FROM artifact_dependencies WHERE artifact_repository=? AND artifact_id=? AND artifact_url=?), id, min_version_major, min_version_minor, min_version_patch, max_version_major, max_version_minor, max_version_patch FROM artifact_dependencies WHERE artifact_repository=? AND artifact_id=? AND artifact_url=?;";
+    sqlite3_stmt *statement;
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
     sqlite3_bind_text(statement, 1, repository, -1, SQLITE_STATIC);
     sqlite3_bind_text(statement, 2, id, -1, SQLITE_STATIC);
@@ -85,14 +85,14 @@ KPMResult KPM_ListArtifactDependencies(KPM* kpm, const char* repository, const c
     {
         if (i == 0)
         {
-            *dependencyCount = sqlite3_column_int64(statement, 0);
+            *dependency_count = sqlite3_column_int64(statement, 0);
         }
         
-        if (dependencies != NULL && *dependencyCount > 0)
+        if (dependencies != NULL && *dependency_count > 0)
         {
             if (!*dependencies)
             {
-                *dependencies = malloc(*dependencyCount * sizeof(Dependency));
+                *dependencies = malloc(*dependency_count * sizeof(Dependency));
             }
             
             (*dependencies)[i].id = strdup((const char*) sqlite3_column_text(statement, 1));
