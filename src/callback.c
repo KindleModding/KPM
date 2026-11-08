@@ -1,7 +1,7 @@
 #include "kpm/kpm.h"
 #include "callback.h"
 
-void logStub(KPMVerbosity verbosity, const char *details, ...)
+void logStub(KPMIO_Verbosity verbosity, const char *details, ...)
 {
     return;
 }

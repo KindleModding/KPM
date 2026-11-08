@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-void KPM_FreeInstalledPackage(InstalledPackage *package)
+void KPM_FreeInstalledPackage(KPM_InstalledPackage *package)
 {
     free(package->id);
     free(package->repository);
@@ -18,7 +18,7 @@ void KPM_FreeInstalledPackage(InstalledPackage *package)
     package->description = NULL;
 }
 
-void KPM_FreeInstalledPackageList(size_t package_count, InstalledPackage *packages)
+void KPM_FreeInstalledPackageList(size_t package_count, KPM_InstalledPackage *packages)
 {
     for (size_t i=0; i < package_count; i++)
     {
@@ -27,7 +27,7 @@ void KPM_FreeInstalledPackageList(size_t package_count, InstalledPackage *packag
     free(packages);
 }
 
-KPMResult KPM_GetInstalledPackage(KPM *kpm, const char *package_id, InstalledPackage *package)
+KPM_Result KPM_GetInstalledPackage(KPM *kpm, const char *package_id, KPM_InstalledPackage *package)
 {
     if (package != NULL)
     {
@@ -68,7 +68,7 @@ KPMResult KPM_GetInstalledPackage(KPM *kpm, const char *package_id, InstalledPac
     return KPM_OK;
 }
 
-KPMResult KPM_ListInstalledPackages(KPM *kpm, size_t *package_count, InstalledPackage **packages)
+KPM_Result KPM_ListInstalledPackages(KPM *kpm, size_t *package_count, KPM_InstalledPackage **packages)
 {
     *package_count = 0;
     if (packages != NULL)
@@ -90,7 +90,7 @@ KPMResult KPM_ListInstalledPackages(KPM *kpm, size_t *package_count, InstalledPa
         {
             if (!*packages)
             {
-                *packages = malloc(*package_count * sizeof(InstalledPackage));
+                *packages = malloc(*package_count * sizeof(KPM_InstalledPackage));
             }
 
             (*packages)[i].id = strdup((const char*) sqlite3_column_text(statement, 1));
@@ -119,7 +119,7 @@ KPMResult KPM_ListInstalledPackages(KPM *kpm, size_t *package_count, InstalledPa
 }
 
 
-KPMResult KPM_ListInstalledPackageDependencies(KPM *kpm, const char *id, size_t *dependency_count, Dependency **dependencies)
+KPM_Result KPM_ListInstalledPackageDependencies(KPM *kpm, const char *id, size_t *dependency_count, KPM_Dependency **dependencies)
 {
     *dependency_count = 0;
     if (dependencies != NULL)
@@ -143,7 +143,7 @@ KPMResult KPM_ListInstalledPackageDependencies(KPM *kpm, const char *id, size_t 
         {
             if (!*dependencies)
             {
-                *dependencies = malloc(*dependency_count * sizeof(Dependency));
+                *dependencies = malloc(*dependency_count * sizeof(KPM_Dependency));
             }
 
             (*dependencies)[i].id = strdup((const char*) sqlite3_column_text(statement, 1));
@@ -166,7 +166,7 @@ KPMResult KPM_ListInstalledPackageDependencies(KPM *kpm, const char *id, size_t 
     return KPM_OK;
 }
 
-KPMResult KPM_ListInstalledPackageDependents(KPM *kpm, const char *id, size_t *dependent_count, Dependency **dependents)
+KPM_Result KPM_ListInstalledPackageDependents(KPM *kpm, const char *id, size_t *dependent_count, KPM_Dependency **dependents)
 { // @TODO: Rework
     *dependent_count = 0;
     if (dependents != NULL)
@@ -190,7 +190,7 @@ KPMResult KPM_ListInstalledPackageDependents(KPM *kpm, const char *id, size_t *d
         {
             if (!*dependents)
             {
-                *dependents = malloc(*dependent_count * sizeof(Dependency));
+                *dependents = malloc(*dependent_count * sizeof(KPM_Dependency));
             }
 
             (*dependents)[i].id = strdup((const char*) sqlite3_column_text(statement, 1));

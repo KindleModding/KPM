@@ -49,11 +49,11 @@ int main(int argc, char *argv[])
         mkdir_r(KPM_PKG_PATH, 0775);
 
     KPM kpm = {
-        .maxConnections = 5, // @TODO
-        .pkgPath = KPM_PKG_PATH,
-        .dbPath = KPM_DB_PATH
+        .max_connections = 5, // @TODO
+        .pkg_path = KPM_PKG_PATH,
+        .db_path = KPM_DB_PATH
     };
-    KPM_Initialise(&kpm);
+    KPM_InitialiseAdv(NULL, NULL);
 
     int command_index = -1;
     for (int i=1; i < argc; i++)
@@ -113,7 +113,7 @@ int main(int argc, char *argv[])
         }
 
         error = KPM_OK;
-        Repository repository;
+        KPM_Repository repository;
         for (int i = command_index+1; i < argc; i++)
         {
             if ((error = KPM_AddRepository(&kpm, argv[i], &repository, &kpm_io)) != KPM_OK)
@@ -161,7 +161,7 @@ int main(int argc, char *argv[])
     else if (strcmp(argv[command_index], "list-repo") == 0)
     {
         size_t repository_count = 0;
-        Repository *repositories;
+        KPM_Repository *repositories;
         if ((error = KPM_ListRepositories(&kpm, &repository_count, &repositories)) != KPM_OK)
             goto cleanup;
 
@@ -206,7 +206,7 @@ int main(int argc, char *argv[])
         }
 
         size_t package_count;
-        IndexedPackage *packages;
+        KPM_IndexedPackage *packages;
         if ((error = KPM_SearchPackages(&kpm, query, &package_count, &packages)) != KPM_OK)
         {
             kpm_io.log(KPM_VERBOSITY_ERROR, "Could not search for '%s' (%i: %s)", query, error, KPM_ErrorToString(error));
@@ -283,7 +283,7 @@ int main(int argc, char *argv[])
         KPM_UpdateIndex(&kpm, &kpm_io);
 
         size_t installed_package_count;
-        InstalledPackage *installed_packages;
+        KPM_InstalledPackage *installed_packages;
         KPM_ListInstalledPackages(&kpm, &installed_package_count, &installed_packages);
 
         size_t target_count = 0;
@@ -297,7 +297,7 @@ int main(int argc, char *argv[])
             }
 
             size_t artifact_count;
-            Artifact *artifacts;
+            KPM_Artifact *artifacts;
             if (KPM_ListPackageArtifacts(&kpm, installed_packages[i].repository, installed_packages[i].id, &artifact_count, &artifacts) != KPM_OK || artifact_count == 0) // @TODO: Allow cross-repository upgrades?
             {
                 kpm_io.log(KPM_VERBOSITY_WARN, "Could not find an artifact for %s", installed_packages[i].id);
@@ -312,7 +312,7 @@ int main(int argc, char *argv[])
                 continue;
             }
 
-            targets[target_count].artifact = (Artifact) {
+            targets[target_count].artifact = (KPM_Artifact) {
                 .id = strdup(artifacts[0].id),
                 .url = strdup(artifacts[0].url),
                 .version = artifacts[0].version

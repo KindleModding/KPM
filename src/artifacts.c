@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-void KPM_FreeIndexedArtifact(Artifact *artifact)
+void KPM_FreeIndexedArtifact(KPM_Artifact *artifact)
 {
      free(artifact->repository);
      free(artifact->id);
@@ -15,7 +15,7 @@ void KPM_FreeIndexedArtifact(Artifact *artifact)
      artifact->url = NULL;
 }
  
-void KPM_FreeIndexedArtifactList(size_t artifact_count, Artifact *artifacts)
+void KPM_FreeIndexedArtifactList(size_t artifact_count, KPM_Artifact *artifacts)
 {
      for (size_t i=0; i < artifact_count; i++)
         KPM_FreeIndexedArtifact(&artifacts[i]);
@@ -23,7 +23,7 @@ void KPM_FreeIndexedArtifactList(size_t artifact_count, Artifact *artifacts)
      free(artifacts);
 }
 
-KPMResult KPM_GetArtifact(KPM *kpm, const char *repository_id, const char *package_id, SemVer version, Artifact *artifact)
+KPM_Result KPM_GetArtifact(KPM *kpm, const char *repository_id, const char *package_id, SemVer version, KPM_Artifact *artifact)
 {
     const char *zSQL;
     sqlite3_stmt *statement;
@@ -64,7 +64,7 @@ KPMResult KPM_GetArtifact(KPM *kpm, const char *repository_id, const char *packa
     return KPM_OK;
 }
 
-KPMResult KPM_ListArtifactDependencies(KPM *kpm, const char *repository, const char *id, const char *url, size_t *dependency_count, Dependency **dependencies)
+KPM_Result KPM_ListArtifactDependencies(KPM *kpm, const char *repository, const char *id, const char *url, size_t *dependency_count, KPM_Dependency **dependencies)
 {
     *dependency_count = 0;
     if (dependencies != NULL)
@@ -92,7 +92,7 @@ KPMResult KPM_ListArtifactDependencies(KPM *kpm, const char *repository, const c
         {
             if (!*dependencies)
             {
-                *dependencies = malloc(*dependency_count * sizeof(Dependency));
+                *dependencies = malloc(*dependency_count * sizeof(KPM_Dependency));
             }
             
             (*dependencies)[i].id = strdup((const char*) sqlite3_column_text(statement, 1));

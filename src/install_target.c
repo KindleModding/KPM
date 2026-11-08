@@ -17,7 +17,7 @@ SemVer KPM_GetInstallTargetVersion(InstallTarget target)
         return KPKG_GetVersion(target.file);
 }
 
-int KPM_GetInstallTargetDependencies(KPM *kpm, InstallTarget target, Dependency **dependencies)
+int KPM_GetInstallTargetDependencies(KPM *kpm, InstallTarget target, KPM_Dependency **dependencies)
 {
     size_t dependency_count = 0;
     *dependencies = NULL;

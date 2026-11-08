@@ -1,4 +1,5 @@
-#pragma once
+#ifndef DEPENDENCIES_H
+#define DEPENDENCIES_H
 
 #include "kpm/kpm.h"
 #include <assert.h>
@@ -58,9 +59,9 @@ typedef struct
     GraphTargetPriority priority; /**< Explicit user-selected target */
     GraphTargetType type;
     union {
-        Dependency dependency;
+        KPM_Dependency dependency;
         InstallTarget target;
-        InstalledPackage installed;
+        KPM_InstalledPackage installed;
     };
 } GraphTarget;
 
@@ -85,8 +86,8 @@ void FreeNode(GraphNode *node);
 void FreeDependencyGraph(DependencyGraph *graph);
 NodeIdx_t AddNode(DependencyGraph *graph, GraphNode node);
 NodeIdx_t CreateTargetNode(DependencyGraph *graph, InstallTarget target, GraphTargetPriority priority);
-NodeIdx_t CreateInstalledNode(DependencyGraph *graph, InstalledPackage installed);
-NodeIdx_t CreateDependencyNode(DependencyGraph *graph, Dependency dependency);
+NodeIdx_t CreateInstalledNode(DependencyGraph *graph, KPM_InstalledPackage installed);
+NodeIdx_t CreateDependencyNode(DependencyGraph *graph, KPM_Dependency dependency);
 void AddArtifactDep(DependencyGraph *graph, NodeIdx_t artNodeIdx, NodeIdx_t depNodeIdx);
 void AddDepTarget(DependencyGraph *graph, NodeIdx_t depNodeIdx, NodeIdx_t artNodeIdx);
 void AddFirstEdge(DependencyGraph *graph, NodeIdx_t firstNodeIndex, NodeIdx_t nextNodeIndex);
@@ -128,3 +129,5 @@ struct ResolverState {
 bool Resolver_Next(struct ResolverState *state);
 bool Resolver_Backtrack(struct ResolverState *state, NodeIdx_t dependency_idx);
 bool Resolver_Resolve(DependencyGraph *graph, NodeIdx_t root, NodeIdx_t currentNode,size_t *traversedNodeCount, NodeIdx_t **traversedNodes, KPMIO *statusCallback);
+
+#endif

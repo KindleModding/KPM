@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SIMPLEGET_H
+#define SIMPLEGET_H
 
 #include <curl/curl.h>
 
@@ -38,3 +39,5 @@ void SimpleGET_Cleanup(SimpleGETRequest *request);
  * @return CURLcode The internal CURL result of the request, given by curl_easy_perform
  */
 CURLcode SimpleGET_Perform(SimpleGETRequest *request);
+
+#endif

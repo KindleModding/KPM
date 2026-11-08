@@ -163,13 +163,13 @@ void Hashmap_Remove(Hashmap *hashmap, char *key)
     }
 }
 
-void KPM_FreeDependency(Dependency *dependency)
+void KPM_FreeDependency(KPM_Dependency *dependency)
 {
     free(dependency->id);
     dependency->id = NULL;
 }
 
-void KPM_FreeDependencyList(size_t dependency_count, Dependency *dependencies)
+void KPM_FreeDependencyList(size_t dependency_count, KPM_Dependency *dependencies)
 {
     for (size_t i=0; i < dependency_count; i++)
         KPM_FreeDependency(&dependencies[i]);
@@ -345,7 +345,7 @@ void AddDepTarget(DependencyGraph *graph, NodeIdx_t depNodeIdx, NodeIdx_t target
  * @param targetDependencies 
  * @return KPMResult 
  */
-KPMResult Internal_GetGraphTargetDependencies(KPM *kpm, GraphTarget target, size_t *targetDependencyCount, Dependency **targetDependencies, KPMIO *kpm_io)
+KPM_Result Internal_GetGraphTargetDependencies(KPM *kpm, GraphTarget target, size_t *targetDependencyCount, KPM_Dependency **targetDependencies, KPMIO *kpm_io)
 {
     switch (target.type)
     {
@@ -498,7 +498,7 @@ NodeIdx_t CreateTargetNode(DependencyGraph *graph, InstallTarget target, GraphTa
     });
 }
 
-NodeIdx_t CreateInstalledNode(DependencyGraph *graph, InstalledPackage installed)
+NodeIdx_t CreateInstalledNode(DependencyGraph *graph, KPM_InstalledPackage installed)
 {
     return AddNode(graph, (GraphNode) {
         .connected = NodeIdxArray_Create(),
@@ -510,7 +510,7 @@ NodeIdx_t CreateInstalledNode(DependencyGraph *graph, InstalledPackage installed
     });
 }
 
-NodeIdx_t CreateDependencyNode(DependencyGraph *graph, Dependency dependency)
+NodeIdx_t CreateDependencyNode(DependencyGraph *graph, KPM_Dependency dependency)
 {
     return AddNode(graph, (GraphNode) {
         .connected = NodeIdxArray_Create(),
@@ -522,7 +522,7 @@ NodeIdx_t CreateDependencyNode(DependencyGraph *graph, Dependency dependency)
     });
 }
 
-NodeIdx_t Internal_FindDependencyInGraph(DependencyGraph *graph, Dependency dep)
+NodeIdx_t Internal_FindDependencyInGraph(DependencyGraph *graph, KPM_Dependency dep)
 {
     NodeIdxArray *deps_found_array;
     Hashmap_Get(graph->depmap, dep.id, &deps_found_array);
@@ -560,7 +560,7 @@ NodeIdx_t Internal_FindTargetInGraph(DependencyGraph *graph, GraphTarget gt)
     return NODE_NULL;
 }
 
-NodeIdx_t Internal_FindArtifactInGraph(DependencyGraph *graph, Artifact artifact)
+NodeIdx_t Internal_FindArtifactInGraph(DependencyGraph *graph, KPM_Artifact artifact)
 {
     NodeIdxArray *targets_found_array;
     Hashmap_Get(graph->targetmap, artifact.id, &targets_found_array);
@@ -581,7 +581,7 @@ NodeIdx_t Internal_FindArtifactInGraph(DependencyGraph *graph, Artifact artifact
 void Internal_AddExistingTargetsToDependency(DependencyGraph *graph, NodeIdx_t dep_idx)
 {
     assert(graph->nodes[dep_idx].gt.type == GT_DEPENDENCY);
-    Dependency dep = graph->nodes[dep_idx].gt.dependency;
+    KPM_Dependency dep = graph->nodes[dep_idx].gt.dependency;
 
     NodeIdxArray *targets_found_array;
     Hashmap_Get(graph->targetmap, dep.id, &targets_found_array);
@@ -643,13 +643,13 @@ bool Internal_FillGraphFromTarget(KPM *kpm, DependencyGraph *graph, NodeIdx_t ta
 
     // Go through this target's own dependencies
     size_t dep_count;
-    Dependency *dependencies;
+    KPM_Dependency *dependencies;
     if (Internal_GetGraphTargetDependencies(kpm, graph_target, &dep_count, &dependencies, kpm_io) != KPM_OK)
         return false;
 
     for (int i=0; i < dep_count; i++)
     {
-        Dependency dep = dependencies[i];
+        KPM_Dependency dep = dependencies[i];
 
         // Check if this dependency already exists in the graph
         NodeIdx_t dep_found = Internal_FindDependencyInGraph(graph, dep);
@@ -667,7 +667,7 @@ bool Internal_FillGraphFromTarget(KPM *kpm, DependencyGraph *graph, NodeIdx_t ta
 
         // Find all artifacts NOT in the graph that satisfy this dependency and recursively add them
         size_t artifact_count;
-        Artifact *artifacts;
+        KPM_Artifact *artifacts;
         if (!KPM_ListPackageArtifacts(kpm, NULL, dep.id,  &artifact_count, &artifacts))
             return false;
 

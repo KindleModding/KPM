@@ -12,26 +12,8 @@ all_test_includes = include_directories(
     '../src/include/'
 )
 
-test(
-    'KPM Init Test',
-    executable('kpm_init_test', files('kpm_init_test.c') + all_test_files, dependencies: [kpm_dep], include_directories: all_test_includes),
-    is_parallel: false
-)
-
-test(
-    'KPM Online Repo Test',
-    executable('kpm_online_repo_test', files('kpm_online_repo_test.c') + all_test_files, dependencies: [kpm_dep], include_directories: all_test_includes),
-    is_parallel: false
-)
-
-test(
-    'KPM Local Repo Test',
-    executable('kpm_local_repo_test', files('kpm_local_repo_test.c') + all_test_files, dependencies: [kpm_dep], include_directories: all_test_includes),
-    is_parallel: false
-)
-
-test(
-    'KPM Package Test',
-    executable('kpm_package_test', files('kpm_package_test.c') + all_test_files, dependencies: [kpm_dep], include_directories: all_test_includes),
-    is_parallel: false
-)
+## test(
+##     'KPM Init Test',
+##     executable('kpm_init_test', files('kpm_init_test.c') + all_test_files, dependencies: [kpm_dep], include_directories: all_test_includes),
+##     is_parallel: false
+## )

@@ -6,7 +6,7 @@
 #include "internal_utils.h"
 #include "uninstall.h"
 
-KPMResult Internal_RunUninstallHook(const char *outPath, const char *package_id, bool upgrading, KPMIO *kpm_io)
+KPM_Result Internal_RunUninstallHook(const char *outPath, const char *package_id, bool upgrading, KPMIO *kpm_io)
 {
     char *uninstallScriptPath = asprintf_hd( "%suninstall.sh", outPath);
 
@@ -55,11 +55,11 @@ KPMResult Internal_RunUninstallHook(const char *outPath, const char *package_id,
     return KPM_OK;
 }
 
-KPMResult Internal_UninstallPackage(KPM *kpm, const char *package_id, bool upgrading, KPMIO *kpm_io)
+KPM_Result Internal_UninstallPackage(KPM *kpm, const char *package_id, bool upgrading, KPMIO *kpm_io)
 {
-    char *outPath = asprintf_hd("%s/%s/", kpm->pkgPath, package_id);
+    char *outPath = asprintf_hd("%s/%s/", kpm->pkg_path, package_id);
     
-    KPMResult result;
+    KPM_Result result;
     if ((result = Internal_RunUninstallHook(outPath, package_id, upgrading, kpm_io)) != KPM_OK)
         return result;
 
@@ -83,7 +83,7 @@ KPMResult Internal_UninstallPackage(KPM *kpm, const char *package_id, bool upgra
     return KPM_OK;
 }
 
-KPMResult KPM_UninstallPackages(KPM *kpm, size_t package_count, const char *package_ids[], KPMIO *kpm_io)
+KPM_Result KPM_UninstallPackages(KPM *kpm, size_t package_count, const char *package_ids[], KPMIO *kpm_io)
 {
     kpm_io->log(KPM_VERBOSITY_INFO, "Uninstalling %zu packages.", package_count);
 
@@ -99,7 +99,7 @@ KPMResult KPM_UninstallPackages(KPM *kpm, size_t package_count, const char *pack
     for (int i=0; i < package_count; i++)
     {
         size_t dependent_count;
-        Dependency *dependents;
+        KPM_Dependency *dependents;
         KPM_ListInstalledPackageDependents(kpm, package_ids[i], &dependent_count, &dependents);
 
         size_t unaccountedDependencies = dependent_count;

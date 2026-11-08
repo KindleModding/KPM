@@ -1,10 +1,11 @@
 #include <stddef.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "kpm/kpm.h"
 #include "internal_utils.h"
 
-const char *KPM_ErrorToString(KPMResult error)
+const char *KPM_ErrorToString(KPM_Result error)
 {
     switch (error)
     {
@@ -31,9 +32,23 @@ const char *KPM_ErrorToString(KPMResult error)
     }
 };
 
-KPMResult KPM_Initialise(KPM *kpm)
+KPM *KPM_InitialiseAdv(char *db_path, char *pkg_path)
 {
-    sqlite3_open(kpm->dbPath, &kpm->db);
+    KPM* kpm = malloc(sizeof(KPM));
+    kpm->max_connections = 5;
+
+    if (db_path)
+        kpm->db_path = strdup(db_path);
+    else
+        kpm->db_path = strdup(KPM_DB_PATH);
+
+    if (db_path)
+        kpm->pkg_path = strdup(pkg_path);
+    else
+        kpm->pkg_path = strdup(KPM_PKG_PATH);
+
+
+    sqlite3_open(kpm->db_path, &kpm->db);
     sqlite3_exec(kpm->db, "PRAGMA foreign_keys=ON;", NULL, NULL, NULL); // @TODO: Ensure this succeeds
 
     sqlite3_exec(kpm->db, R"(
@@ -122,12 +137,24 @@ KPMResult KPM_Initialise(KPM *kpm)
     sqlite3_exec(kpm->db, query, NULL, NULL, NULL);
     free(query);
 
-    return KPM_OK;
+    return kpm;
+}
+
+/**
+ * @brief Initialise the KPM object
+ * 
+ * @return KPM* 
+ */
+KPM *KPM_Initialise()
+{
+    return KPM_InitialiseAdv(NULL, NULL);
 }
 
 void KPM_Cleanup(KPM *kpm)
 {
     sqlite3_close(kpm->db);
     kpm->db = NULL;
+    free(kpm->db_path);
+    free(kpm->pkg_path);
     return;
 }

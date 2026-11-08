@@ -2,16 +2,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-KPM initialise_kpm()
+KPM *initialise_kpm()
 {
-    KPM kpm = {
-        .dbPath = "./repo_test.db",
-        .pkgPath = "./packages",
-        .maxConnections = 5
-    };
-
-    KPM_Initialise(&kpm);
-    return kpm;
+    return KPM_InitialiseAdv("./repo_test.db", "./packages");
 }
 
 /**

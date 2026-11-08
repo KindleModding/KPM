@@ -6,7 +6,7 @@
 #include "kpm/kpm.h"
 #include "simpleGET.h"
 
-void KPM_FreeRepository(Repository *repository)
+void KPM_FreeRepository(KPM_Repository *repository)
 {
     free(repository->id);
     free(repository->url);
@@ -18,7 +18,7 @@ void KPM_FreeRepository(Repository *repository)
     repository->description = NULL;
 }
 
-void KPM_FreeRepositoryList(size_t repository_count, Repository *repositories)
+void KPM_FreeRepositoryList(size_t repository_count, KPM_Repository *repositories)
 {
     for (size_t i=0; i < repository_count; i++)
         KPM_FreeRepository(&repositories[i]);
@@ -26,7 +26,7 @@ void KPM_FreeRepositoryList(size_t repository_count, Repository *repositories)
     free(repositories);
 }
 
-KPMResult KPM_ListRepositories(KPM *kpm, size_t *repository_count, Repository **repositories)
+KPM_Result KPM_ListRepositories(KPM *kpm, size_t *repository_count, KPM_Repository **repositories)
 {
     *repository_count = 0;
     if (repositories != NULL)
@@ -48,7 +48,7 @@ KPMResult KPM_ListRepositories(KPM *kpm, size_t *repository_count, Repository **
         {
             if (*repositories == NULL)
             {
-                *repositories = malloc(*repository_count * sizeof(Repository));
+                *repositories = malloc(*repository_count * sizeof(KPM_Repository));
             }
 
             (*repositories)[i].id = strdup((char*) sqlite3_column_text(statement, 1));
@@ -69,7 +69,7 @@ KPMResult KPM_ListRepositories(KPM *kpm, size_t *repository_count, Repository **
     return KPM_OK;
 }
 
-KPMResult KPM_GetRepository(KPM *kpm, const char *repository_id, Repository *repository)
+KPM_Result KPM_GetRepository(KPM *kpm, const char *repository_id, KPM_Repository *repository)
 {
     if (repository != NULL)
     {
@@ -102,7 +102,7 @@ KPMResult KPM_GetRepository(KPM *kpm, const char *repository_id, Repository *rep
     return KPM_OK;
 }
 
-KPMResult KPM_AddRepository(KPM *kpm, const char *url, Repository *repository, KPMIO *kpm_io)
+KPM_Result KPM_AddRepository(KPM *kpm, const char *url, KPM_Repository *repository, KPMIO *kpm_io)
 {
     SimpleGETRequest *request = SimpleGET_Initialise(url);
     if (SimpleGET_Perform(request) != CURLE_OK)
@@ -180,7 +180,7 @@ KPMResult KPM_AddRepository(KPM *kpm, const char *url, Repository *repository, K
     return KPM_OK;
 }
 
-KPMResult KPM_RemoveRepository(KPM *kpm, const char *repository_id)
+KPM_Result KPM_RemoveRepository(KPM *kpm, const char *repository_id)
 {
     sqlite3_exec(kpm->db, "BEGIN", NULL, NULL, NULL);
     const char *zSQL = "DELETE FROM repositories WHERE id=?;";
@@ -200,7 +200,7 @@ KPMResult KPM_RemoveRepository(KPM *kpm, const char *repository_id)
     return KPM_OK;
 }
 
-KPMResult KPM_ListRepositoryPackages(KPM *kpm, const char *repository_id, size_t *package_count, IndexedPackage **packages)
+KPM_Result KPM_ListRepositoryPackages(KPM *kpm, const char *repository_id, size_t *package_count, KPM_IndexedPackage **packages)
 {
     *package_count = 0;
     if (packages != NULL)
@@ -224,7 +224,7 @@ KPMResult KPM_ListRepositoryPackages(KPM *kpm, const char *repository_id, size_t
         {
             if (!*packages)
             {
-                *packages = malloc(*package_count * sizeof(IndexedPackage));
+                *packages = malloc(*package_count * sizeof(KPM_IndexedPackage));
             }
 
             (*packages)[i].repository = strdup((const char*) sqlite3_column_text(statement, 1));

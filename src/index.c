@@ -39,9 +39,9 @@ bool indexDependency(KPM *kpm, char *artifact_repository, char *artifact_id, cha
     }
     else
     {
-        sqlite3_bind_int(statement, 8, VERSION_MAX);
-        sqlite3_bind_int(statement, 9, VERSION_MAX);
-        sqlite3_bind_int(statement, 10, VERSION_MAX);
+        sqlite3_bind_int(statement, 8, SEMVER_VERSION_MAX);
+        sqlite3_bind_int(statement, 9, SEMVER_VERSION_MAX);
+        sqlite3_bind_int(statement, 10, SEMVER_VERSION_MAX);
     }
 
     int status;
@@ -180,7 +180,7 @@ bool indexPackage(KPM *kpm, char *repository_id, cJSON *package, KPMIO *kpm_io)
     return true;
 }
 
-KPMResult KPM_UpdateIndex(KPM *kpm, KPMIO *kpm_io)
+KPM_Result KPM_UpdateIndex(KPM *kpm, KPMIO *kpm_io)
 {
     if (kpm_io == NULL)
     {
@@ -190,8 +190,8 @@ KPMResult KPM_UpdateIndex(KPM *kpm, KPMIO *kpm_io)
     kpm_io->log(KPM_VERBOSITY_INFO, "Getting repositories...");
 
     size_t repository_count;
-    Repository *repositories;
-    KPMResult result;
+    KPM_Repository *repositories;
+    KPM_Result result;
     if ((result = KPM_ListRepositories(kpm, &repository_count, &repositories)) != KPM_OK)
     {
         kpm_io->log(KPM_VERBOSITY_ERROR, "Unable to list KPM repositories");

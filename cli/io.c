@@ -99,7 +99,7 @@ void hd_log(const char *format, ...)
     va_end(args);
 }
 
-void kpm_log(KPMVerbosity verbosity, const char *format, ...)
+void kpm_log(KPMIO_Verbosity verbosity, const char *format, ...)
 {
     char *prefixed_format;
     char *prefixed_format_fbink;

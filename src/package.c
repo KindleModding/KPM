@@ -6,7 +6,7 @@
 #include <string.h>
 #include "internal_utils.h"
 
-void KPM_FreeIndexedPackage(IndexedPackage *package)
+void KPM_FreeIndexedPackage(KPM_IndexedPackage *package)
 {
     free(package->repository);
     free(package->id);
@@ -21,7 +21,7 @@ void KPM_FreeIndexedPackage(IndexedPackage *package)
     package->author = NULL;
 }
 
-void KPM_FreeIndexedPackageList(size_t package_count, IndexedPackage *packages)
+void KPM_FreeIndexedPackageList(size_t package_count, KPM_IndexedPackage *packages)
 {
     for (size_t i=0; i < package_count; i++)
         KPM_FreeIndexedPackage(&packages[i]);
@@ -29,7 +29,7 @@ void KPM_FreeIndexedPackageList(size_t package_count, IndexedPackage *packages)
     free(packages);
 }
 
-KPMResult KPM_GetPackage(KPM *kpm, const char *repository, const char *id, IndexedPackage *package)
+KPM_Result KPM_GetPackage(KPM *kpm, const char *repository, const char *id, KPM_IndexedPackage *package)
 {
     package->repository = NULL;
     package->id = NULL;
@@ -66,7 +66,7 @@ KPMResult KPM_GetPackage(KPM *kpm, const char *repository, const char *id, Index
     return KPM_OK;
 }
 
-KPMResult KPM_GetPackages(KPM *kpm, const char *id, size_t *package_count, IndexedPackage **packages)
+KPM_Result KPM_GetPackages(KPM *kpm, const char *id, size_t *package_count, KPM_IndexedPackage **packages)
 {
     *package_count = 0;
     if (packages != NULL)
@@ -90,7 +90,7 @@ KPMResult KPM_GetPackages(KPM *kpm, const char *id, size_t *package_count, Index
         {
             if (!*packages)
             {
-                *packages = malloc(*package_count * sizeof(IndexedPackage));
+                *packages = malloc(*package_count * sizeof(KPM_IndexedPackage));
             }
 
             (*packages)[i].repository = strdup((const char*) sqlite3_column_text(statement, 1));
@@ -111,7 +111,7 @@ KPMResult KPM_GetPackages(KPM *kpm, const char *id, size_t *package_count, Index
     return KPM_OK;
 }
 
-KPMResult KPM_SearchPackages(KPM *kpm, const char *query, size_t *package_count, IndexedPackage **packages)
+KPM_Result KPM_SearchPackages(KPM *kpm, const char *query, size_t *package_count, KPM_IndexedPackage **packages)
 {
     *package_count = 0;
     if (packages != NULL)
@@ -139,7 +139,7 @@ KPMResult KPM_SearchPackages(KPM *kpm, const char *query, size_t *package_count,
         {
             if (!*packages)
             {
-                *packages = malloc(*package_count * sizeof(IndexedPackage));
+                *packages = malloc(*package_count * sizeof(KPM_IndexedPackage));
             }
 
             (*packages)[i].repository = strdup((const char*) sqlite3_column_text(statement, 1));
@@ -162,7 +162,7 @@ KPMResult KPM_SearchPackages(KPM *kpm, const char *query, size_t *package_count,
     return KPM_OK;
 }
 
-KPMResult KPM_ListPackageArtifacts(KPM *kpm, const char *repository_id, const char *package_id, size_t *artifact_count, Artifact **artifacts)
+KPM_Result KPM_ListPackageArtifacts(KPM *kpm, const char *repository_id, const char *package_id, size_t *artifact_count, KPM_Artifact **artifacts)
 {
     *artifact_count = 0;
     if (artifacts != NULL)
@@ -206,7 +206,7 @@ KPMResult KPM_ListPackageArtifacts(KPM *kpm, const char *repository_id, const ch
         {
             if (!*artifacts)
             {
-                *artifacts = malloc(*artifact_count * sizeof(Artifact));
+                *artifacts = malloc(*artifact_count * sizeof(KPM_Artifact));
             }
 
             (*artifacts)[i].url = strdup((const char*) sqlite3_column_text(statement, 1));

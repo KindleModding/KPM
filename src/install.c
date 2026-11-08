@@ -93,7 +93,7 @@ size_t Internal_DownloadHeaderCallback(char *ptr, size_t size, size_t nitems, vo
  * @param deduplicatedPackages 
  * @return KPMResult 
  */
-KPMResult Internal_DownloadGraphItems(KPM *kpm, DependencyGraph *graph, size_t deduplicatedPackageCount, NodeIdx_t *deduplicatedPackages, KPMIO *kpm_io)
+KPM_Result Internal_DownloadGraphItems(KPM *kpm, DependencyGraph *graph, size_t deduplicatedPackageCount, NodeIdx_t *deduplicatedPackages, KPMIO *kpm_io)
 {
     
 
@@ -115,7 +115,7 @@ bool Internal_InstallItem(KPM *kpm, char *repository, char *path, bool installed
 
     kpm_io->log(KPM_VERBOSITY_DEBUG, "Installing item with id: '%s'", id);
 
-    char *outPath = asprintf_hd("%s/%s/", kpm->pkgPath, id);
+    char *outPath = asprintf_hd("%s/%s/", kpm->pkg_path, id);
     rmdir_r(outPath); // Just in case it exists
 
     // First unpack the .kpkg file
@@ -202,7 +202,7 @@ bool Internal_InstallItem(KPM *kpm, char *repository, char *path, bool installed
     return true;
 }
 
-KPMResult KPM_InstallPackages(KPM *kpm, size_t target_count, InstallTarget *targets, KPMIO *kpm_io)
+KPM_Result KPM_InstallPackages(KPM *kpm, size_t target_count, InstallTarget *targets, KPMIO *kpm_io)
 {
     if (kpm_io == NULL)
         kpm_io = &dummyKPMStub;
