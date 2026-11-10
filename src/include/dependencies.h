@@ -1,27 +1,17 @@
 #ifndef DEPENDENCIES_H
 #define DEPENDENCIES_H
 
+#include "array.h"
 #include "kpm/kpm.h"
 #include <assert.h>
 
-typedef int NodeIdx_t;
-#define NODE_NULL (NodeIdx_t)(-1)
+typedef int NodeIdx;
+#define NODE_NULL (NodeIdx)(-1)
 
-typedef struct {
-    size_t count;
-    NodeIdx_t *items;
-} NodeIdxArray;
+create_array_h(NodeIdx)
 
-#define NodeIdxArray_ForEach(array, current) NodeIdx_t current; for (int i = 0; current = array->items[i], i < array->count; i++)
-#define NodeIdxArray_ForEachIndex(array, i, current) NodeIdx_t current; for (int i = 0; current = array->items[i], i < array->count; i++)
-
-NodeIdxArray *NodeIdxArray_Create();
-void NodeIdxArray_Free(NodeIdxArray *array);
-void NodeIdxArray_Add(NodeIdxArray *array, NodeIdx_t item);
-size_t NodeIdxArray_FindFirst(NodeIdxArray *array, NodeIdx_t item);
-void NodeIdxArray_Insert(NodeIdxArray *array, size_t index, NodeIdx_t node_idx);
-int NodeIdxArray_Size(NodeIdxArray *array);
-NodeIdx_t NodeIdxArray_Get(NodeIdxArray *array, size_t index);
+#define NodeIdxArray_ForEach(array, current) NodeIdx current; for (int i = 0; current = array->items[i], i < array->count; i++)
+#define NodeIdxArray_ForEachIndex(array, i, current) NodeIdx current; for (int i = 0; current = array->items[i], i < array->count; i++)
 
 struct HashmapBucket {
     char *key;
@@ -38,13 +28,13 @@ Hashmap *Hashmap_Create(int size);
 int Hashmap_Hash(Hashmap *hashmap, char *key);
 bool Hashmap_Get(Hashmap *hashmap, char *key, NodeIdxArray **array);
 void Hashmap_Remove(Hashmap *hashmap, char *key);
-void Hashmap_AddNode(Hashmap *hashmap, char *key, NodeIdx_t node);
+void Hashmap_AddNode(Hashmap *hashmap, char *key, NodeIdx node);
 
 typedef enum
 {
     GT_DEPENDENCY, /**< Node that declares a dependency between two versions */
     GT_INSTALL_TARGET, /**< Node that declares a specific install target */
-    GT_INSTALLED, /**< Node that declares an already installed target */
+    GT_INSTALLED, /**< Node that declares a target representing an already-installed package */
 } GraphTargetType;
 
 typedef enum
@@ -60,74 +50,63 @@ typedef struct
     GraphTargetType type;
     union {
         KPM_Dependency dependency;
-        InstallTarget target;
+        KPM_InstallTarget target;
         KPM_InstalledPackage installed;
     };
-} GraphTarget;
+} DepGraph_Target;
 
 typedef struct
 {
     NodeIdxArray *connected;
-    GraphTarget gt;
-} GraphNode;
+    DepGraph_Target gt;
+} DepGraph_Node;
 
 typedef struct
 {
-    GraphNode *nodes; /**< Nodes in this graph */
-    NodeIdx_t allocated; /**< The maximum storable nodes of this graph */
-    NodeIdx_t nodeCount; /**< The number of nodes currently in this graph */
+    DepGraph_Node *nodes; /**< Nodes in this graph */
+    NodeIdx allocated; /**< The maximum storable nodes of this graph */
+    NodeIdx nodeCount; /**< The number of nodes currently in this graph */
     Hashmap *targetmap; /**< Map IDs to a list of target or installed nodes */
     Hashmap *depmap; /**< Map IDs to a list of dependency nodes */
 } DependencyGraph;
 
-void CreateDependencyGraph(DependencyGraph *graph, int count);
-void ExtendDependencyGraph(DependencyGraph *graph, int allocate);
-void FreeNode(GraphNode *node);
-void FreeDependencyGraph(DependencyGraph *graph);
-NodeIdx_t AddNode(DependencyGraph *graph, GraphNode node);
-NodeIdx_t CreateTargetNode(DependencyGraph *graph, InstallTarget target, GraphTargetPriority priority);
-NodeIdx_t CreateInstalledNode(DependencyGraph *graph, KPM_InstalledPackage installed);
-NodeIdx_t CreateDependencyNode(DependencyGraph *graph, KPM_Dependency dependency);
-void AddArtifactDep(DependencyGraph *graph, NodeIdx_t artNodeIdx, NodeIdx_t depNodeIdx);
-void AddDepTarget(DependencyGraph *graph, NodeIdx_t depNodeIdx, NodeIdx_t artNodeIdx);
-void AddFirstEdge(DependencyGraph *graph, NodeIdx_t firstNodeIndex, NodeIdx_t nextNodeIndex);
-void RenderGraph(DependencyGraph *graph, char **output);
-void Internal_ArrayAddNode(size_t *traversedNodeCount, NodeIdx_t **traversedNodes, NodeIdx_t node);
+DependencyGraph *DepGraph_Create(int count);
+void DepGraph_Extend(DependencyGraph *graph, int allocate);
+void DepGraph_FreeNode(DepGraph_Node *node);
+void DepGraph_FreeGraph(DependencyGraph *graph);
+NodeIdx DepGraph_AddNode(DependencyGraph *graph, DepGraph_Node node);
+SemVer DepGraph_GetTargetVersion(DepGraph_Target target);
+char *DepGraph_GetTargetId(DepGraph_Target target);
+NodeIdx DepGraph_CreateTargetNode(DependencyGraph *graph, KPM_InstallTarget target, GraphTargetPriority priority);
+NodeIdx DepGraph_CreateInstalledNode(DependencyGraph *graph, KPM_InstalledPackage installed);
+NodeIdx DepGraph_CreateDependencyNode(DependencyGraph *graph, KPM_Dependency dependency);
+void DepGraph_AddArtifactDep(DependencyGraph *graph, NodeIdx art_node_idx, NodeIdx dep_node_idx);
+void DepGraph_AddDepTarget(DependencyGraph *graph, NodeIdx dep_node_idx, NodeIdx art_node_idx);
+void DepGraph_Render(DependencyGraph *graph, char **output);
+
+bool DepGraph_FillGraphFromTarget(KPM *kpm, DependencyGraph *graph, NodeIdx target_node_id, KPMIO *kpm_io);
 
 /**
  * Dependency Resolver
  * 
  */
-struct TraversedNode {
-    NodeIdx_t node_idx;         /**< The index of the node in the graph */
+typedef struct {
+    NodeIdx node_idx;         /**< The index of the node in the graph */
     size_t parent_traversed_idx;    /**< The index of the parent in the list of traversed nodes */
     size_t connected_idx;       /**< The index of this node in the parent's connected node list */
-};
+} TraversedNode;
+
+create_array_h(TraversedNode);
+#define TraversedNodeArray_ForEach(array, current) for (int i = 0; current = array->items[i], i < array->count; i++)
+#define TraversedNodeArray_ForEachIndex(array, i, current) for (int i = 0; current = array->items[i], i < array->count; i++)
+int TraversedNodeArray_FindFirstByNodeIdx(TraversedNodeArray *array, size_t node_idx);
 
 typedef struct {
-    size_t count;
-    struct TraversedNode *items;
-} TraversedNodeArray;
+    DependencyGraph *graph;                 /**< Store a reference to the graph */
+    TraversedNodeArray *traversed_nodes;    /**< List of dep and target nodes traversed */
+} Resolver_State;
 
-#define TraversedNodeArray_ForEach(array, current) struct TraversedNode current; for (int i = 0; current = array->items[i], i < array->count; i++)
-#define TraversedNodeArray_ForEachIndex(array, i, current) struct TraversedNode current; for (int i = 0; current = array->items[i], i < array->count; i++)
-
-TraversedNodeArray *TraversedNodeArray_Create();
-void TraversedNodeArray_Free(TraversedNodeArray *array);
-void TraversedNodeArray_Truncate(TraversedNodeArray *array, size_t size);
-void TraversedNodeArray_Add(TraversedNodeArray *array, struct TraversedNode item);
-int TraversedNodeArray_FindFirstByNodeIdx(TraversedNodeArray *array, size_t node_idx);
-int TraversedNodeArray_Size(TraversedNodeArray *array);
-const struct TraversedNode TraversedNodeArray_Get(TraversedNodeArray *array, size_t idx);
-
-
-struct ResolverState {
-    DependencyGraph *graph;                     /**< Store a reference to the graph */
-    TraversedNodeArray *traversed_nodes;              /**< List of dep and target nodes traversed */
-};
-
-bool Resolver_Next(struct ResolverState *state);
-bool Resolver_Backtrack(struct ResolverState *state, NodeIdx_t dependency_idx);
-bool Resolver_Resolve(DependencyGraph *graph, NodeIdx_t root, NodeIdx_t currentNode,size_t *traversedNodeCount, NodeIdx_t **traversedNodes, KPMIO *statusCallback);
+void Resolver_FreeState(Resolver_State *state);
+Resolver_State *Resolver_Resolve(DependencyGraph *graph, NodeIdx root, KPMIO *kpm_io);
 
 #endif
