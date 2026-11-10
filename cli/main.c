@@ -45,15 +45,10 @@ int main(int argc, char *argv[])
 {
     int error = KPM_OK;
 
-    if (access(KPM_PKG_PATH, R_OK) != 0)
-        mkdir_r(KPM_PKG_PATH, 0775);
+    if (access(KPM_PATH, R_OK) != 0)
+        mkdir_r(KPM_PATH, 0775); //@TODO: New paths too?
 
-    KPM kpm = {
-        .max_connections = 5, // @TODO
-        .pkg_path = KPM_PKG_PATH,
-        .db_path = KPM_DB_PATH
-    };
-    KPM_InitialiseAdv(NULL, NULL);
+    KPM *kpm = KPM_InitialiseAdv(NULL, NULL, NULL);
 
     int command_index = -1;
     for (int i=1; i < argc; i++)
@@ -99,8 +94,7 @@ int main(int argc, char *argv[])
 
         if (strcmp(argv[command_index], "debug") == 0) // Undocumented? Should we document this
         {
-            kpm_io.log(KPM_VERBOSITY_INFO, "package path: %s", KPM_PKG_PATH);
-            kpm_io.log(KPM_VERBOSITY_INFO, "db path: %s", KPM_DB_PATH);
+            kpm_io.log(KPM_VERBOSITY_INFO, "kmp path: %s", KPM_PATH);
         }
     }
     else if (strcmp(argv[command_index], "add-repo") == 0)
@@ -116,7 +110,7 @@ int main(int argc, char *argv[])
         KPM_Repository repository;
         for (int i = command_index+1; i < argc; i++)
         {
-            if ((error = KPM_AddRepository(&kpm, argv[i], &repository, &kpm_io)) != KPM_OK)
+            if ((error = KPM_AddRepository(kpm, argv[i], &repository, &kpm_io)) != KPM_OK)
                 kpm_io.log(KPM_VERBOSITY_ERROR, "Could not add repository '%s' (%i: %s)", argv[i], error, KPM_ErrorToString(error));
             else
             {
@@ -144,7 +138,7 @@ int main(int argc, char *argv[])
         for (int i = command_index+1; i < argc; i++)
         {
             int tmp_error = 0;
-            if ((tmp_error = KPM_GetRepository(&kpm, argv[i], NULL)) != KPM_OK || (tmp_error = KPM_RemoveRepository(&kpm, argv[i])) != KPM_OK)
+            if ((tmp_error = KPM_GetRepository(kpm, argv[i], NULL)) != KPM_OK || (tmp_error = KPM_RemoveRepository(kpm, argv[i])) != KPM_OK)
             {
                 kpm_io.log(KPM_VERBOSITY_ERROR, "Could not remove repository '%s' (%i: %s)", argv[i], tmp_error, KPM_ErrorToString(tmp_error));
                 error = tmp_error;
@@ -162,7 +156,7 @@ int main(int argc, char *argv[])
     {
         size_t repository_count = 0;
         KPM_Repository *repositories;
-        if ((error = KPM_ListRepositories(&kpm, &repository_count, &repositories)) != KPM_OK)
+        if ((error = KPM_ListRepositories(kpm, &repository_count, &repositories)) != KPM_OK)
             goto cleanup;
 
         kpm_io.log(KPM_VERBOSITY_INFO, "Repositories:");
@@ -174,7 +168,7 @@ int main(int argc, char *argv[])
     }
     else if (strcmp(argv[command_index], "update") == 0)
     {
-        if ((error = KPM_UpdateIndex(&kpm, &kpm_io)) != KPM_OK)
+        if ((error = KPM_UpdateIndex(kpm, &kpm_io)) != KPM_OK)
         {
             kpm_io.log(KPM_VERBOSITY_ERROR, "Could not update indexed packages (%i: %s)", error, KPM_ErrorToString(error));
             goto cleanup;
@@ -207,7 +201,7 @@ int main(int argc, char *argv[])
 
         size_t package_count;
         KPM_IndexedPackage *packages;
-        if ((error = KPM_SearchPackages(&kpm, query, &package_count, &packages)) != KPM_OK)
+        if ((error = KPM_SearchPackages(kpm, query, &package_count, &packages)) != KPM_OK)
         {
             kpm_io.log(KPM_VERBOSITY_ERROR, "Could not search for '%s' (%i: %s)", query, error, KPM_ErrorToString(error));
             free(query);
@@ -226,16 +220,16 @@ int main(int argc, char *argv[])
     else if (strcmp(argv[command_index], "install") == 0)
     {
         // Update index automatically
-        KPM_UpdateIndex(&kpm, &kpm_io);
+        KPM_UpdateIndex(kpm, &kpm_io);
         
-        InstallTarget *targets = malloc((argc - (command_index+1)) * sizeof(InstallTarget));
+        KPM_InstallTarget *targets = malloc((argc - (command_index+1)) * sizeof(KPM_InstallTarget));
         for (int i=0; i < argc - (command_index+1); i++)
         {
             if (is_path(argv[command_index+1 + i]))
             {
                 targets[i].type = INSTALL_FILE;
                 int r;
-                if ((r = KPKG_LoadFile(&targets[i].file, argv[command_index+1 + i], NULL)) != KPKG_OK)
+                if ((r = KPKG_LoadFile(&targets[i].file, argv[command_index+1 + i], NULL, &kpm_io)) != KPKG_OK)
                 {
                     free(targets);
                     kpm_io.log(KPM_VERBOSITY_ERROR, "Could not load path %s as file (%s)", argv[command_index+1 + i], KPKG_ResultStr(r));
@@ -257,7 +251,7 @@ int main(int argc, char *argv[])
             goto cleanup;
         }
 
-        if ((error = KPM_InstallPackages(&kpm, argc - (command_index+1), targets, &kpm_io)) != KPM_OK)
+        if ((error = KPM_InstallPackages(kpm, argc - (command_index+1), targets, &kpm_io)) != KPM_OK)
         {
             kpm_io.log(KPM_VERBOSITY_ERROR, "Failed to install all packages (%i: %s)", error, KPM_ErrorToString(error));
         }
@@ -269,7 +263,7 @@ int main(int argc, char *argv[])
     }
     else if (strcmp(argv[command_index], "uninstall") == 0)
     {
-        if ((error = KPM_UninstallPackages(&kpm, argc - (command_index+1), (const char**) &argv[command_index+1], &kpm_io)) != KPM_OK)
+        if ((error = KPM_UninstallPackages(kpm, argc - (command_index+1), (const char**) &argv[command_index+1], &kpm_io)) != KPM_OK)
         {
             kpm_io.log(KPM_VERBOSITY_ERROR, "Failed to uninstall packages (%i: %s)", error, KPM_ErrorToString(error));
         }
@@ -280,14 +274,14 @@ int main(int argc, char *argv[])
     }
     else if (strcmp(argv[command_index], "upgrade") == 0)
     {
-        KPM_UpdateIndex(&kpm, &kpm_io);
+        KPM_UpdateIndex(kpm, &kpm_io);
 
         size_t installed_package_count;
         KPM_InstalledPackage *installed_packages;
-        KPM_ListInstalledPackages(&kpm, &installed_package_count, &installed_packages);
+        KPM_ListInstalledPackages(kpm, &installed_package_count, &installed_packages);
 
         size_t target_count = 0;
-        InstallTarget *targets = malloc(installed_package_count * sizeof(InstallTarget));
+        KPM_InstallTarget *targets = malloc(installed_package_count * sizeof(KPM_InstallTarget));
         for (int i=0; i < installed_package_count; i++)
         {
             if (installed_packages[i].repository == NULL)
@@ -298,17 +292,17 @@ int main(int argc, char *argv[])
 
             size_t artifact_count;
             KPM_Artifact *artifacts;
-            if (KPM_ListPackageArtifacts(&kpm, installed_packages[i].repository, installed_packages[i].id, &artifact_count, &artifacts) != KPM_OK || artifact_count == 0) // @TODO: Allow cross-repository upgrades?
+            if (KPM_ListPackageArtifacts(kpm, installed_packages[i].repository, installed_packages[i].id, &artifact_count, &artifacts) != KPM_OK || artifact_count == 0) // @TODO: Allow cross-repository upgrades?
             {
                 kpm_io.log(KPM_VERBOSITY_WARN, "Could not find an artifact for %s", installed_packages[i].id);
-                KPM_FreeIndexedArtifactList(artifact_count, artifacts);
+                KPM_FreeArtifactList(artifact_count, artifacts);
                 continue;
             }
 
             if (SemVerCmp(artifacts[0].version, installed_packages[i].version) <= 0)
             {
                 kpm_io.log(KPM_VERBOSITY_DEBUG, "Could not find an upgrade artifact for %s", installed_packages[i].id);
-                KPM_FreeIndexedArtifactList(artifact_count, artifacts);
+                KPM_FreeArtifactList(artifact_count, artifacts);
                 continue;
             }
 
@@ -319,7 +313,7 @@ int main(int argc, char *argv[])
             };
             if (artifacts[0].repository)
                 targets[target_count].artifact.repository = strdup(artifacts[0].repository);
-            KPM_FreeIndexedArtifactList(artifact_count, artifacts);
+            KPM_FreeArtifactList(artifact_count, artifacts);
             target_count++;
         }
 
@@ -330,7 +324,7 @@ int main(int argc, char *argv[])
             goto cleanup;
         }
 
-        if ((error = KPM_InstallPackages(&kpm, target_count, targets, &kpm_io)) != KPM_OK)
+        if ((error = KPM_InstallPackages(kpm, target_count, targets, &kpm_io)) != KPM_OK)
             kpm_io.log(KPM_VERBOSITY_ERROR, "Failed to upgrade packages (%i: %s)", error, KPM_ErrorToString(error));
         else
             kpm_io.log(KPM_VERBOSITY_INFO, "Upgraded %i package(s) successfully.", installed_package_count);
@@ -347,7 +341,7 @@ int main(int argc, char *argv[])
         }
 
         char *id = argv[command_index+1];
-        char *launch_path = asprintf_hd("%s/%s/launch.sh", KPM_PKG_PATH, id);
+        char *launch_path = asprintf_hd("%s/packages/%s/launch.sh", KPM_PATH, id);
         kpm_io.log(KPM_VERBOSITY_DEBUG, "Checking for script at %s", launch_path);
         if (access(launch_path, R_OK) != 0)
         {
@@ -360,7 +354,7 @@ int main(int argc, char *argv[])
 
         char **launch_args = malloc(sizeof(char*) * (2 + argc - (command_index + 2)) + 1);
         launch_args[0] = strdup("/bin/sh");
-        launch_args[1] = asprintf_hd("%s/%s/launch.sh", KPM_PKG_PATH, id);
+        launch_args[1] = asprintf_hd("%s/packages/%s/launch.sh", KPM_PATH, id);
         for (int i=0; i < argc - (command_index + 2); i++)
         {
             launch_args[i+2] = strdup(argv[i + command_index + 2]);
@@ -372,7 +366,7 @@ int main(int argc, char *argv[])
             kpm_io.log(KPM_VERBOSITY_DEBUG, "\t- %s", launch_args[i]);
         }
 
-        char *launch_folder = asprintf_hd("%s/%s", KPM_PKG_PATH, id);
+        char *launch_folder = asprintf_hd("%s/packages/%s", KPM_PATH, id);
         chdir(launch_folder);
         free(launch_folder);
 
@@ -423,6 +417,6 @@ launch:\n\
 
 cleanup:
     io_cleanup();
-    KPM_Cleanup(&kpm);
+    KPM_Cleanup(kpm);
     return error;
 }
