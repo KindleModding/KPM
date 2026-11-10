@@ -1,3 +1,4 @@
+#include <sys/sendfile.h>
 #include "kpm/kpkg.h"
 #include "archive.h"
 #include "archive_entry.h"
@@ -13,7 +14,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
-#include <unistd.h>
 
 #include "zstd.h"
 
@@ -266,7 +266,7 @@ static int copy_data(struct archive *ar, struct archive *aw)
 }
 
 // @TODO: Implement progress monitoring
-KPKG_Result KPKG1_ExtractTo(KPKG_File *file, char *out_path, KPMIO *kpm_io)
+KPKG_Result KPKG1_ExtractTo(KPKG_File *file, const char *out_path, KPMIO *kpm_io)
 {
     assert(file->kpkg_version == 1 || file->kpkg_version == 2);
     // location is ALWAYS guaranteed to be a path for KPKG1 (see KPKG_CURLCallback)
@@ -397,7 +397,7 @@ bool KPKG3_ValidateFile(KPKG_File *file, int file_size)
     return true;
 }
 
-KPKG_Result KPKG3_LoadFile(KPKG_File *kpkg_file, const char *location, FILE *in_file)
+KPKG_Result KPKG3_LoadFile(KPKG_File *kpkg_file, const char *location, FILE *in_file, KPMIO *kpm_io)
 {
     struct stat stats;
     fstat(fileno(in_file), &stats);
@@ -508,7 +508,7 @@ KPKG_CURLData *KPKG_InitCURLData(KPKG_File *file, const char *location, const ch
     return data;
 }
 
-void KPKG_FreeCURLData(KPKG_CURLData** data)
+void KPKG_FreeCURLData(KPKG_CURLData **data)
 {
     free((*data)->location);
     free((*data)->out_path);
@@ -609,9 +609,9 @@ size_t KPKG_CURLCallback(char *ptr, size_t size, size_t nmemb, void *userdata)
     return realsize;
 }
 
-KPKG_Result KPKG_LoadFile(KPKG_File **kpkg_file, const char *location, const char *out_path)
+KPKG_Result KPKG_LoadFile(KPKG_File **file, const char *location, const char *out_path, KPMIO *kpm_io)
 {
-    *kpkg_file = NULL;
+    *file = NULL;
     if (is_path(location))
     {
         FILE *in_file = fopen(location, O_RDONLY);
@@ -628,8 +628,8 @@ KPKG_Result KPKG_LoadFile(KPKG_File **kpkg_file, const char *location, const cha
         fseek(in_file, 0, SEEK_SET);
         if (memcmp(miniheader, "KPKG", 4)) // This is most likely a legacy file!
         {
-            *kpkg_file = malloc(sizeof(KPKG_File));
-            int res = KPKG1_LoadFile(*kpkg_file, location, in_file);
+            *file = malloc(sizeof(KPKG_File));
+            int res = KPKG1_LoadFile(*file, location, in_file);
             fclose(in_file);
             return res;
         }
@@ -641,17 +641,17 @@ KPKG_Result KPKG_LoadFile(KPKG_File **kpkg_file, const char *location, const cha
             return KPKG_VERSION_OUT_OF_RANGE;
         }
 
-        *kpkg_file = malloc(sizeof(KPKG_File));
-        int res = KPKG3_LoadFile(*kpkg_file, location, in_file);
+        *file = malloc(sizeof(KPKG_File));
+        int res = KPKG3_LoadFile(*file, location, in_file, kpm_io);
         fclose(in_file);
         return res;
     }
 
-    *kpkg_file = malloc(sizeof(KPKG_File));
-    **kpkg_file = (KPKG_File) {
+    *file = malloc(sizeof(KPKG_File));
+    **file = (KPKG_File) {
         .kpkg_version = -1
     };
-    KPKG_CURLData *curl_data = KPKG_InitCURLData(*kpkg_file, location, out_path);
+    KPKG_CURLData *curl_data = KPKG_InitCURLData(*file, location, out_path);
 
     CURL *curl = curl_easy_init();
     curl_easy_setopt(curl, CURLOPT_URL, location);
@@ -687,13 +687,13 @@ KPKG_Result KPKG_LoadFile(KPKG_File **kpkg_file, const char *location, const cha
 
     if (curl_data->type == KPKG_CURLTypeKPKG1)
     {
-        int res = KPKG1_LoadFile(*kpkg_file, curl_data->out_path, curl_data->out_file);
+        int res = KPKG1_LoadFile(*file, curl_data->out_path, curl_data->out_file);
         KPKG_FreeCURLData(&curl_data);
         return res;
     }
 
     // Valid KPKG3+
-    if (!KPKG3_ValidateFile(*kpkg_file, curl_data->downloaded))
+    if (!KPKG3_ValidateFile(*file, curl_data->downloaded))
     {
         KPKG_FreeCURLData(&curl_data); // Will also free the file
         return KPKG_VALIDATION_ERROR;
@@ -787,6 +787,16 @@ size_t KPKG_GetDependencies(KPKG_File *file, KPKG_DependencyEntry **dependencies
         memcpy(*dependencies, file->kpkg3_payload.dependencies, file->kpkg3_payload.header->dependency_count * sizeof(KPKG_DependencyEntry));
         return file->kpkg1_payload.dependency_count;
     }
+}
+
+KPKG_Result KPKG_ExtractTo(KPKG_File *file, const char *target, KPMIO *kpm_io)
+{
+    if (file->kpkg_version == KPKG_VERSION_1 || file->kpkg_version == KPKG_VERSION_2)
+        return KPKG1_ExtractTo(file, target, kpm_io);
+
+    
+
+    return KPKG_OK;
 }
 
 void KPKG_CloseFile(KPKG_File *file)

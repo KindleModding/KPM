@@ -6,8 +6,7 @@ if KPM_PLATFORM == ''
 endif
 
 add_global_arguments('-DKPM_PLATFORM="' + KPM_PLATFORM + '"', language: 'c')
-add_global_arguments('-DKPM_DB_PATH="' + get_option('db_path') + '"', language: 'c')
-add_global_arguments('-DKPM_PKG_PATH="' + get_option('pkg_path') + '"', language: 'c')
+add_global_arguments('-DKPM_PATH="' + get_option('kpm_path') + '"', language: 'c')
 
 kmc_lib_dir = '/var/local/kmc/lib'
 
@@ -113,8 +112,7 @@ summary(
     'arch': host_machine.cpu_family(),
     'kpm_platform': KPM_PLATFORM,
     'cli': get_option('cli').enabled(),
-    'db_path': get_option('db_path'),
-    'pkg_path': get_option('pkg_path'),
+    'kpm_path': get_option('kpm_path')
   },
   bool_yn: true,
 )

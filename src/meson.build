@@ -4,17 +4,17 @@ sources = files(
     'dependencies.c',
     'device.c',
     'index.c',
-    'install.c',
+    'install_target.c',
     'installed_packages.c',
     'internal_utils.c',
+    'kpkg.c',
     'kpm.c',
+    'operation.c',
     'package.c',
     'repository.c',
     'simpleGET.c',
     'uninstall.c',
-    'utils.c',
-    'kpkg.c',
-    'install_target.c'
+    'utils.c'
 )
 include_dir = include_directories('./include')
 
