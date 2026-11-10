@@ -37,7 +37,8 @@ typedef enum
     KPM_INVALID_RESPONSE_CONTENT,   /**< Invalid content when parsing it */
     KPM_FILE_SYSTEM_ERROR,
     KPM_LIBARCHIVE_ERROR,
-    KPM_PARSE_ERROR
+    KPM_PARSE_ERROR,
+    KPM_RESOLUTION_ERROR            /**< BIG BAD! */
 } KPM_Result;
 
 const char *KPM_ErrorToString(KPM_Result error);
@@ -115,7 +116,7 @@ typedef struct
 typedef enum {
     INSTALL_ARTIFACT,   /**< A remote artifact */
     INSTALL_FILE        /**< A local file */
-} InstallTargetSource;
+} KPM_InstallTargetSource;
 
 /**
  * @brief Represent an installation target
@@ -123,24 +124,25 @@ typedef enum {
  */
 typedef struct
 {
-    InstallTargetSource type; /**< The source of this target */
+    KPM_InstallTargetSource type; /**< The source of this target */
     union {
         KPM_Artifact artifact;  /**< The remote artifact for the package */
         KPKG_File *file;    /**< The local file for the package */
     };
-} InstallTarget;
+} KPM_InstallTarget;
 
 typedef struct
 {
     sqlite3 *db;        /**< The sqlite db object */
     char *db_path;       /**< The path to KPM's database */
     char *pkg_path;      /**< The path to KPM packages */
+    char *tmp_path;      /**< The path to store temporary files (ideally on same device as pkg_path) */
     int max_connections; /**< Maximum number of parallel connections to hold when downloading stuff */
 } KPM;
 
-char *KPM_GetInstallTargetId(InstallTarget target);
-SemVer KPM_GetInstallTargetVersion(InstallTarget target);
-int KPM_GetInstallTargetDependencies(KPM *kpm, InstallTarget target, KPM_Dependency **dependencies);
+char *KPM_GetInstallTargetId(KPM_InstallTarget target);
+SemVer KPM_GetInstallTargetVersion(KPM_InstallTarget target);
+int KPM_GetInstallTargetDependencies(KPM *kpm, KPM_InstallTarget target, KPM_Dependency **dependencies);
 
 /**
  * @brief Initialise the KPM object
@@ -149,7 +151,7 @@ int KPM_GetInstallTargetDependencies(KPM *kpm, InstallTarget target, KPM_Depende
  * @param pkg_path Override the default pkg path (or null)
  * @return KPM* 
  */
-KPM *KPM_InitialiseAdv(char *db_path, char *pkg_path);
+KPM *KPM_InitialiseAdv(char *db_path, char *pkg_path, char *tmp_path);
 
 /**
  * @brief Initialise the KPM object
@@ -347,7 +349,7 @@ KPM_Result KPM_ListInstalledPackageDependents(KPM *kpm, const char *id, size_t *
  * 
  * @param artifact The artifact to free the properties of
  */
-void KPM_FreeIndexedArtifact(KPM_Artifact *artifact);
+void KPM_FreeArtifact(KPM_Artifact *artifact);
 
 /**
  * @brief Free an allocated list of indexed artifact
@@ -355,10 +357,10 @@ void KPM_FreeIndexedArtifact(KPM_Artifact *artifact);
  * @param artifact_count The number of indexed artifacts in the array
  * @param artifacts The indexed artifact array
 */
-void KPM_FreeIndexedArtifactList(size_t artifact_count, KPM_Artifact *artifacts);
+void KPM_FreeArtifactList(size_t artifact_count, KPM_Artifact *artifacts);
 
 /**
- * @brief Get an IndexedArtifact
+ * @brief Get an Artifact
  * 
  * @param kpm The KPM object
  * @param repository_id The repository of the artifact to get (or NULL)
@@ -424,15 +426,15 @@ KPM_Result KPM_UpdateIndex(KPM *kpm, KPMIO *kpm_io);
  * 
  * @param target The installation target object to free
  */
-void KPM_FreeInstallTarget(InstallTarget *target);
+void KPM_FreeInstallTarget(KPM_InstallTarget *target);
 
 /**
- * @brief Frees a list of InstallTarget objects
+ * @brief Frees a list of KPM_InstallTarget objects
  * 
- * @param target_count The number of InstallTarget objects
- * @param targets The list of InstallTarget objects
+ * @param target_count The number of KPM_InstallTarget objects
+ * @param targets The list of KPM_InstallTarget objects
  */
-void KPM_FreeInstallTargetList(size_t target_count, InstallTarget *targets);
+void KPM_FreeInstallTargetList(size_t target_count, KPM_InstallTarget *targets);
 
 
 /**
@@ -444,7 +446,7 @@ void KPM_FreeInstallTargetList(size_t target_count, InstallTarget *targets);
  * @param kpm_io 
  * @return KPMResult 
  */
-KPM_Result KPM_InstallPackages(KPM *kpm, size_t target_count, InstallTarget *targets, KPMIO *kpm_io);
+KPM_Result KPM_InstallPackages(KPM *kpm, size_t target_count, KPM_InstallTarget *targets, KPMIO *kpm_io);
 
 /**
  * @brief Uninstalls a package

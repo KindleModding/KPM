@@ -119,17 +119,18 @@ typedef struct
 
 //// General functions
 char *KPKG_ResultStr(KPKG_Result result);
-KPKG_Result KPKG_LoadFile(KPKG_File **file, const char *location, const char *out_path);
+KPKG_Result KPKG_LoadFile(KPKG_File **file, const char *location, const char *out_path, KPMIO *kpm_io);
 char *KPKG_GetId(KPKG_File *file);
 char *KPKG_GetName(KPKG_File *file);
 char *KPKG_GetAuthor(KPKG_File *file);
 char *KPKG_GetDescription(KPKG_File *file);
 SemVer KPKG_GetVersion(KPKG_File *file);
 size_t KPKG_GetDependencies(KPKG_File *file, KPKG_DependencyEntry **dependencies);
+KPKG_Result KPKG_ExtractTo(KPKG_File *file, const char *target, KPMIO *kpm_io);
 void KPKG_CloseFile(KPKG_File *file);
 
 //// KPKG1-specific functions
-KPKG_Result KPKG1_ExtractTo(KPKG_File *file, char *out_path, KPMIO *kpmio);
+KPKG_Result KPKG1_ExtractTo(KPKG_File *file, const char *out_path, KPMIO *kpmio);
 
 //// KPKG3-specific functions
 

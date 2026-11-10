@@ -6,6 +6,7 @@
 
 #define SEMVER_VERSION_MAX UINT_MAX
 #define SEMVER_MAX { .major = UINT_MAX, .minor = UINT_MAX, .patch = UINT_MAX }
+#define SEMVER_MIN { .major = 0, .minor = 0, .patch = 0 }
 
 /**
  * @file semver.h

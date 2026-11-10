@@ -9,43 +9,50 @@ const char *KPM_ErrorToString(KPM_Result error)
 {
     switch (error)
     {
-        case KPM_OK:
-            return "Ok";
-        case KPM_ABORTED:
-            return "Aborted";
-        case KPM_GENERIC_ERROR:
-            return "Generic Error";
-        case KPM_SQLITE_ERROR:
-            return "SQLite Error";
-        case KPM_CURL_ERROR:
-            return "cURL error";
-        case KPM_INVALID_RESPONSE_CODE:
-            return "Invalid response code";
-        case KPM_INVALID_RESPONSE_CONTENT:
-            return "Invalid response content";
-        case KPM_FILE_SYSTEM_ERROR:
-            return "File system error";
-        case KPM_LIBARCHIVE_ERROR:
-            return "Libarchive error";
-        case KPM_PARSE_ERROR:
-            return "Parse error";
+    case KPM_OK:
+        return "Ok";
+    case KPM_ABORTED:
+        return "Aborted";
+    case KPM_GENERIC_ERROR:
+        return "Generic Error";
+    case KPM_SQLITE_ERROR:
+        return "SQLite Error";
+    case KPM_CURL_ERROR:
+        return "cURL error";
+    case KPM_INVALID_RESPONSE_CODE:
+        return "Invalid response code";
+    case KPM_INVALID_RESPONSE_CONTENT:
+        return "Invalid response content";
+    case KPM_FILE_SYSTEM_ERROR:
+        return "File system error";
+    case KPM_LIBARCHIVE_ERROR:
+        return "Libarchive error";
+    case KPM_PARSE_ERROR:
+        return "Parse error";
+    case KPM_RESOLUTION_ERROR:
+        return "Resolution error";
     }
 };
 
-KPM *KPM_InitialiseAdv(char *db_path, char *pkg_path)
+KPM *KPM_InitialiseAdv(char *db_path, char *pkg_path, char *tmp_path)
 {
-    KPM* kpm = malloc(sizeof(KPM));
+    KPM *kpm = malloc(sizeof(KPM));
     kpm->max_connections = 5;
 
     if (db_path)
         kpm->db_path = strdup(db_path);
     else
-        kpm->db_path = strdup(KPM_DB_PATH);
+        kpm->db_path = asprintf_hd("%s/kpm.db", KPM_PATH);
 
     if (db_path)
         kpm->pkg_path = strdup(pkg_path);
     else
-        kpm->pkg_path = strdup(KPM_PKG_PATH);
+        kpm->pkg_path = asprintf_hd("%s/packages", KPM_PATH);
+
+    if (tmp_path)
+        kpm->tmp_path = strdup(tmp_path);
+    else
+        kpm->tmp_path = asprintf_hd("%s/tmp", KPM_PATH);
 
 
     sqlite3_open(kpm->db_path, &kpm->db);
@@ -147,7 +154,7 @@ KPM *KPM_InitialiseAdv(char *db_path, char *pkg_path)
  */
 KPM *KPM_Initialise()
 {
-    return KPM_InitialiseAdv(NULL, NULL);
+    return KPM_InitialiseAdv(NULL, NULL, NULL);
 }
 
 void KPM_Cleanup(KPM *kpm)
@@ -156,5 +163,6 @@ void KPM_Cleanup(KPM *kpm)
     kpm->db = NULL;
     free(kpm->db_path);
     free(kpm->pkg_path);
-    return;
+    free(kpm->tmp_path);
+    free(kpm);
 }
