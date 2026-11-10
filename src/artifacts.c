@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-void KPM_FreeIndexedArtifact(KPM_Artifact *artifact)
+void KPM_FreeArtifact(KPM_Artifact *artifact)
 {
      free(artifact->repository);
      free(artifact->id);
@@ -15,10 +15,10 @@ void KPM_FreeIndexedArtifact(KPM_Artifact *artifact)
      artifact->url = NULL;
 }
  
-void KPM_FreeIndexedArtifactList(size_t artifact_count, KPM_Artifact *artifacts)
+void KPM_FreeArtifactList(size_t artifact_count, KPM_Artifact *artifacts)
 {
      for (size_t i=0; i < artifact_count; i++)
-        KPM_FreeIndexedArtifact(&artifacts[i]);
+        KPM_FreeArtifact(&artifacts[i]);
 
      free(artifacts);
 }
