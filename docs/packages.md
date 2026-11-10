@@ -153,6 +153,11 @@ Hooks are executed by `sh`.
 | `launch.sh` | Executed by a launcher or scriptlet to launch the package |
 | `startup.sh` | Executed when the device boots |
 
+### startup
+`startup.sh` is ran when the device boots and runs as `KPPMainApp` is initialised.  
+`startup.sh` should not fork, if it does then the forked process **must** terminate when `SIGTERM` is sent to `startup.sh`'s process  
+The `startup.sh` for a given package is ran after dependent packages have started
+
 ### Upgrades
 When a package is upgraded, the following actions are performed:
 - The `uninstall.sh` hook is run with the `upgrade` flag (ie: `sh uninstall.sh upgrade`)
