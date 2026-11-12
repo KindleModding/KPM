@@ -13,22 +13,22 @@ create_array_h(NodeIdx)
 #define NodeIdxArray_ForEach(array, current) NodeIdx current; for (int i = 0; current = array->items[i], i < array->count; i++)
 #define NodeIdxArray_ForEachIndex(array, i, current) NodeIdx current; for (int i = 0; current = array->items[i], i < array->count; i++)
 
-struct HashmapBucket {
+struct NodeIdxHashmapBucket {
     char *key;
     NodeIdxArray *payload;
-    struct HashmapBucket *pnext;
+    struct NodeIdxHashmapBucket *pnext;
 };
 
 typedef struct {
     int bucket_count;
-    struct HashmapBucket *buckets;
-} Hashmap;
+    struct NodeIdxHashmapBucket *buckets;
+} NodeIdxHashmap;
 
-Hashmap *Hashmap_Create(int size);
-int Hashmap_Hash(Hashmap *hashmap, char *key);
-bool Hashmap_Get(Hashmap *hashmap, char *key, NodeIdxArray **array);
-void Hashmap_Remove(Hashmap *hashmap, char *key);
-void Hashmap_AddNode(Hashmap *hashmap, char *key, NodeIdx node);
+NodeIdxHashmap *NodeIdxHashmap_Create(int size);
+int NodeIdxHashmap_Hash(NodeIdxHashmap *NodeIdxHashmap, char *key);
+bool NodeIdxHashmap_Get(NodeIdxHashmap *NodeIdxHashmap, char *key, NodeIdxArray **array);
+void NodeIdxHashmap_Remove(NodeIdxHashmap *NodeIdxHashmap, char *key);
+void NodeIdxHashmap_AddNode(NodeIdxHashmap *NodeIdxHashmap, char *key, NodeIdx node);
 
 typedef enum
 {
@@ -66,8 +66,8 @@ typedef struct
     DepGraph_Node *nodes; /**< Nodes in this graph */
     NodeIdx allocated; /**< The maximum storable nodes of this graph */
     NodeIdx nodeCount; /**< The number of nodes currently in this graph */
-    Hashmap *targetmap; /**< Map IDs to a list of target or installed nodes */
-    Hashmap *depmap; /**< Map IDs to a list of dependency nodes */
+    NodeIdxHashmap *targetmap; /**< Map IDs to a list of target or installed nodes */
+    NodeIdxHashmap *depmap; /**< Map IDs to a list of dependency nodes */
 } DependencyGraph;
 
 DependencyGraph *DepGraph_Create(int count);

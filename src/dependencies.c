@@ -30,34 +30,34 @@ int TraversedNodeArray_FindFirstByNodeIdx(TraversedNodeArray *array, size_t node
     return -1;
 }
 
-Hashmap *Hashmap_Create(int size)
+NodeIdxHashmap *NodeIdxHashmap_Create(int size)
 {
     assert((size & (size-1)) == 0); // Ensure power of 2
-    Hashmap *h = malloc(sizeof(Hashmap));
-    *h = (Hashmap) {
+    NodeIdxHashmap *h = malloc(sizeof(NodeIdxHashmap));
+    *h = (NodeIdxHashmap) {
         .bucket_count = size,
-        .buckets = malloc(size * sizeof(struct HashmapBucket))
+        .buckets = malloc(size * sizeof(struct NodeIdxHashmapBucket))
     };
-    memset(h->buckets, 0, sizeof(struct HashmapBucket) * size);
+    memset(h->buckets, 0, sizeof(struct NodeIdxHashmapBucket) * size);
     return h;
 }
 
-int Hashmap_Hash(Hashmap *hashmap, char *key)
+int NodeIdxHashmap_Hash(NodeIdxHashmap *NodeIdxHashmap, char *key)
 {
     int hash = 0;
     int len = strlen(key);
     for (int i=0; i < len; i++)
         hash += key[i]; // @TODO: More robust hashing algorithm lol
-    return (hashmap->bucket_count - 1) & hash;
+    return (NodeIdxHashmap->bucket_count - 1) & hash;
 }
 
-bool Hashmap_Get(Hashmap *hashmap, char *key, NodeIdxArray **array)
+bool NodeIdxHashmap_Get(NodeIdxHashmap *NodeIdxHashmap, char *key, NodeIdxArray **array)
 {
     *array = NULL;
-    int hash = Hashmap_Hash(hashmap, key);
+    int hash = NodeIdxHashmap_Hash(NodeIdxHashmap, key);
     
     for (
-        struct HashmapBucket *bucket = hashmap->buckets + hash;
+        struct NodeIdxHashmapBucket *bucket = NodeIdxHashmap->buckets + hash;
         bucket->key != NULL;
         bucket = bucket->pnext
     )
@@ -76,13 +76,13 @@ bool Hashmap_Get(Hashmap *hashmap, char *key, NodeIdxArray **array)
     return false;
 }
 
-void Hashmap_AddNode(Hashmap *hashmap, char *key, NodeIdx idx)
+void NodeIdxHashmap_AddNode(NodeIdxHashmap *NodeIdxHashmap, char *key, NodeIdx idx)
 {
-    int hash = Hashmap_Hash(hashmap, key);
+    int hash = NodeIdxHashmap_Hash(NodeIdxHashmap, key);
 
-    struct HashmapBucket *bucket;
+    struct NodeIdxHashmapBucket *bucket;
     for (
-        bucket = hashmap->buckets + hash;
+        bucket = NodeIdxHashmap->buckets + hash;
         bucket->key != NULL;
         bucket = bucket->pnext
     )
@@ -92,7 +92,7 @@ void Hashmap_AddNode(Hashmap *hashmap, char *key, NodeIdx idx)
 
         if (!bucket->pnext)
         {
-            bucket->pnext = malloc(sizeof(struct HashmapBucket));
+            bucket->pnext = malloc(sizeof(struct NodeIdxHashmapBucket));
             bucket = bucket->pnext;
             bucket->key = strdup(key);
             bucket->payload = NodeIdxArray_Create();
@@ -103,12 +103,12 @@ void Hashmap_AddNode(Hashmap *hashmap, char *key, NodeIdx idx)
     NodeIdxArray_Add(bucket->payload, idx);
 }
 
-void Hashmap_Remove(Hashmap *hashmap, char *key)
+void NodeIdxHashmap_Remove(NodeIdxHashmap *NodeIdxHashmap, char *key)
 {
-    int hash = Hashmap_Hash(hashmap, key);
+    int hash = NodeIdxHashmap_Hash(NodeIdxHashmap, key);
 
     for (
-        struct HashmapBucket *bucket = hashmap->buckets + hash;
+        struct NodeIdxHashmapBucket *bucket = NodeIdxHashmap->buckets + hash;
         bucket->key != NULL;
         bucket = bucket->pnext
     )
@@ -120,7 +120,7 @@ void Hashmap_Remove(Hashmap *hashmap, char *key)
             NodeIdxArray_Free(bucket->payload);
             if (bucket->pnext)
             {
-                struct HashmapBucket *to_free = bucket->pnext;
+                struct NodeIdxHashmapBucket *to_free = bucket->pnext;
                 *bucket = *to_free;
                 free(to_free);
             }
@@ -235,11 +235,11 @@ NodeIdx DepGraph_AddNode(DependencyGraph *graph, DepGraph_Node node)
     graph->nodes[graph->nodeCount++] = node;
 
     if (graph->nodes->gt.type == GT_DEPENDENCY)
-        Hashmap_AddNode(graph->depmap, node.gt.dependency.id, graph->nodeCount-1);
+        NodeIdxHashmap_AddNode(graph->depmap, node.gt.dependency.id, graph->nodeCount-1);
     else if (graph->nodes->gt.type == GT_INSTALL_TARGET)
-        Hashmap_AddNode(graph->depmap, KPM_GetInstallTargetId(node.gt.target), graph->nodeCount-1);
+        NodeIdxHashmap_AddNode(graph->depmap, KPM_GetInstallTargetId(node.gt.target), graph->nodeCount-1);
     else
-        Hashmap_AddNode(graph->depmap, node.gt.installed.id, graph->nodeCount-1);
+        NodeIdxHashmap_AddNode(graph->depmap, node.gt.installed.id, graph->nodeCount-1);
 
     return graph->nodeCount-1;
 }
@@ -498,7 +498,7 @@ NodeIdx DepGraph_CreateDependencyNode(DependencyGraph *graph, KPM_Dependency dep
 NodeIdx DepGraph_FindDependency(DependencyGraph *graph, KPM_Dependency dep)
 {
     NodeIdxArray *deps_found_array;
-    Hashmap_Get(graph->depmap, dep.id, &deps_found_array);
+    NodeIdxHashmap_Get(graph->depmap, dep.id, &deps_found_array);
     NodeIdxArray_ForEach(deps_found_array, idx)
     {
         DepGraph_Node node = graph->nodes[idx];
@@ -518,7 +518,7 @@ NodeIdx DepGraph_FindDependency(DependencyGraph *graph, KPM_Dependency dep)
 NodeIdx Internal_FindTargetInGraph(DependencyGraph *graph, DepGraph_Target gt)
 {
     NodeIdxArray *targets_found_array;
-    Hashmap_Get(graph->targetmap, DepGraph_GetTargetId(gt), &targets_found_array);
+    NodeIdxHashmap_Get(graph->targetmap, DepGraph_GetTargetId(gt), &targets_found_array);
     NodeIdxArray_ForEach(targets_found_array, idx)
     {
         DepGraph_Node node = graph->nodes[idx];
@@ -536,7 +536,7 @@ NodeIdx Internal_FindTargetInGraph(DependencyGraph *graph, DepGraph_Target gt)
 NodeIdx Internal_FindArtifactInGraph(DependencyGraph *graph, KPM_Artifact artifact)
 {
     NodeIdxArray *targets_found_array;
-    Hashmap_Get(graph->targetmap, artifact.id, &targets_found_array);
+    NodeIdxHashmap_Get(graph->targetmap, artifact.id, &targets_found_array);
     NodeIdxArray_ForEach(targets_found_array, idx)
     {
         DepGraph_Node node = graph->nodes[idx];
@@ -557,7 +557,7 @@ void Internal_AddExistingTargetsToDependency(DependencyGraph *graph, NodeIdx dep
     KPM_Dependency dep = graph->nodes[dep_idx].gt.dependency;
 
     NodeIdxArray *targets_found_array;
-    Hashmap_Get(graph->targetmap, dep.id, &targets_found_array);
+    NodeIdxHashmap_Get(graph->targetmap, dep.id, &targets_found_array);
     NodeIdxArray_ForEach(targets_found_array, target_idx)
     {
         DepGraph_Node node = graph->nodes[target_idx];
@@ -585,7 +585,7 @@ void DepGraph_AddTargetToExistingDependencies(DependencyGraph *graph, NodeIdx ta
     assert(target_node.gt.type != GT_DEPENDENCY);
 
     NodeIdxArray *dep_node_ids;
-    Hashmap_Get(graph->depmap, DepGraph_GetTargetId(target_node.gt), &dep_node_ids);
+    NodeIdxHashmap_Get(graph->depmap, DepGraph_GetTargetId(target_node.gt), &dep_node_ids);
     NodeIdxArray_ForEach(dep_node_ids, dep_idx)
     {
         DepGraph_Node dep_node = graph->nodes[dep_idx];
