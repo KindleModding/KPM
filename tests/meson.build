@@ -19,3 +19,8 @@ test(
     executable('kpm_REPO_test', files('kpm_repo_test.c') + all_test_files, dependencies: [kpm_dep], include_directories: all_test_includes),
     is_parallel: false
 )
+
+test(
+    'KPM SemVer Test',
+    executable('kpm_semver_test', files('kpm_semver_test.c'), include_directories: all_test_includes)
+)
