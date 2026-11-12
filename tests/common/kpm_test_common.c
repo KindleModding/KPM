@@ -4,7 +4,7 @@
 
 KPM *initialise_kpm()
 {
-    return KPM_InitialiseAdv("./repo_test.db", "./packages");
+    return KPM_InitialiseAdv("./repo_test.db", "./packages", "./kpm_tmp");
 }
 
 /**
