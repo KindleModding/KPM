@@ -22,17 +22,18 @@ typedef struct SemVer SemVer;
  */
 static inline long SemVerCmp(SemVer a, SemVer b)
 {
+    // Compare rather than subtract: on 32-bit targets long is 32 bits, so (long) UINT_MAX is -1
     if (a.major != b.major)
     {
-        return (long) a.major - (long) b.major;
+        return a.major > b.major ? 1 : -1;
     }
-    if (a.major == b.major && a.minor != b.minor)
+    if (a.minor != b.minor)
     {
-        return (long) a.minor - (long) b.minor;
+        return a.minor > b.minor ? 1 : -1;
     }
-    if (a.major == b.major && a.minor == b.minor && a.patch != b.patch)
+    if (a.patch != b.patch)
     {
-        return (long) a.patch - (long) b.patch;
+        return a.patch > b.patch ? 1 : -1;
     }
     return 0;
 }
