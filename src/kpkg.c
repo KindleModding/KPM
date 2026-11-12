@@ -855,7 +855,9 @@ KPKG3_FileEntry *KPKG3_GetFileEntries(KPKG3_Payload *payload, size_t *count)
 KPKG_Result KPKG3_ExtractData(void *ptr, uint64_t size, uint64_t out_size, char *out_path)
 {
     int fd = open(out_path, O_WRONLY);
-    AssertOrReturn(fd != 0, 0, KPKG_IO_ERROR);
+    if (fd < 0)
+        return KPKG_IO_ERROR;
+
     if (!ftruncate(fd, out_size))
     {
         close(fd);
