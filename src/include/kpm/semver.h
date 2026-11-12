@@ -29,26 +29,20 @@ typedef struct
 } SemVer;
 
 /**
- * @brief If a > b it returns a number > 0, if a < b it returns a number < 0, if a == b it returns 0
+ * @brief If a > b it returns 1, if a < b it returns -1, if a == b it returns 0
  * 
  * @param a 
  * @param b 
  * @return int 
  */
-static inline long SemVerCmp(SemVer a, SemVer b)
+static inline uint8_t SemVerCmp(SemVer a, SemVer b)
 {
     if (a.major != b.major)
-    {
-        return (long) a.major - (long) b.major;
-    }
-    if (a.major == b.major && a.minor != b.minor)
-    {
-        return (long) a.minor - (long) b.minor;
-    }
-    if (a.major == b.major && a.minor == b.minor && a.patch != b.patch)
-    {
-        return (long) a.patch - (long) b.patch;
-    }
+        return a.major > b.major ? 1 : -1;
+    if (a.minor != b.minor)
+        return a.minor > b.minor ? 1 : -1;
+    if (a.patch != b.patch)
+        return a.patch > b.patch ? 1 : -1;
     return 0;
 }
 
