@@ -35,7 +35,7 @@
                                                                                                             \
     type type##Array_Get(type##Array *array, size_t index)                                                  \
     {                                                                                                       \
-        if (index > array->count)                                                                           \
+        if (index >= array->count)                                                                          \
             return type_null;                                                                               \
         return array->items[index];                                                                         \
     }                                                                                                       \
