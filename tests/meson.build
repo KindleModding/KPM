@@ -15,6 +15,12 @@ all_test_includes = include_directories(
 )
 
 test(
+    'KPM Utils Test',
+    executable('kpm_utils_test', files('kpm_utils_test.c') + all_test_files, dependencies: [kpm_dep], include_directories: all_test_includes),
+    is_parallel: false
+)
+
+test(
     'SemVer Test',
     executable('semver_test', files('semver_test.c') + all_test_files, dependencies: [kpm_dep], include_directories: all_test_includes),
     is_parallel: false

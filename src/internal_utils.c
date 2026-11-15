@@ -25,7 +25,7 @@ void mkdir_r(char *path, __mode_t mode)
     {
         current_path[i] = path[i];
         current_path[i+1] = 0;
-        if (current_path[i] == '/' && access(current_path, R_OK) != 0)
+        if ((i == strlen(path) - 1 || current_path[i] == '/') && access(current_path, R_OK) != 0)
             mkdir(current_path, mode);
     }
     free(current_path);

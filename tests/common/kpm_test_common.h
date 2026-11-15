@@ -2,14 +2,12 @@
 #define KPM_TEST_COMMON_H
 
 #include "kpm.h"
-#include "semver.h"
-#include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 KPM *initialise_kpm();
 
-char *vasprintf_hd(const char *format, va_list args);
-char *asprintf_hd(const char *format, ...);
 char *get_path(int argc, char* argv[]);
 
 #define GET_FORMAT(a) _Generic(a,     \
