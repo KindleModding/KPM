@@ -17,9 +17,3 @@ test(
     executable('semver_test', files('semver_test.c') + all_test_files, dependencies: [kpm_dep], include_directories: all_test_includes),
     is_parallel: false
 )
-
-## test(
-##     'KPM Init Test',
-##     executable('kpm_init_test', files('kpm_init_test.c') + all_test_files, dependencies: [kpm_dep], include_directories: all_test_includes),
-##     is_parallel: false
-## )
