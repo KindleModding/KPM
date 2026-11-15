@@ -1,15 +1,7 @@
 #include <sys/sendfile.h>
-#include "kpm/kpkg.h"
-#include "kpkg3.h"
-#include "kpkg1.h"
-#include "archive.h"
-#include "archive_entry.h"
-#include "cjson/cJSON.h"
 #include "curl/curl.h"
 #include "curl/easy.h"
 #include "curl_helpers.h"
-#include "kpm/kpmio.h"
-#include "simpleGET.h"
 #include "internal_utils.h"
 #include <assert.h>
 #include <fcntl.h>
@@ -20,6 +12,12 @@
 #include <sys/stat.h>
 
 #include "zstd.h"
+
+#include "kpm/kpkg.h"
+#include "kpkg3.h"
+#include "kpkg1.h"
+#include "kpm/kpmio.h"
+#include "simpleGET.h"
 
 char *KPKG_ResultStr(KPKG_Result result)
 {

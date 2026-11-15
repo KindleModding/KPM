@@ -31,7 +31,7 @@ bool operation_eq(Operation a, Operation b)
     return &a == &b;
 }
 
-#define OPERATION_NULL ((Operation){.current_version=0,.target={},.type=0});
+#define OPERATION_NULL ((Operation){.current_version=0,.type=0});
 create_array_c(Operation, OPERATION_NULL, operation_eq);
 
 struct DownloadData
@@ -307,6 +307,7 @@ bool DownloadOperationFiles(KPM *kpm, OperationArray *operations, KPMIO *kpmio)
                 res = KPKG_LoadFile(&file, operation.target.target.artifact.url, out_path, kpmio);
             else
                 file = operation.target.target.file;
+            free(out_path);
             
             if (res != KPKG_OK)
             {
@@ -314,16 +315,20 @@ bool DownloadOperationFiles(KPM *kpm, OperationArray *operations, KPMIO *kpmio)
                 return false;
             }
 
-            char* tmp_write_path = asprintf_hd("%s/%s", kpm->tmp_path, DepGraph_GetTargetId(operation.target));
-            char* pkg_path = asprintf_hd("%s/%s", kpm->pkg_path, DepGraph_GetTargetId(operation.target));
-            rmdir_r(tmp_write_path);
-            if ((res = KPKG_Unpack(file, tmp_write_path, pkg_path, kpmio)) != KPKG_OK)
+            char* tmp_pkg_path = asprintf_hd("%s/%s", kpm->tmp_path, DepGraph_GetTargetId(operation.target));
+            char* pkg_cmp_path = asprintf_hd("%s/%s", kpm->pkg_path, DepGraph_GetTargetId(operation.target));
+            rmdir_r(tmp_pkg_path);
+            if ((res = KPKG_Unpack(file, tmp_pkg_path, pkg_cmp_path, kpmio)) != KPKG_OK)
             {
+                free(tmp_pkg_path);
+                free(pkg_cmp_path);
                 kpmio->log(KPM_VERBOSITY_ERROR, "KPKGErr: %i - Could not unpack KPKG file", res);
                 if (operation.target.target.type == INSTALL_ARTIFACT)
                     KPKG_CloseFile(file);
                 return false;
             }
+            free(tmp_pkg_path);
+            free(pkg_cmp_path);
 
             if (operation.target.target.type == INSTALL_ARTIFACT)
                 KPKG_CloseFile(file);
@@ -332,22 +337,8 @@ bool DownloadOperationFiles(KPM *kpm, OperationArray *operations, KPMIO *kpmio)
         case GT_INSTALLED:
             unreachable();
         };
-
-        // Download the contents of the KPKG_FILE
-        if (file->kpkg_version == KPKG_VERSION_1 || file->kpkg_version == KPKG_VERSION_2)
-        {
-            //if (!access(out_path, R_OK))
-            return 0; // @TODO
-        }
-
-        // KPKG3+
-        if (operation.type == OP_INSTALL)
-        {
-            // Write the entire file to our tmp
-            //KPKG_WriteFile(file, out_path);
-            return KPM_OK;
-        }
     }
+    return true;
 }
 
 KPM_Result KPM_InstallPackages(KPM *kpm, size_t target_count, KPM_InstallTarget *targets, KPMIO *kpmio)
