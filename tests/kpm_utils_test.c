@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-int main()
+int main(int argc, char *argv[])
 {
     char *str = asprintf_hd("%s%i", "Hello, World!", 42);
     ASSERT_HD_STR(str, "Hello, World!42");
@@ -31,4 +31,25 @@ int main()
     ASSERT_HD(access("./test_folder/idk/idk2/", R_OK), -1);
     ASSERT_HD(access("./test_folder/idk/", R_OK), -1);
     ASSERT_HD(access("./test_folder/", R_OK), -1);
+
+    char *cur_path = get_path(argc, argv);
+    ASSERT_HD(is_file("/resources"), 0);
+    ASSERT_HD(is_file("resources"), 0);
+    ASSERT_HD(is_file("nonexistent"), 0);
+    ASSERT_HD(is_file("oifjiojos"), 0);
+    ASSERT_HD(is_file("/sfsfss"), 0);
+
+    char *test_path = asprintf_hd("%s/%s", cur_path, "resources/misc/test_file");
+    ASSERT_HD(is_file(test_path), 1);
+    free(test_path);
+
+    test_path = asprintf_hd("%s/%s", cur_path, "resources/misc/");
+    ASSERT_HD(is_file(test_path), 0);
+    free(test_path);
+
+    test_path = asprintf_hd("%s/%s", cur_path, "resources/misc/*");
+    ASSERT_HD(is_file(test_path), 0);
+    free(test_path);
+    
+    free(cur_path);
 }
