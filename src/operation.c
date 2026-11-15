@@ -36,7 +36,7 @@ create_array_c(Operation, OPERATION_NULL, operation_eq);
 
 struct DownloadData
 {
-    KPMIO *kpm_io;
+    KPMIO *kpmio;
     long int total_size;
     long int downloaded;
     int reported_progress;
@@ -55,7 +55,7 @@ size_t Internal_DownloadWriteCallback(char *ptr, size_t size, size_t nmemb, void
         if (calculated_progress >= downloadData->reported_progress+10  || (downloadData->downloaded + size * nmemb) == downloadData->total_size)
         {
             downloadData->reported_progress = (calculated_progress/10)*10;
-            downloadData->kpm_io->log(KPM_VERBOSITY_INFO, "%i%% (%iMB/%iMB)", calculated_progress, (downloadData->downloaded + size*nmemb)/1000000, downloadData->total_size/1000000);
+            downloadData->kpmio->log(KPM_VERBOSITY_INFO, "%i%% (%iMB/%iMB)", calculated_progress, (downloadData->downloaded + size*nmemb)/1000000, downloadData->total_size/1000000);
         }
     }
 
@@ -80,7 +80,7 @@ size_t Internal_DownloadHeaderCallback(char *ptr, size_t size, size_t nitems, vo
             value[size*nitems - (i+2) - 1] = 0;
         }
     }
-    ((struct DownloadData*) userdata)->kpm_io->log(KPM_VERBOSITY_DEBUG, "H: %s:%s", key, value);
+    ((struct DownloadData*) userdata)->kpmio->log(KPM_VERBOSITY_DEBUG, "H: %s:%s", key, value);
 
     if (strcmp(key, "content-length") == 0)
     {
@@ -101,7 +101,7 @@ size_t Internal_DownloadHeaderCallback(char *ptr, size_t size, size_t nitems, vo
  * @param deduplicatedPackages 
  * @return KPMResult 
  */
-KPM_Result Internal_DownloadGraphItems(KPM *kpm, DependencyGraph *graph, size_t deduplicatedPackageCount, NodeIdx *deduplicatedPackages, KPMIO *kpm_io)
+KPM_Result Internal_DownloadGraphItems(KPM *kpm, DependencyGraph *graph, size_t deduplicatedPackageCount, NodeIdx *deduplicatedPackages, KPMIO *kpmio)
 {
     
 
@@ -113,22 +113,22 @@ KPM_Result Internal_DownloadGraphItems(KPM *kpm, DependencyGraph *graph, size_t 
  * 
  * @param kpm 
  * @param path 
- * @param kpm_io 
+ * @param kpmio 
  * @return true 
  * @return false 
  */
-bool Internal_InstallItem(KPM *kpm, char *repository, char *path, bool installed_as_dependency, bool upgrading, KPMIO *kpm_io)
+bool Internal_InstallItem(KPM *kpm, char *repository, char *path, bool installed_as_dependency, bool upgrading, KPMIO *kpmio)
 {
     char *id = "";
 
-    kpm_io->log(KPM_VERBOSITY_DEBUG, "Installing item with id: '%s'", id);
+    kpmio->log(KPM_VERBOSITY_DEBUG, "Installing item with id: '%s'", id);
 
     char *outPath = asprintf_hd("%s/%s/", kpm->pkg_path, id);
     rmdir_r(outPath); // Just in case it exists
 
     // First unpack the .kpkg file
-    kpm_io->log(KPM_VERBOSITY_INFO, "Extracting archive");
-    //Internal_ExtractArchive(path, outPath, kpm_io);
+    kpmio->log(KPM_VERBOSITY_INFO, "Extracting archive");
+    //Internal_ExtractArchive(path, outPath, kpmio);
 
     char *installScriptPath = asprintf_hd( "%sinstall.sh", outPath);
 
@@ -137,7 +137,7 @@ bool Internal_InstallItem(KPM *kpm, char *repository, char *path, bool installed
     if (access(installScriptPath, R_OK) == 0)
     {
         free(installScriptPath);
-        kpm_io->log(KPM_VERBOSITY_DEBUG, "Running install script for [%s]", id);
+        kpmio->log(KPM_VERBOSITY_DEBUG, "Running install script for [%s]", id);
         // Run install script
         int result = -1;
         char *installCommand;
@@ -148,8 +148,8 @@ bool Internal_InstallItem(KPM *kpm, char *repository, char *path, bool installed
 
         char *old_path = getcwd(NULL, 0);
         chdir(outPath);
-        kpm_io->log(KPM_VERBOSITY_INFO, "Running install hooks for %s", id);
-        kpm_io->log(KPM_VERBOSITY_DEBUG, "Running: %s", installCommand);
+        kpmio->log(KPM_VERBOSITY_INFO, "Running install hooks for %s", id);
+        kpmio->log(KPM_VERBOSITY_DEBUG, "Running: %s", installCommand);
         FILE *stream = popen(installCommand, "r");
         free(installCommand);
         if (stream != NULL)
@@ -157,13 +157,13 @@ bool Internal_InstallItem(KPM *kpm, char *repository, char *path, bool installed
             int c;
             while ((c = fgetc(stream)) != EOF)
             {
-                kpm_io->stream((char) c);
+                kpmio->stream((char) c);
             }
             result = pclose(stream);
         }
         else
         {
-            kpm_io->log(KPM_VERBOSITY_ERROR, "Could not run script - POPEN FAILURE");
+            kpmio->log(KPM_VERBOSITY_ERROR, "Could not run script - POPEN FAILURE");
         }
 
         chdir(old_path);
@@ -171,8 +171,8 @@ bool Internal_InstallItem(KPM *kpm, char *repository, char *path, bool installed
         if (result != 0)
         {
             // The install hook failed
-            kpm_io->log(KPM_VERBOSITY_ERROR, "Could not execute install hook for [%s]", id);
-            Internal_RunUninstallHook(outPath, id, false, kpm_io);
+            kpmio->log(KPM_VERBOSITY_ERROR, "Could not execute install hook for [%s]", id);
+            Internal_RunUninstallHook(outPath, id, false, kpmio);
             rmdir_r(outPath);
             free(outPath);
             return false;
@@ -210,15 +210,15 @@ bool Internal_InstallItem(KPM *kpm, char *repository, char *path, bool installed
     return true;
 }
 
-KPM_Result AddInstalledPackagesToGraph(KPM *kpm, DependencyGraph *graph, NodeIdx root_idx, KPMIO *kpm_io)
+KPM_Result AddInstalledPackagesToGraph(KPM *kpm, DependencyGraph *graph, NodeIdx root_idx, KPMIO *kpmio)
 {
-    kpm_io->log(KPM_VERBOSITY_DEBUG, "Adding installed packages to graph");
+    kpmio->log(KPM_VERBOSITY_DEBUG, "Adding installed packages to graph");
     KPM_Result res;
     size_t installed_package_count;
     KPM_InstalledPackage *installed_packages;
     if ((res = KPM_ListInstalledPackages(kpm, &installed_package_count,&installed_packages)) != KPM_OK)
     {
-        kpm_io->log(KPM_VERBOSITY_ERROR, "Could not list packages: (%i) %s", res, KPM_ErrorToString(res));
+        kpmio->log(KPM_VERBOSITY_ERROR, "Could not list packages: (%i) %s", res, KPM_ErrorToString(res));
         KPM_FreeInstalledPackageList(installed_package_count, installed_packages);
         return res;
     }
@@ -229,7 +229,7 @@ KPM_Result AddInstalledPackagesToGraph(KPM *kpm, DependencyGraph *graph, NodeIdx
         if (installed_package.installed_as_dependency)
             continue;
 
-        kpm_io->log(KPM_VERBOSITY_DEBUG, "- Adding %s to graph", installed_package.id);
+        kpmio->log(KPM_VERBOSITY_DEBUG, "- Adding %s to graph", installed_package.id);
         NodeIdx dep_idx = DepGraph_CreateDependencyNode(graph, (KPM_Dependency) {
             .id = strdup(installed_package.id),
             .min_version = SEMVER_MIN,
@@ -239,20 +239,20 @@ KPM_Result AddInstalledPackagesToGraph(KPM *kpm, DependencyGraph *graph, NodeIdx
 
         NodeIdx idx = DepGraph_CreateInstalledNode(graph, installed_package);
         DepGraph_AddDepTarget(graph, dep_idx, idx);
-        if (!DepGraph_FillGraphFromTarget(kpm, graph, idx, kpm_io))
+        if (!DepGraph_FillGraphFromTarget(kpm, graph, idx, kpmio))
         {
-            kpm_io->log(KPM_VERBOSITY_ERROR, "Could not fill graph for package.");
+            kpmio->log(KPM_VERBOSITY_ERROR, "Could not fill graph for package.");
             KPM_FreeInstalledPackageList(installed_package_count, installed_packages);
             return KPM_GENERIC_ERROR;
         }
 
         // Add potential upgrade/downgrade paths
-        kpm_io->log(KPM_VERBOSITY_DEBUG, "Adding alternate versions");
+        kpmio->log(KPM_VERBOSITY_DEBUG, "Adding alternate versions");
         KPM_Artifact *artifacts;
         size_t artifact_count;
         if (KPM_ListPackageArtifacts(kpm, NULL, installed_package.id, &artifact_count, &artifacts) != KPM_OK)
         {
-            kpm_io->log(KPM_VERBOSITY_ERROR, "Could not construct graph for package.");
+            kpmio->log(KPM_VERBOSITY_ERROR, "Could not construct graph for package.");
             KPM_FreeArtifactList(artifact_count, artifacts);
             KPM_FreeInstalledPackageList(installed_package_count, installed_packages);
             return KPM_GENERIC_ERROR;
@@ -261,7 +261,7 @@ KPM_Result AddInstalledPackagesToGraph(KPM *kpm, DependencyGraph *graph, NodeIdx
         for (int j=0; j < artifact_count; j++)
         {
             KPM_Artifact artifact = artifacts[j];
-            kpm_io->log(KPM_VERBOSITY_DEBUG, "- %s/%s (%i.%i.%i)", artifact.repository, artifact.id, artifact.version.major, artifact.version.minor, artifact.version.patch);
+            kpmio->log(KPM_VERBOSITY_DEBUG, "- %s/%s (%i.%i.%i)", artifact.repository, artifact.id, artifact.version.major, artifact.version.minor, artifact.version.patch);
             NodeIdx idx = DepGraph_CreateTargetNode(
                 graph,
                 (KPM_InstallTarget) {
@@ -271,9 +271,9 @@ KPM_Result AddInstalledPackagesToGraph(KPM *kpm, DependencyGraph *graph, NodeIdx
                 GT_PRIORITY_NONE
             );
             DepGraph_AddDepTarget(graph, dep_idx, idx);
-            if (!DepGraph_FillGraphFromTarget(kpm, graph, idx, kpm_io))
+            if (!DepGraph_FillGraphFromTarget(kpm, graph, idx, kpmio))
             {
-                kpm_io->log(KPM_VERBOSITY_ERROR, "Could not fill graph for package artifact.");
+                kpmio->log(KPM_VERBOSITY_ERROR, "Could not fill graph for package artifact.");
                 KPM_FreeArtifactList(artifact_count, artifacts);
                 KPM_FreeInstalledPackageList(installed_package_count, installed_packages);
                 return KPM_GENERIC_ERROR;
@@ -286,7 +286,7 @@ KPM_Result AddInstalledPackagesToGraph(KPM *kpm, DependencyGraph *graph, NodeIdx
     return KPM_OK;
 }
 
-bool DownloadOperationFiles(KPM *kpm, OperationArray *operations, KPMIO *kpm_io)
+bool DownloadOperationFiles(KPM *kpm, OperationArray *operations, KPMIO *kpmio)
 {
     Operation operation;
     OperationArray_ForEach(operations, operation)
@@ -309,9 +309,9 @@ bool DownloadOperationFiles(KPM *kpm, OperationArray *operations, KPMIO *kpm_io)
             else
             {
                 KPKG_Result res;
-                if ((res = KPKG_LoadFile(&file, operation.target.target.artifact.url, out_path, kpm_io)) != KPKG_OK)
+                if ((res = KPKG_LoadFile(&file, operation.target.target.artifact.url, out_path, kpmio)) != KPKG_OK)
                 {
-                    kpm_io->log(KPM_VERBOSITY_ERROR, "KPKGErr: %i - Could not load KPKG file from %s", res, operation.target.target.artifact.url);
+                    kpmio->log(KPM_VERBOSITY_ERROR, "KPKGErr: %i - Could not load KPKG file from %s", res, operation.target.target.artifact.url);
                     return false;
                 }
             }
@@ -324,6 +324,7 @@ bool DownloadOperationFiles(KPM *kpm, OperationArray *operations, KPMIO *kpm_io)
         // Download the contents of the KPKG_FILE
         if (file->kpkg_version == KPKG_VERSION_1 || file->kpkg_version == KPKG_VERSION_2)
         {
+            //if (!access(out_path, R_OK))
             return 0; // @TODO
         }
 
@@ -337,12 +338,12 @@ bool DownloadOperationFiles(KPM *kpm, OperationArray *operations, KPMIO *kpm_io)
     }
 }
 
-KPM_Result KPM_InstallPackages(KPM *kpm, size_t target_count, KPM_InstallTarget *targets, KPMIO *kpm_io)
+KPM_Result KPM_InstallPackages(KPM *kpm, size_t target_count, KPM_InstallTarget *targets, KPMIO *kpmio)
 {
-    if (kpm_io == NULL)
-        kpm_io = &dummyKPMStub;
+    if (kpmio == NULL)
+        kpmio = &dummyKPMStub;
 
-    kpm_io->log(KPM_VERBOSITY_DEBUG, "Creating dependency graph");
+    kpmio->log(KPM_VERBOSITY_DEBUG, "Creating dependency graph");
     DependencyGraph *graph = DepGraph_Create(target_count * 2);
     NodeIdx root_idx = DepGraph_AddNode(graph, (DepGraph_Node) {
         .connected = NodeIdxArray_Create(),
@@ -357,23 +358,23 @@ KPM_Result KPM_InstallPackages(KPM *kpm, size_t target_count, KPM_InstallTarget 
         }
     });
 
-    KPM_Result res = AddInstalledPackagesToGraph(kpm, graph, root_idx, kpm_io);
+    KPM_Result res = AddInstalledPackagesToGraph(kpm, graph, root_idx, kpmio);
     if (res != KPM_OK)
     {
         DepGraph_FreeGraph(graph);
         return res;
     }
 
-    kpm_io->log(KPM_VERBOSITY_DEBUG, "Adding explicit targets to graph");
+    kpmio->log(KPM_VERBOSITY_DEBUG, "Adding explicit targets to graph");
     for (int i=0; i < target_count; i++)
     {
         KPM_InstallTarget target = targets[i];
-        kpm_io->log(KPM_VERBOSITY_DEBUG, "- Adding %s to graph", KPM_GetInstallTargetId(target));
+        kpmio->log(KPM_VERBOSITY_DEBUG, "- Adding %s to graph", KPM_GetInstallTargetId(target));
         NodeIdx idx = DepGraph_CreateTargetNode(graph, target, GT_PRIORITY_EXPLICIT);
         DepGraph_AddDepTarget(graph, root_idx, idx);
-        if (!DepGraph_FillGraphFromTarget(kpm, graph, idx, kpm_io))
+        if (!DepGraph_FillGraphFromTarget(kpm, graph, idx, kpmio))
         {
-            kpm_io->log(KPM_VERBOSITY_ERROR, "Could not fill graph for package.");
+            kpmio->log(KPM_VERBOSITY_ERROR, "Could not fill graph for package.");
             return KPM_GENERIC_ERROR;
         }
     }
@@ -382,24 +383,24 @@ KPM_Result KPM_InstallPackages(KPM *kpm, size_t target_count, KPM_InstallTarget 
     DepGraph_Render(graph, &rendered);
     if (!rendered)
     {
-        kpm_io->log(KPM_VERBOSITY_ERROR, "Could not render graph.");
+        kpmio->log(KPM_VERBOSITY_ERROR, "Could not render graph.");
         DepGraph_FreeGraph(graph);
         return KPM_GENERIC_ERROR;
     }
 
-    kpm_io->log(KPM_VERBOSITY_DEBUG, "Rendered dependency graph:\n%s", rendered);
+    kpmio->log(KPM_VERBOSITY_DEBUG, "Rendered dependency graph:\n%s", rendered);
 
     
-    kpm_io->log(KPM_VERBOSITY_DEBUG, "Solving dependency graph...");
-    Resolver_State *state = Resolver_Resolve(graph, root_idx, kpm_io);
+    kpmio->log(KPM_VERBOSITY_DEBUG, "Solving dependency graph...");
+    Resolver_State *state = Resolver_Resolve(graph, root_idx, kpmio);
     if (!state)
     {
-        kpm_io->log(KPM_VERBOSITY_ERROR, "Could not resolve graph.");
-        kpm_io->log(KPM_VERBOSITY_DEBUG, "Dumping state:");
+        kpmio->log(KPM_VERBOSITY_ERROR, "Could not resolve graph.");
+        kpmio->log(KPM_VERBOSITY_DEBUG, "Dumping state:");
         TraversedNode current;
         TraversedNodeArray_ForEach(state->traversed_nodes, current)
         {
-            kpm_io->log(KPM_VERBOSITY_DEBUG, "%i, %i", current.node_idx, current.parent_traversed_idx);
+            kpmio->log(KPM_VERBOSITY_DEBUG, "%i, %i", current.node_idx, current.parent_traversed_idx);
         }
         DepGraph_FreeGraph(graph);
         return KPM_RESOLUTION_ERROR;
@@ -409,13 +410,13 @@ KPM_Result KPM_InstallPackages(KPM *kpm, size_t target_count, KPM_InstallTarget 
     KPM_InstalledPackage *installed_packages;
     if ((res = KPM_ListInstalledPackages(kpm, &installed_package_count,&installed_packages)) != KPM_OK)
     {
-        kpm_io->log(KPM_VERBOSITY_ERROR, "Could not list packages: (%i) %s", res, KPM_ErrorToString(res));
+        kpmio->log(KPM_VERBOSITY_ERROR, "Could not list packages: (%i) %s", res, KPM_ErrorToString(res));
         Resolver_FreeState(state);
         KPM_FreeInstalledPackageList(installed_package_count, installed_packages);
         return res;
     }
 
-    kpm_io->log(KPM_VERBOSITY_DEBUG, "Listing resolved packages");
+    kpmio->log(KPM_VERBOSITY_DEBUG, "Listing resolved packages");
 
     size_t installing = 0;
     size_t reinstalling = 0;
@@ -464,7 +465,7 @@ KPM_Result KPM_InstallPackages(KPM *kpm, size_t target_count, KPM_InstallTarget 
         if (operation.type == OP_INSTALL)
             installing++;
 
-        kpm_io->log(KPM_VERBOSITY_DEBUG, "- %s %i.%i.%i T:%i", DepGraph_GetTargetId(node.gt), DepGraph_GetTargetVersion(node.gt).major, DepGraph_GetTargetVersion(node.gt).minor, DepGraph_GetTargetVersion(node.gt).patch, operation.type);
+        kpmio->log(KPM_VERBOSITY_DEBUG, "- %s %i.%i.%i T:%i", DepGraph_GetTargetId(node.gt), DepGraph_GetTargetVersion(node.gt).major, DepGraph_GetTargetVersion(node.gt).minor, DepGraph_GetTargetVersion(node.gt).patch, operation.type);
         
         // Add to corresponding list
         OperationArray_Add(operations, operation);
@@ -503,68 +504,68 @@ KPM_Result KPM_InstallPackages(KPM *kpm, size_t target_count, KPM_InstallTarget 
     Operation current_operation;
     if (installing > 0)
     {
-        kpm_io->log(KPM_VERBOSITY_INFO, "Installing %i new packages.", installing);
+        kpmio->log(KPM_VERBOSITY_INFO, "Installing %i new packages.", installing);
         OperationArray_ForEach(operations, current_operation)
         {
             if (current_operation.type != OP_INSTALL)
                 continue;
-            kpm_io->log(KPM_VERBOSITY_DEBUG, "- %s (%i.%i.%i)", DepGraph_GetTargetId(current_operation.target), DepGraph_GetTargetVersion(current_operation.target).major, DepGraph_GetTargetVersion(current_operation.target).minor, DepGraph_GetTargetVersion(current_operation.target).patch);
+            kpmio->log(KPM_VERBOSITY_DEBUG, "- %s (%i.%i.%i)", DepGraph_GetTargetId(current_operation.target), DepGraph_GetTargetVersion(current_operation.target).major, DepGraph_GetTargetVersion(current_operation.target).minor, DepGraph_GetTargetVersion(current_operation.target).patch);
         }
     }
 
     if (reinstalling > 0)
     {
-        kpm_io->log(KPM_VERBOSITY_INFO, "Reinstalling %i packages.", reinstalling);
+        kpmio->log(KPM_VERBOSITY_INFO, "Reinstalling %i packages.", reinstalling);
         OperationArray_ForEach(operations, current_operation)
         {
             if (current_operation.type != OP_REINSTALL)
                 continue;
-            kpm_io->log(KPM_VERBOSITY_DEBUG, "- %s (%i.%i.%i)", DepGraph_GetTargetId(current_operation.target), DepGraph_GetTargetVersion(current_operation.target).major, DepGraph_GetTargetVersion(current_operation.target).minor, DepGraph_GetTargetVersion(current_operation.target).patch);
+            kpmio->log(KPM_VERBOSITY_DEBUG, "- %s (%i.%i.%i)", DepGraph_GetTargetId(current_operation.target), DepGraph_GetTargetVersion(current_operation.target).major, DepGraph_GetTargetVersion(current_operation.target).minor, DepGraph_GetTargetVersion(current_operation.target).patch);
         }
     }
 
     if (upgrading > 0)
     {
-        kpm_io->log(KPM_VERBOSITY_INFO, "Upgrading %i packages.", upgrading);
+        kpmio->log(KPM_VERBOSITY_INFO, "Upgrading %i packages.", upgrading);
         OperationArray_ForEach(operations, current_operation)
         {
             if (current_operation.type != OP_UPGRADE)
                 continue;
-            kpm_io->log(KPM_VERBOSITY_DEBUG, "- %s (%i.%i.%i -> %i.%i.%i)", current_operation.current_version.major, current_operation.current_version.minor, current_operation.current_version.patch, DepGraph_GetTargetId(current_operation.target), DepGraph_GetTargetVersion(current_operation.target).major, DepGraph_GetTargetVersion(current_operation.target).minor, DepGraph_GetTargetVersion(current_operation.target).patch);
+            kpmio->log(KPM_VERBOSITY_DEBUG, "- %s (%i.%i.%i -> %i.%i.%i)", current_operation.current_version.major, current_operation.current_version.minor, current_operation.current_version.patch, DepGraph_GetTargetId(current_operation.target), DepGraph_GetTargetVersion(current_operation.target).major, DepGraph_GetTargetVersion(current_operation.target).minor, DepGraph_GetTargetVersion(current_operation.target).patch);
         }
     }
 
     if (downgrading > 0)
     {
-        kpm_io->log(KPM_VERBOSITY_INFO, "Downgrading %i packages.", downgrading);
+        kpmio->log(KPM_VERBOSITY_INFO, "Downgrading %i packages.", downgrading);
         OperationArray_ForEach(operations, current_operation)
         {
             if (current_operation.type != OP_DOWNGRADE)
                 continue;
-            kpm_io->log(KPM_VERBOSITY_DEBUG, "- %s (%i.%i.%i -> %i.%i.%i)", current_operation.current_version.major, current_operation.current_version.minor, current_operation.current_version.patch, DepGraph_GetTargetId(current_operation.target), DepGraph_GetTargetVersion(current_operation.target).major, DepGraph_GetTargetVersion(current_operation.target).minor, DepGraph_GetTargetVersion(current_operation.target).patch);
+            kpmio->log(KPM_VERBOSITY_DEBUG, "- %s (%i.%i.%i -> %i.%i.%i)", current_operation.current_version.major, current_operation.current_version.minor, current_operation.current_version.patch, DepGraph_GetTargetId(current_operation.target), DepGraph_GetTargetVersion(current_operation.target).major, DepGraph_GetTargetVersion(current_operation.target).minor, DepGraph_GetTargetVersion(current_operation.target).patch);
         }
     }
 
     if (uninstalling > 0)
     {
-        kpm_io->log(KPM_VERBOSITY_INFO, "Uninstalling %i packages.", uninstalling);
+        kpmio->log(KPM_VERBOSITY_INFO, "Uninstalling %i packages.", uninstalling);
         OperationArray_ForEach(operations, current_operation)
         {
             if (current_operation.type != OP_UNINSTALL)
                 continue;
-            kpm_io->log(KPM_VERBOSITY_DEBUG, "- %s (%i.%i.%i)", DepGraph_GetTargetId(current_operation.target), DepGraph_GetTargetVersion(current_operation.target).major, DepGraph_GetTargetVersion(current_operation.target).minor, DepGraph_GetTargetVersion(current_operation.target).patch);
+            kpmio->log(KPM_VERBOSITY_DEBUG, "- %s (%i.%i.%i)", DepGraph_GetTargetId(current_operation.target), DepGraph_GetTargetVersion(current_operation.target).major, DepGraph_GetTargetVersion(current_operation.target).minor, DepGraph_GetTargetVersion(current_operation.target).patch);
         }
     }
 
-    if (!kpm_io->getInput("Proceed."))
+    if (!kpmio->getInput("Proceed?"))
     {
         OperationArray_Free(operations);
         Resolver_FreeState(state);
         return KPM_ABORTED;
     }
 
-    kpm_io->log(KPM_VERBOSITY_DEBUG, "Downloading operation data");
-    DownloadOperationFiles(kpm, operations, kpm_io);
+    kpmio->log(KPM_VERBOSITY_DEBUG, "Downloading operation data");
+    DownloadOperationFiles(kpm, operations, kpmio);
 
     OperationArray_Free(operations);
     Resolver_FreeState(state);

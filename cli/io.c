@@ -167,7 +167,7 @@ bool kpm_get_input(const char *format, ...)
 }
 
 
-KPMIO kpm_io = {
+KPMIO kpmio = {
     .stream = kpm_stream,
     .log = kpm_log,
     .logProgress = kpm_log_progress,

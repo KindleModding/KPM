@@ -122,7 +122,7 @@ typedef struct
 
 //// General functions
 char *KPKG_ResultStr(KPKG_Result result);
-KPKG_Result KPKG_LoadFile(KPKG_File **file, const char *location, const char *out_path, KPMIO *kpm_io);
+KPKG_Result KPKG_LoadFile(KPKG_File **file, const char *location, const char *out_path, KPMIO *kpmio);
 char *KPKG_GetId(KPKG_File *file);
 char *KPKG_GetName(KPKG_File *file);
 char *KPKG_GetAuthor(KPKG_File *file);

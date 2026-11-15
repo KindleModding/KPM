@@ -191,7 +191,7 @@ size_t KPKG_CURLCallback(char *ptr, size_t size, size_t nmemb, void *userdata)
     return realsize;
 }
 
-KPKG_Result KPKG_LoadFile(KPKG_File **file, const char *location, const char *out_path, KPMIO *kpm_io)
+KPKG_Result KPKG_LoadFile(KPKG_File **file, const char *location, const char *out_path, KPMIO *kpmio)
 {
     *file = NULL;
     if (is_path(location))
@@ -224,7 +224,7 @@ KPKG_Result KPKG_LoadFile(KPKG_File **file, const char *location, const char *ou
         }
 
         *file = malloc(sizeof(KPKG_File));
-        int res = KPKG3_LoadFile(*file, location, in_file, kpm_io);
+        int res = KPKG3_LoadFile(*file, location, in_file, kpmio);
         fclose(in_file);
         return res;
     }

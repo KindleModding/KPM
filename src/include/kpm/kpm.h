@@ -209,10 +209,10 @@ KPM_Result KPM_GetRepository(KPM *kpm, const char *repository_id, KPM_Repository
  * @param kpm The KPM object
  * @param url The URL to the repository manifest file
  * @param repository A pointer to return the indexed repository object (or NULL)
- * @param kpm_io A KPM IO object
+ * @param kpmio A KPM IO object
  * @return KPMResult 
  */
-KPM_Result KPM_AddRepository(KPM *kpm, const char *url, KPM_Repository *repository, KPMIO *kpm_io);
+KPM_Result KPM_AddRepository(KPM *kpm, const char *url, KPM_Repository *repository, KPMIO *kpmio);
 
 /**
  * @brief Remove an indexed repository by its Id
@@ -418,7 +418,7 @@ KPM_Result KPM_ListArtifactDependencies(KPM *kpm, const char *repository, const 
  * @param statusCallback A callback for progress information
  * @return KPMResult 
  */
-KPM_Result KPM_UpdateIndex(KPM *kpm, KPMIO *kpm_io);
+KPM_Result KPM_UpdateIndex(KPM *kpm, KPMIO *kpmio);
 
 
 /**
@@ -443,10 +443,10 @@ void KPM_FreeInstallTargetList(size_t target_count, KPM_InstallTarget *targets);
  * @param kpm 
  * @param target_count The number of packages to install
  * @param targets An array of packages to install
- * @param kpm_io 
+ * @param kpmio 
  * @return KPMResult 
  */
-KPM_Result KPM_InstallPackages(KPM *kpm, size_t target_count, KPM_InstallTarget *targets, KPMIO *kpm_io);
+KPM_Result KPM_InstallPackages(KPM *kpm, size_t target_count, KPM_InstallTarget *targets, KPMIO *kpmio);
 
 /**
  * @brief Uninstalls a package
@@ -454,9 +454,9 @@ KPM_Result KPM_InstallPackages(KPM *kpm, size_t target_count, KPM_InstallTarget 
  * @param kpm 
  * @param package_count
  * @param package_ids 
- * @param kpm_io 
+ * @param kpmio 
  * @return KPMResult 
  */
-KPM_Result KPM_UninstallPackages(KPM *kpm, size_t package_count, const char *package_ids[], KPMIO *kpm_io);
+KPM_Result KPM_UninstallPackages(KPM *kpm, size_t package_count, const char *package_ids[], KPMIO *kpmio);
 
 #endif

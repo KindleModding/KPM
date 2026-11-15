@@ -257,7 +257,7 @@ static int copy_data(struct archive *ar, struct archive *aw)
 }
 
 // @TODO: Implement progress monitoring
-KPKG_Result KPKG1_Unpack(KPKG_File *file, const char *out_path, KPMIO *kpm_io)
+KPKG_Result KPKG1_Unpack(KPKG_File *file, const char *out_path, KPMIO *kpmio)
 {
     assert(file->kpkg_version == 1 || file->kpkg_version == 2);
     // location is ALWAYS guaranteed to be a path for KPKG1 (see KPKG_CURLCallback)
@@ -286,7 +286,7 @@ KPKG_Result KPKG1_Unpack(KPKG_File *file, const char *out_path, KPMIO *kpm_io)
 
     if ((r = archive_read_open_filename(a, file->location, 10240)))
     {
-        kpm_io->log(KPM_VERBOSITY_ERROR, "Could not open file %s", file->location);
+        kpmio->log(KPM_VERBOSITY_ERROR, "Could not open file %s", file->location);
         goto libarchive_error;
     }
 
@@ -300,7 +300,7 @@ KPKG_Result KPKG1_Unpack(KPKG_File *file, const char *out_path, KPMIO *kpm_io)
 
         if (r < ARCHIVE_OK)
         {
-            kpm_io->log(KPM_VERBOSITY_ERROR, "Libarchive error: %s", archive_error_string(a));
+            kpmio->log(KPM_VERBOSITY_ERROR, "Libarchive error: %s", archive_error_string(a));
         }
         if (r < ARCHIVE_WARN)
         {
@@ -314,14 +314,14 @@ KPKG_Result KPKG1_Unpack(KPKG_File *file, const char *out_path, KPMIO *kpm_io)
 
         if (r < ARCHIVE_OK)
         {
-            kpm_io->log(KPM_VERBOSITY_ERROR, "Libarchive error: %s", archive_error_string(a));
+            kpmio->log(KPM_VERBOSITY_ERROR, "Libarchive error: %s", archive_error_string(a));
         }
         else if (archive_entry_size(entry) > 0)
         {
             r = copy_data(a, ext);
             if (r < ARCHIVE_OK)
             {
-                kpm_io->log(KPM_VERBOSITY_ERROR, "Libarchive error: %s", archive_error_string(a));
+                kpmio->log(KPM_VERBOSITY_ERROR, "Libarchive error: %s", archive_error_string(a));
             }
             if (r < ARCHIVE_WARN)
             {

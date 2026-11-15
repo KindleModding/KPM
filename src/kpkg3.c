@@ -62,7 +62,7 @@ bool KPKG3_ValidateFile(KPKG_File *file, int file_size)
     return true;
 }
 
-KPKG_Result KPKG3_LoadFile(KPKG_File *kpkg_file, const char *location, FILE *in_file, KPMIO *kpm_io)
+KPKG_Result KPKG3_LoadFile(KPKG_File *kpkg_file, const char *location, FILE *in_file, KPMIO *kpmio)
 {
     struct stat stats;
     fstat(fileno(in_file), &stats);

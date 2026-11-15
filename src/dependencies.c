@@ -318,7 +318,7 @@ void DepGraph_AddDepTarget(DependencyGraph *graph, NodeIdx dep_node_idx, NodeIdx
  * @param targetDependencies 
  * @return KPMResult 
  */
-KPM_Result DepGraph_GetTargetDependencies(KPM *kpm, DepGraph_Target target, size_t *targetDependencyCount, KPM_Dependency **targetDependencies, KPMIO *kpm_io)
+KPM_Result DepGraph_GetTargetDependencies(KPM *kpm, DepGraph_Target target, size_t *targetDependencyCount, KPM_Dependency **targetDependencies, KPMIO *kpmio)
 {
     switch (target.type)
     {
@@ -606,7 +606,7 @@ void DepGraph_AddTargetToExistingDependencies(DependencyGraph *graph, NodeIdx ta
     }
 }
 
-bool DepGraph_FillGraphFromTarget(KPM *kpm, DependencyGraph *graph, NodeIdx target_node_id, KPMIO *kpm_io)
+bool DepGraph_FillGraphFromTarget(KPM *kpm, DependencyGraph *graph, NodeIdx target_node_id, KPMIO *kpmio)
 {
     DepGraph_Target graph_target = graph->nodes[target_node_id].gt;
     assert(graph_target.type == GT_INSTALL_TARGET);
@@ -617,7 +617,7 @@ bool DepGraph_FillGraphFromTarget(KPM *kpm, DependencyGraph *graph, NodeIdx targ
     // Go through this target's own dependencies
     size_t dep_count;
     KPM_Dependency *dependencies;
-    if (DepGraph_GetTargetDependencies(kpm, graph_target, &dep_count, &dependencies, kpm_io) != KPM_OK)
+    if (DepGraph_GetTargetDependencies(kpm, graph_target, &dep_count, &dependencies, kpmio) != KPM_OK)
         return false;
 
     for (int i=0; i < dep_count; i++)
@@ -677,7 +677,7 @@ bool DepGraph_FillGraphFromTarget(KPM *kpm, DependencyGraph *graph, NodeIdx targ
                 kpm,
                 graph,
                 idx,
-                kpm_io
+                kpmio
             ))
             {
                 KPM_FreeArtifactList(artifact_count, artifacts);
@@ -692,7 +692,7 @@ bool DepGraph_FillGraphFromTarget(KPM *kpm, DependencyGraph *graph, NodeIdx targ
     return true;
 }
 
-bool Resolver_Next(Resolver_State *state, KPMIO *kpm_io)
+bool Resolver_Next(Resolver_State *state, KPMIO *kpmio)
 {
     size_t current_traversed_node_idx = TraversedNodeArray_Size(state->traversed_nodes) - 1;
     size_t parent_traversed_node_idx = TraversedNodeArray_Get(state->traversed_nodes, current_traversed_node_idx).parent_traversed_idx;
@@ -735,7 +735,7 @@ bool Resolver_Next(Resolver_State *state, KPMIO *kpm_io)
  * @return true 
  * @return false 
  */
-bool Resolver_Backtrack(Resolver_State *state, NodeIdx dependency_idx, KPMIO *kpm_io)
+bool Resolver_Backtrack(Resolver_State *state, NodeIdx dependency_idx, KPMIO *kpmio)
 {
     NodeIdx dep_traversed_idx = dependency_idx;
     for (;;)
@@ -747,7 +747,7 @@ bool Resolver_Backtrack(Resolver_State *state, NodeIdx dependency_idx, KPMIO *kp
         assert(picked_target_traversed.parent_traversed_idx == dep_traversed_idx);
 
         DepGraph_Node dep_node = state->graph->nodes[dep_traversed.node_idx];
-        kpm_io->log(KPM_VERBOSITY_DEBUG, "Backtracking: (%i) %s", dep_traversed.node_idx, DepGraph_GetTargetId(dep_node.gt));
+        kpmio->log(KPM_VERBOSITY_DEBUG, "Backtracking: (%i) %s", dep_traversed.node_idx, DepGraph_GetTargetId(dep_node.gt));
         if (picked_target_traversed.connected_idx == NodeIdxArray_Size(dep_node.connected) - 1)
         {
             // Backtrack to the parent dependency!
@@ -780,7 +780,7 @@ void Resolver_FreeState(Resolver_State *state)
     free(state);
 }
 
-Resolver_State *Resolver_Resolve(DependencyGraph *graph, NodeIdx root, KPMIO *kpm_io)
+Resolver_State *Resolver_Resolve(DependencyGraph *graph, NodeIdx root, KPMIO *kpmio)
 {
     Resolver_State *state = malloc(sizeof(Resolver_State));
     *state = (Resolver_State) {
@@ -802,7 +802,7 @@ Resolver_State *Resolver_Resolve(DependencyGraph *graph, NodeIdx root, KPMIO *kp
 
         if (current_node.gt.type == GT_DEPENDENCY)
         {
-            kpm_io->log(KPM_VERBOSITY_DEBUG, "Resolving dependency (%i) %s %i.%i.%i - %i.%i.%i", current_node_traversed.node_idx, DepGraph_GetTargetId(current_node.gt), current_node.gt.dependency.min_version.major, current_node.gt.dependency.min_version.minor, current_node.gt.dependency.min_version.patch, current_node.gt.dependency.max_version.major, current_node.gt.dependency.max_version.minor, current_node.gt.dependency.max_version.patch);
+            kpmio->log(KPM_VERBOSITY_DEBUG, "Resolving dependency (%i) %s %i.%i.%i - %i.%i.%i", current_node_traversed.node_idx, DepGraph_GetTargetId(current_node.gt), current_node.gt.dependency.min_version.major, current_node.gt.dependency.min_version.minor, current_node.gt.dependency.min_version.patch, current_node.gt.dependency.max_version.major, current_node.gt.dependency.max_version.minor, current_node.gt.dependency.max_version.patch);
 
             // Check if an existing resolution for this dependency id exists
             NodeIdx picked_target_idx = NODE_NULL;
@@ -815,7 +815,7 @@ Resolver_State *Resolver_Resolve(DependencyGraph *graph, NodeIdx root, KPMIO *kp
 
                 if (!strcmp(DepGraph_GetTargetId(traversed_node.gt), DepGraph_GetTargetId(current_node.gt)))
                 {
-                    kpm_io->log(KPM_VERBOSITY_DEBUG, "Found existing resolution (%i) %s (%i.%i.%i)", traversed.node_idx, DepGraph_GetTargetId(traversed_node.gt), DepGraph_GetTargetVersion(traversed_node.gt).major, DepGraph_GetTargetVersion(traversed_node.gt).minor, DepGraph_GetTargetVersion(traversed_node.gt).patch);
+                    kpmio->log(KPM_VERBOSITY_DEBUG, "Found existing resolution (%i) %s (%i.%i.%i)", traversed.node_idx, DepGraph_GetTargetId(traversed_node.gt), DepGraph_GetTargetVersion(traversed_node.gt).major, DepGraph_GetTargetVersion(traversed_node.gt).minor, DepGraph_GetTargetVersion(traversed_node.gt).patch);
                     picked_target_idx = traversed.node_idx;
                     break;
                 }
@@ -827,14 +827,14 @@ Resolver_State *Resolver_Resolve(DependencyGraph *graph, NodeIdx root, KPMIO *kp
                 NodeIdx connected_idx = NodeIdxArray_FindFirst(current_node.connected, picked_target_idx);
                 if (connected_idx != -1)
                 {
-                    if (!Resolver_Next(state, kpm_io))
+                    if (!Resolver_Next(state, kpmio))
                         break;  // If there is no next after this empty target, we're done!
                     continue;
                 }
 
                 // Backtrack
-                kpm_io->log(KPM_VERBOSITY_DEBUG, "Conflict detected!");
-                if (!Resolver_Backtrack(state, current_node_traversed.node_idx, kpm_io))
+                kpmio->log(KPM_VERBOSITY_DEBUG, "Conflict detected!");
+                if (!Resolver_Backtrack(state, current_node_traversed.node_idx, kpmio))
                 {
                     Resolver_FreeState(state);
                     return NULL; // Could not backtrack, resolution failure
@@ -852,16 +852,16 @@ Resolver_State *Resolver_Resolve(DependencyGraph *graph, NodeIdx root, KPMIO *kp
         }
 
         // Target node
-        kpm_io->log(KPM_VERBOSITY_DEBUG, "Resolving target (%i) %s", current_node_traversed.node_idx, DepGraph_GetTargetId(current_node.gt));
+        kpmio->log(KPM_VERBOSITY_DEBUG, "Resolving target (%i) %s", current_node_traversed.node_idx, DepGraph_GetTargetId(current_node.gt));
 
         // Check if previously traversed
         if (TraversedNodeArray_FindFirstByNodeIdx(state->traversed_nodes, current_node_traversed.node_idx) < current_node_traversed_idx)
-            if (!Resolver_Next(state, kpm_io))
+            if (!Resolver_Next(state, kpmio))
                 break; // If there is no next after this empty target, we're done!
 
         if (NodeIdxArray_Size(current_node.connected) > 0)
         {
-            kpm_io->log(KPM_VERBOSITY_DEBUG, "Resolving target dependencies...");
+            kpmio->log(KPM_VERBOSITY_DEBUG, "Resolving target dependencies...");
             TraversedNodeArray_Add(state->traversed_nodes, (TraversedNode) {
                 .node_idx = NodeIdxArray_Get(current_node.connected, 0),
                 .parent_traversed_idx = current_node_traversed_idx,
@@ -871,7 +871,7 @@ Resolver_State *Resolver_Resolve(DependencyGraph *graph, NodeIdx root, KPMIO *kp
         }
 
         // Empty target, move to next
-        if (!Resolver_Next(state, kpm_io))
+        if (!Resolver_Next(state, kpmio))
             break; // If there is no next after this empty target, we're done!
     }
 

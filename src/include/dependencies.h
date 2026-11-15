@@ -84,7 +84,7 @@ void DepGraph_AddArtifactDep(DependencyGraph *graph, NodeIdx art_node_idx, NodeI
 void DepGraph_AddDepTarget(DependencyGraph *graph, NodeIdx dep_node_idx, NodeIdx art_node_idx);
 void DepGraph_Render(DependencyGraph *graph, char **output);
 
-bool DepGraph_FillGraphFromTarget(KPM *kpm, DependencyGraph *graph, NodeIdx target_node_id, KPMIO *kpm_io);
+bool DepGraph_FillGraphFromTarget(KPM *kpm, DependencyGraph *graph, NodeIdx target_node_id, KPMIO *kpmio);
 
 /**
  * Dependency Resolver
@@ -107,6 +107,6 @@ typedef struct {
 } Resolver_State;
 
 void Resolver_FreeState(Resolver_State *state);
-Resolver_State *Resolver_Resolve(DependencyGraph *graph, NodeIdx root, KPMIO *kpm_io);
+Resolver_State *Resolver_Resolve(DependencyGraph *graph, NodeIdx root, KPMIO *kpmio);
 
 #endif

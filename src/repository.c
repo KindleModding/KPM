@@ -102,7 +102,7 @@ KPM_Result KPM_GetRepository(KPM *kpm, const char *repository_id, KPM_Repository
     return KPM_OK;
 }
 
-KPM_Result KPM_AddRepository(KPM *kpm, const char *url, KPM_Repository *repository, KPMIO *kpm_io)
+KPM_Result KPM_AddRepository(KPM *kpm, const char *url, KPM_Repository *repository, KPMIO *kpmio)
 {
     SimpleGETRequest *request = SimpleGET_Initialise(url);
     if (SimpleGET_Perform(request) != CURLE_OK)
@@ -118,7 +118,7 @@ KPM_Result KPM_AddRepository(KPM *kpm, const char *url, KPM_Repository *reposito
     }
 
 
-    kpm_io->log(KPM_VERBOSITY_DEBUG, "Got JSON:\n%s", request->buffer);
+    kpmio->log(KPM_VERBOSITY_DEBUG, "Got JSON:\n%s", request->buffer);
     cJSON *json = cJSON_Parse((char*) request->buffer);
 
     if (
@@ -134,14 +134,14 @@ KPM_Result KPM_AddRepository(KPM *kpm, const char *url, KPM_Repository *reposito
     }
 
     char *repo_id = cJSON_GetStringValue(cJSON_GetObjectItem(json, "id"));
-    kpm_io->log(KPM_VERBOSITY_DEBUG, "ID: %s", repo_id);
-    kpm_io->log(KPM_VERBOSITY_DEBUG, "URL: %s", url);
-    kpm_io->log(KPM_VERBOSITY_DEBUG, "NAME: %s", cJSON_GetStringValue(cJSON_GetObjectItem(json, "name")));
-    kpm_io->log(KPM_VERBOSITY_DEBUG, "DESC: %s", cJSON_GetStringValue(cJSON_GetObjectItem(json, "description")));
+    kpmio->log(KPM_VERBOSITY_DEBUG, "ID: %s", repo_id);
+    kpmio->log(KPM_VERBOSITY_DEBUG, "URL: %s", url);
+    kpmio->log(KPM_VERBOSITY_DEBUG, "NAME: %s", cJSON_GetStringValue(cJSON_GetObjectItem(json, "name")));
+    kpmio->log(KPM_VERBOSITY_DEBUG, "DESC: %s", cJSON_GetStringValue(cJSON_GetObjectItem(json, "description")));
 
     if (strlen(repo_id) == 0 || repo_id[0] == ' ' || repo_id[strlen(repo_id)-1] == ' ')
     {
-        kpm_io->log(KPM_VERBOSITY_ERROR, "Repository must have a valid id");
+        kpmio->log(KPM_VERBOSITY_ERROR, "Repository must have a valid id");
         return KPM_PARSE_ERROR;
     }
 
@@ -157,7 +157,7 @@ KPM_Result KPM_AddRepository(KPM *kpm, const char *url, KPM_Repository *reposito
     int e = 0;
     if ((e = sqlite3_step(statement)) != SQLITE_DONE)
     {
-        kpm_io->log(KPM_VERBOSITY_ERROR, "SQLite error: %i", e);
+        kpmio->log(KPM_VERBOSITY_ERROR, "SQLite error: %i", e);
         sqlite3_finalize(statement);
         cJSON_Delete(json);
         SimpleGET_Cleanup(request);
