@@ -25,11 +25,6 @@ SimpleGETRequest *SimpleGET_Initialise(const char *url)
     return request;
 }
 
-void SimpleGET_SetMaxSize(SimpleGETRequest *request, size_t max_size)
-{
-    request->max_size = max_size;
-}
-
 void SimpleGET_Cleanup(SimpleGETRequest *request)
 {
     free(request->buffer);
