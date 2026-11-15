@@ -9,6 +9,6 @@ void rmdir_r(char *path);
 
 char *vasprintf_hd(const char *format, va_list args);
 char *asprintf_hd(const char *format, ...) __attribute__((format(printf, 1, 2)));
-bool is_path(const char *location);
+bool is_file(const char *location);
 
 #endif

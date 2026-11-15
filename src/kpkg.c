@@ -192,7 +192,7 @@ size_t KPKG_CURLCallback(char *ptr, size_t size, size_t nmemb, void *userdata)
 KPKG_Result KPKG_LoadFile(KPKG_File **file, const char *location, const char *out_path, KPMIO *kpmio)
 {
     *file = NULL;
-    if (is_path(location))
+    if (is_file(location))
     {
         FILE *in_file = fopen(location, O_RDONLY);
         if (!in_file)

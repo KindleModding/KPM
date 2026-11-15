@@ -94,7 +94,11 @@ char *asprintf_hd(const char *format, ...)
     return result;
 }
 
-bool is_path(const char *location)
+bool is_file(const char *location)
 {
-    return location[0] == '/' || location[0] == '.';
+    struct stat buf;
+    if (access(location, R_OK) || stat(location, &buf))
+        return false;
+
+    return (buf.st_mode & S_IFREG) == S_IFREG;
 }

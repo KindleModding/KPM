@@ -29,9 +29,9 @@ struct CLIState cli_state = {
 #endif
 };
 
-bool is_path(const char *location) // @TODO: Move this into a shared file
+bool is_file(const char *location) // @TODO: Move this into a shared file
 {
-    return location[0] == '/' || location[0] == '.';
+    return access(location, R_OK) == 0;
 }
 
 void init_header()
@@ -225,7 +225,7 @@ int main(int argc, char *argv[])
         KPM_InstallTarget *targets = malloc((argc - (command_index+1)) * sizeof(KPM_InstallTarget));
         for (int i=0; i < argc - (command_index+1); i++)
         {
-            if (is_path(argv[command_index+1 + i]))
+            if (is_file(argv[command_index+1 + i]))
             {
                 targets[i].type = INSTALL_FILE;
                 int r;
