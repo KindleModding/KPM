@@ -56,7 +56,7 @@ bool KPKG3_ValidateFile(KPKG_File *file, int file_size)
 
     uint64_t last_offset = 0;
     for (int i=0; i < file->kpkg3_payload.header->file_count; last_offset = file->kpkg3_payload.files[i].offset, i++)
-        if (file->kpkg3_payload.files[i].offset >= file_section_size || file->kpkg3_payload.files[i].offset <= last_offset)
+        if (file->kpkg3_payload.files[i].offset >= file_section_size || file->kpkg3_payload.files[i].offset + file->kpkg3_payload.files[i].size >= file_section_size || file->kpkg3_payload.files[i].offset <= last_offset)
             return false; // File content OOB, or offsets invalid
 
     return true;
@@ -385,6 +385,10 @@ KPKG_Result KPKG3_HandleRangeMap(KPKG_File *file, uint32_t range_count, KPKG3_Do
 KPKG_Result KPKG3_Unpack(KPKG_File *file, const char *out_path, const char *cmp_path, KPMIO *kpmio)
 {
     assert(file->kpkg_version != KPKG_VERSION_1 && file->kpkg_version != KPKG_VERSION_2);
+    uint64_t file_section_off = sizeof(KPKG3_Header);
+    file_section_off += sizeof(KPKG3_DependencyEntry) * file->kpkg3_payload.header->dependency_count;
+    file_section_off += sizeof(KPKG3_FileEntry) * file->kpkg3_payload.header->file_count;
+    file_section_off += file->kpkg3_payload.header->strings_size;
 
     kpmio->log(KPM_VERBOSITY_DEBUG, "Generating KPKG3 ranges...");
     KPKG3_DownloadRange *ranges = malloc(sizeof(KPKG3_DownloadRange) * file->kpkg3_payload.header->file_count);
@@ -447,12 +451,10 @@ KPKG_Result KPKG3_Unpack(KPKG_File *file, const char *out_path, const char *cmp_
 
             ranges[range_count] = (KPKG3_DownloadRange) {
                 .file_entry = file_entry,
-                .start = file_entry.offset,
+                .start = file_entry.offset + file_section_off,
+                .end = file_entry.offset + file_section_off + file_entry.size,
                 .out_path = asprintf_hd("%s/%s", out_path, KPKG3_GetString(&file->kpkg3_payload, file_entry.path))
             };
-            ranges[range_count].end = 0;
-            if (i+1 < file->kpkg3_payload.header->file_count)
-                ranges[range_count].end = file->kpkg3_payload.files[i+1].offset - file_entry.offset;
             range_count++;
             continue;
         }

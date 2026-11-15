@@ -1,6 +1,6 @@
 <mxfile host="app.diagrams.net">
   <diagram name="Page-1" id="9rtM6annv6j0TtzBnsRT">
-    <mxGraphModel dx="1585" dy="463" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+    <mxGraphModel dx="1395" dy="344" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -181,9 +181,6 @@
         <mxCell id="N2nTVU4Ex5qT0vqb23A_-123" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;rounded=0;" value="null-terminated string" vertex="1">
           <mxGeometry height="30" width="200" x="440" y="685" as="geometry" />
         </mxCell>
-        <mxCell id="06cu8ERaoBd7S3RhmO1_-1" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="size of compressed data stream is calculaed by next file entry offset - this offset" vertex="1">
-          <mxGeometry height="30" width="260" x="960" y="1020" as="geometry" />
-        </mxCell>
         <mxCell id="vYpSIP4w1dWDiAoOe37w-3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="installed size" vertex="1">
           <mxGeometry height="40" width="120" x="880" y="840" as="geometry" />
         </mxCell>
@@ -195,6 +192,12 @@
         </mxCell>
         <mxCell id="g2oBlLo2v8AOwEowNzme-3" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;rounded=0;" value="256-bit checksum of decompressed data" vertex="1">
           <mxGeometry height="40" width="280" x="1020" y="800" as="geometry" />
+        </mxCell>
+        <mxCell id="h_o-ZSbvnNxtHyVAU_39-1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="size" vertex="1">
+          <mxGeometry height="40" width="120" x="880" y="1000" as="geometry" />
+        </mxCell>
+        <mxCell id="h_o-ZSbvnNxtHyVAU_39-2" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;rounded=0;" value="u64, compressed size" vertex="1">
+          <mxGeometry height="40" width="390" x="1020" y="1000" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>

@@ -302,19 +302,31 @@ bool DownloadOperationFiles(KPM *kpm, OperationArray *operations, KPMIO *kpmio)
         switch (operation.target.type)
         {
         case GT_INSTALL_TARGET:
-            if (operation.target.target.type == INSTALL_FILE)
-            {
-                file = operation.target.target.file;
-            }
+            KPKG_Result res = KPKG_OK;
+            if (operation.target.target.type == INSTALL_ARTIFACT)
+                res = KPKG_LoadFile(&file, operation.target.target.artifact.url, out_path, kpmio);
             else
+                file = operation.target.target.file;
+            
+            if (res != KPKG_OK)
             {
-                KPKG_Result res;
-                if ((res = KPKG_LoadFile(&file, operation.target.target.artifact.url, out_path, kpmio)) != KPKG_OK)
-                {
-                    kpmio->log(KPM_VERBOSITY_ERROR, "KPKGErr: %i - Could not load KPKG file from %s", res, operation.target.target.artifact.url);
-                    return false;
-                }
+                kpmio->log(KPM_VERBOSITY_ERROR, "KPKGErr: %i - Could not load KPKG file from %s", res, operation.target.target.artifact.url);
+                return false;
             }
+
+            char* tmp_write_path = asprintf_hd("%s/%s", kpm->tmp_path, DepGraph_GetTargetId(operation.target));
+            char* pkg_path = asprintf_hd("%s/%s", kpm->pkg_path, DepGraph_GetTargetId(operation.target));
+            rmdir_r(tmp_write_path);
+            if ((res = KPKG_Unpack(file, tmp_write_path, pkg_path, kpmio)) != KPKG_OK)
+            {
+                kpmio->log(KPM_VERBOSITY_ERROR, "KPKGErr: %i - Could not unpack KPKG file", res);
+                if (operation.target.target.type == INSTALL_ARTIFACT)
+                    KPKG_CloseFile(file);
+                return false;
+            }
+
+            if (operation.target.target.type == INSTALL_ARTIFACT)
+                KPKG_CloseFile(file);
             break;
         case GT_DEPENDENCY:
         case GT_INSTALLED:

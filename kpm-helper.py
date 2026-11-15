@@ -103,7 +103,7 @@ class BinaryDependency:
 
 @dataclass
 class BinaryFileEntry:
-    SIZE = 8 + 32 + 8 + 32 + 4 + 8
+    SIZE = 8 + 32 + 8 + 32 + 4 + 8 + 8
     """Class that represents a file entry"""
     path_ptr: int
     installed_checksum: bytes
@@ -111,12 +111,13 @@ class BinaryFileEntry:
     checksum: bytes
     file_mode: int
     offset: int
+    size: int
 
     def decode(buffer: BytesIO):
-        return BinaryFileEntry(*struct.unpack("<Q32sQ32sIQ", buffer.read(BinaryFileEntry.SIZE)))
+        return BinaryFileEntry(*struct.unpack("<Q32sQ32sIQQ", buffer.read(BinaryFileEntry.SIZE)))
 
     def encode(self):
-        return struct.pack("<Q32sQ32sIQ", self.path_ptr, self.installed_checksum, self.installed_size, self.checksum, self.file_mode, self.offset)
+        return struct.pack("<Q32sQ32sIQQ", self.path_ptr, self.installed_checksum, self.installed_size, self.checksum, self.file_mode, self.offset, self.size)
 
 
 @dataclass
@@ -264,7 +265,8 @@ class Package:
                 os.stat(filepath).st_size,
                 compressed_digest.digest(),
                 os.stat(filepath).st_mode,
-                file_off
+                file_off,
+                compressed_size
             ))
             file_entry_string_off += len(filename.encode()) + 1
 

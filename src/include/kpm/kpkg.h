@@ -97,6 +97,7 @@ typedef struct __attribute__ ((packed))
     uint8_t checksum[KPKG_CHECKSUM_SIZE]; /**< The file's compressed checksum (sha256) */
     uint32_t file_mode; /**< The file mode */
     uint64_t offset; /**< Pointer to compressed stream in file data section */
+    uint64_t size;  /**< Size of compressed stream */
 } KPKG3_FileEntry;
 
 typedef struct
