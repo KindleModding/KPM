@@ -257,7 +257,7 @@ static int copy_data(struct archive *ar, struct archive *aw)
 }
 
 // @TODO: Implement progress monitoring
-KPKG_Result KPKG1_WriteTo(KPKG_File *file, const char *out_path, KPMIO *kpm_io)
+KPKG_Result KPKG1_Unpack(KPKG_File *file, const char *out_path, KPMIO *kpm_io)
 {
     assert(file->kpkg_version == 1 || file->kpkg_version == 2);
     // location is ALWAYS guaranteed to be a path for KPKG1 (see KPKG_CURLCallback)

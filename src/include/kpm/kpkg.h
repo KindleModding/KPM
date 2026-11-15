@@ -129,13 +129,7 @@ char *KPKG_GetAuthor(KPKG_File *file);
 char *KPKG_GetDescription(KPKG_File *file);
 SemVer KPKG_GetVersion(KPKG_File *file);
 size_t KPKG_GetDependencies(KPKG_File *file, KPKG_DependencyEntry **dependencies);
-KPKG_Result KPKG_ExtractTo(KPKG_File *file, const char *target, KPMIO *kpm_io);
+KPKG_Result KPKG_Unpack(KPKG_File *file, const char *out_path, const char *cmp_path, KPMIO *kpmio);
 void KPKG_CloseFile(KPKG_File *file);
-
-//// KPKG1-specific functions
-KPKG_Result KPKG1_WriteTo(KPKG_File *file, const char *out_path, KPMIO *kpmio);
-
-//// KPKG3-specific functions
-KPKG_Result KPKG3_WriteTo(KPKG_File *file, const char *out_path, const char *cmp_path, KPMIO *kpmio);
 
 #endif

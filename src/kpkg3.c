@@ -382,7 +382,7 @@ KPKG_Result KPKG3_HandleRangeMap(KPKG_File *file, uint32_t range_count, KPKG3_Do
     return KPKG_OK;
 }
 
-KPKG_Result KPKG3_WriteTo(KPKG_File *file, const char *out_path, const char *cmp_path, KPMIO *kpmio)
+KPKG_Result KPKG3_Unpack(KPKG_File *file, const char *out_path, const char *cmp_path, KPMIO *kpmio)
 {
     assert(file->kpkg_version != KPKG_VERSION_1 && file->kpkg_version != KPKG_VERSION_2);
 

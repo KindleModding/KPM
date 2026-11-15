@@ -366,6 +366,14 @@ size_t KPKG_GetDependencies(KPKG_File *file, KPKG_DependencyEntry **dependencies
     }
 }
 
+KPKG_Result KPKG_Unpack(KPKG_File *file, const char *out_path, const char *cmp_path, KPMIO *kpmio)
+{
+    if (file->kpkg_version == KPKG_VERSION_1 || file->kpkg_version == KPKG_VERSION_2)
+        return KPKG1_Unpack(file, out_path, kpmio);
+
+    return KPKG3_Unpack(file, out_path, cmp_path, kpmio);
+}
+
 void KPKG_CloseFile(KPKG_File *file)
 {
     if (file == NULL)
