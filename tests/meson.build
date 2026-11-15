@@ -31,3 +31,9 @@ test(
     executable('kpm_add_repo_test', files('kpm_add_repo_test.c') + all_test_files, dependencies: [kpm_dep], include_directories: all_test_includes),
     is_parallel: false
 )
+
+test(
+    'KPM Indexing Test',
+    executable('kpm_index_test', files('kpm_index_test.c') + all_test_files, dependencies: [kpm_dep], include_directories: all_test_includes),
+    is_parallel: false
+)
