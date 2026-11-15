@@ -8,6 +8,8 @@ sources = files(
     'installed_packages.c',
     'internal_utils.c',
     'kpkg.c',
+    'kpkg1.c',
+    'kpkg3.c',
     'kpm.c',
     'operation.c',
     'package.c',

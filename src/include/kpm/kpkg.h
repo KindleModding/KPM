@@ -17,6 +17,7 @@
 #define KPKG_MAGIC "KPKG"
 #define KPKG_MAGIC_LENGTH 4
 #define KPKG_VERSION 3
+#define KPKG_CHECKSUM_SIZE 32
 
 typedef enum {
     KPKG_VERSION_1 = 1,
@@ -27,6 +28,7 @@ typedef enum {
 typedef enum {
     KPKG_OK,
     KPKG_GENERIC_ERROR,
+    KPKG_NOTIMPL_ERROR, // Feature not yet implemented
     KPKG_UNKNOWN_FORMAT,
     KPKG_VALIDATION_ERROR,
     KPKG_IO_ERROR,
@@ -36,7 +38,8 @@ typedef enum {
     KPKG_EARLY_EOF,
     KPKG_CURL_ERROR,
     KPKG_LIBARCHIVE_ERROR,
-    KPKG_FILESYSTEM_ERROR
+    KPKG_FILESYSTEM_ERROR,
+    KPKG_HASH_ERROR
 } KPKG_Result;
 
 // Global types
@@ -89,9 +92,9 @@ typedef struct __attribute__ ((packed))
 typedef struct __attribute__ ((packed))
 {
     uint64_t path; /**< Pointer in string section to the file's path */
-    uint8_t installed_checksum[32]; /**< The file's decompressed checksum (sha256) */
+    uint8_t installed_checksum[KPKG_CHECKSUM_SIZE]; /**< The file's decompressed checksum (sha256) */
     uint64_t installed_size; /**< The size of this file once decompressed */
-    uint8_t checksum[32]; /**< The file's compressed checksum (sha256) */
+    uint8_t checksum[KPKG_CHECKSUM_SIZE]; /**< The file's compressed checksum (sha256) */
     uint32_t file_mode; /**< The file mode */
     uint64_t offset; /**< Pointer to compressed stream in file data section */
 } KPKG3_FileEntry;
@@ -99,7 +102,7 @@ typedef struct __attribute__ ((packed))
 typedef struct
 {
     void *internal_file; /**< The memory mapped file or NULL */
-    size_t map_size; /**< If file is local and memory mapped, this will indicate the size */
+    size_t mapped_size; /**< This will indicate the total size of the file */
     KPKG3_Header *header; /**< Local storage of header (always present) */
     KPKG3_DependencyEntry *dependencies; /**< The package's dependencies */
     KPKG3_FileEntry *files; /**< The package's files */
@@ -130,21 +133,9 @@ KPKG_Result KPKG_ExtractTo(KPKG_File *file, const char *target, KPMIO *kpm_io);
 void KPKG_CloseFile(KPKG_File *file);
 
 //// KPKG1-specific functions
-KPKG_Result KPKG1_ExtractTo(KPKG_File *file, const char *out_path, KPMIO *kpmio);
+KPKG_Result KPKG1_WriteTo(KPKG_File *file, const char *out_path, KPMIO *kpmio);
 
 //// KPKG3-specific functions
-
-KPKG3_FileEntry *KPKG3_GetFileEntries(KPKG3_Payload *kpkg3_payload, size_t *count);
-
-/**
- * @brief Extract a memory-mapped compressed file
- * 
- * @param ptr The location of the file in memory
- * @param size The size of the compressed data
- * @param out_size The size of the output file
- * @param out The path of the output file
- * @return KPKG_Result 
- */
-KPKG_Result KPKG3_ExtractData(void *ptr, uint64_t size, uint64_t out_size, char *out_path);
+KPKG_Result KPKG3_WriteTo(KPKG_File *file, const char *out_path, const char *cmp_path, KPMIO *kpmio);
 
 #endif
