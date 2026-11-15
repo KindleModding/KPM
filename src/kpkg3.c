@@ -237,10 +237,10 @@ size_t KPKG3_CurlWriteFunction(char *ptr, size_t size, size_t nmemb, void *userd
             }
 
             ZSTD_inBuffer in;
-            if (state->total_downloaded + read_remaining <= current_range.end)
-                in = (ZSTD_inBuffer) { ptr + offset, read_remaining, 0 };
-            else
+            if (state->total_downloaded + read_remaining >= current_range.end)
                 in = (ZSTD_inBuffer) { ptr + offset, current_range.end - state->total_downloaded, 0 };
+            else
+                in = (ZSTD_inBuffer) { ptr + offset, read_remaining, 0 };
 
             if (!EVP_DigestUpdate(state->cur_evp_ctx, in.src, in.size))
             {
@@ -260,6 +260,7 @@ size_t KPKG3_CurlWriteFunction(char *ptr, size_t size, size_t nmemb, void *userd
                     state->result = KPKG_ZSTD_ERROR;
                     return CURL_WRITEFUNC_ERROR;
                 }
+                
             state->total_downloaded += in.pos;
             offset += in.pos;
             if (fwrite(state->out_buf, 1, out.pos, state->cur_file) != out.pos)
@@ -343,10 +344,7 @@ KPKG_Result KPKG3_HandleRangeMap(KPKG_File *file, uint32_t range_count, KPKG3_Do
         kpmio->log(KPM_VERBOSITY_DEBUG, "Downloading %s", file->kpkg3_payload.files->path);
         KPKG3_DownloadRange range = ranges[i];
         char *ranges_str;
-        if (range.end != 0)
-            ranges_str = asprintf_hd("%lu-%lu", range.start, range.end);
-        else
-            ranges_str = asprintf_hd("%lu", range.start);
+        ranges_str = asprintf_hd("%lu-%lu", range.start, range.end + 1);
 
         KPKG3_DownloadState state = {
             .type = DOWNLOAD_SINGLERANGE,
