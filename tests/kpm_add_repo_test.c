@@ -43,25 +43,37 @@ int main(int argc, char* argv[])
     ASSERT_HD(KPM_AddRepository(kpm, repo_path, &repository, &kpmio), KPM_INVALID_RESPONSE_CONTENT);
     free(repo_path);
 
-    repo_path = asprintf_hd("file://%s/resources/invalid_repo_manifests/no_id.json", cur_path);
-    ASSERT_HD(KPM_AddRepository(kpm, repo_path, &repository, &kpmio), KPM_INVALID_RESPONSE_CONTENT);
-    free(repo_path);
+    char *invalid_repo_manifests[] = {
+        "bad_repo_version.json",
+        "empty_id.json",
+        "malformed_repo_version.json",
+        "missing_repo_version.json",
+        "negative_repo_version.json",
+        "no_description.json",
+        "no_id.json",
+        "no_name.json",
+        "not_json.txt"
+    };
 
-    repo_path = asprintf_hd("file://%s/resources/invalid_repo_manifests/no_name.json", cur_path);
-    ASSERT_HD(KPM_AddRepository(kpm, repo_path, &repository, &kpmio), KPM_INVALID_RESPONSE_CONTENT);
-    free(repo_path);
+    KPM_Result invalid_repo_manifests_responses[] = {
+        KPM_INVALID_RESPONSE_CONTENT,
+        KPM_INVALID_RESPONSE_CONTENT,
+        KPM_INVALID_RESPONSE_CONTENT,
+        KPM_INVALID_RESPONSE_CONTENT,
+        KPM_INVALID_RESPONSE_CONTENT,
+        KPM_INVALID_RESPONSE_CONTENT,
+        KPM_INVALID_RESPONSE_CONTENT,
+        KPM_INVALID_RESPONSE_CONTENT,
+        KPM_PARSE_ERROR
+    };
 
-    repo_path = asprintf_hd("file://%s/resources/invalid_repo_manifests/no_description.json", cur_path);
-    ASSERT_HD(KPM_AddRepository(kpm, repo_path, &repository, &kpmio), KPM_INVALID_RESPONSE_CONTENT);
-    free(repo_path);
-
-    repo_path = asprintf_hd("file://%s/resources/invalid_repo_manifests/empty_id.json", cur_path);
-    ASSERT_HD(KPM_AddRepository(kpm, repo_path, &repository, &kpmio), KPM_INVALID_RESPONSE_CONTENT);
-    free(repo_path);
-
-    repo_path = asprintf_hd("file://%s/resources/invalid_repo_manifests/not_json.txt", cur_path);
-    ASSERT_HD(KPM_AddRepository(kpm, repo_path, &repository, &kpmio), KPM_PARSE_ERROR);
-    free(repo_path);
+    for (int i=0; i < sizeof(invalid_repo_manifests)/sizeof(invalid_repo_manifests[0]); i++)
+    {
+        fprintf(stderr, "Adding repo %s\n", invalid_repo_manifests[i]);
+        repo_path = asprintf_hd("file://%s/resources/invalid_repo_manifests/%s", cur_path, invalid_repo_manifests[i]);
+        ASSERT_HD(KPM_AddRepository(kpm, repo_path, &repository, &kpmio), invalid_repo_manifests_responses[i]);
+        free(repo_path);
+    }
 
     repo_path = asprintf_hd("file://%s/resources/valid_repo_manifests/valid_v1.json", cur_path);
     ASSERT_HD(KPM_AddRepository(kpm, repo_path, &repository, &kpmio), KPM_OK);

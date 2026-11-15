@@ -1,0 +1,34 @@
+{
+    "manifest_version": 999,
+    "id": "testrepo_bad",
+    "name": "Test Repo Bad",
+    "description": "The test repo Bad",
+    "packages": {
+        "testpackage": {
+            "name": "Test Package",
+            "author": "Test Author",
+            "description": "Test Package Description",
+            "artifacts": [
+                {
+                    "url": "packages/test/artifacts/test_0.2.0_kindlehf-kindlepw2_compat.kpkg",
+                    "version": [
+                        0,
+                        2,
+                        0
+                    ],
+                    "dependencies": [
+                        {
+                            "id": "kpm",
+                            "min": [1, 0, 0],
+                            "max": [0, 0, 0]
+                        }
+                    ],
+                    "supported_platforms": [
+                        "kindlehf",
+                        "kindlepw2"
+                    ]
+                }
+            ]
+        }
+    }
+}

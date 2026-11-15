@@ -76,7 +76,7 @@ KPKG_Result KPKG1_LoadFile(KPKG_File *kpkg_file, const char *location, FILE *in_
         return KPKG_UNKNOWN_FORMAT;
     }
 
-    if (cJSON_GetObjectItem(json, "manifest_version") == NULL)
+    if (cJSON_GetObjectItem(json, "manifest_version") == NULL || !cJSON_IsNumber(cJSON_GetObjectItem(json, "manifest_version")))
     {
         free(raw_manifest);
         cJSON_Delete(json);

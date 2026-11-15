@@ -17,9 +17,29 @@ bool indexDependency(KPM *kpm, char *artifact_repository, char *artifact_id, cha
     sqlite3_bind_text(statement, 2, artifact_id, -1, SQLITE_STATIC);
     sqlite3_bind_text(statement, 3, artifact_url, -1, SQLITE_STATIC);
     sqlite3_bind_text(statement, 4, cJSON_GetStringValue(cJSON_GetObjectItem(dependency, "id")), -1, SQLITE_STATIC);
+
+    if (cJSON_GetObjectItem(dependency, "id") == NULL || strlen(cJSON_GetStringValue(cJSON_GetObjectItem(dependency, "id"))) == 0)
+    {
+        sqlite3_finalize(statement);
+        return false;
+    }
     
     if (cJSON_GetObjectItem(dependency, "min") != NULL)
     {
+        if (
+            cJSON_GetArraySize(cJSON_GetObjectItem(dependency, "min")) != 3 ||
+            !cJSON_IsNumber(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "min"), 0)) ||
+            !cJSON_IsNumber(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "min"), 1)) ||
+            !cJSON_IsNumber(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "min"), 2)) ||
+            cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "min"), 0)) < 0 ||
+            cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "min"), 1)) < 0 ||
+            cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "min"), 2)) < 0
+        )
+        {
+            sqlite3_finalize(statement);
+            return false;
+        }
+
         sqlite3_bind_int(statement, 5, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "min"), 0)));
         sqlite3_bind_int(statement, 6, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "min"), 1)));
         sqlite3_bind_int(statement, 7, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "min"), 2)));
@@ -33,6 +53,20 @@ bool indexDependency(KPM *kpm, char *artifact_repository, char *artifact_id, cha
 
     if (cJSON_GetObjectItem(dependency, "max") != NULL)
     {
+        if (
+            cJSON_GetArraySize(cJSON_GetObjectItem(dependency, "max")) != 3 ||
+            !cJSON_IsNumber(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "max"), 0)) ||
+            !cJSON_IsNumber(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "max"), 1)) ||
+            !cJSON_IsNumber(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "max"), 2)) ||
+            cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "max"), 0)) < 0 ||
+            cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "max"), 1)) < 0 ||
+            cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "max"), 2)) < 0
+        )
+        {
+            sqlite3_finalize(statement);
+            return false;
+        }
+
         sqlite3_bind_int(statement, 8, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "max"), 0)));
         sqlite3_bind_int(statement, 9, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "max"), 1)));
         sqlite3_bind_int(statement, 10, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "max"), 2)));
@@ -42,6 +76,27 @@ bool indexDependency(KPM *kpm, char *artifact_repository, char *artifact_id, cha
         sqlite3_bind_int(statement, 8, SEMVER_VERSION_MAX);
         sqlite3_bind_int(statement, 9, SEMVER_VERSION_MAX);
         sqlite3_bind_int(statement, 10, SEMVER_VERSION_MAX);
+    }
+
+    if (
+        cJSON_GetObjectItem(dependency, "min") != NULL &&
+        cJSON_GetObjectItem(dependency, "max") != NULL &&
+        SemVerCmp(
+            (SemVer) {
+                .major = cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "min"), 0)),
+                .minor = cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "min"), 1)),
+                .patch = cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "min"), 2))
+            },
+            (SemVer) {
+                .major = cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "max"), 0)),
+                .minor = cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "max"), 1)),
+                .patch = cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "max"), 2))
+            }
+        ) >= 0
+    )
+    {
+        sqlite3_finalize(statement);
+        return false;
     }
 
     int status;
@@ -58,7 +113,7 @@ bool indexDependency(KPM *kpm, char *artifact_repository, char *artifact_id, cha
 
 bool indexArtifact(KPM *kpm, char *repository_id, char *package_id, cJSON *artifact, KPMIO *kpmio)
 {
-    if (strlen(cJSON_GetStringValue(cJSON_GetObjectItem(artifact, "url"))) == 0)
+    if (cJSON_GetObjectItem(artifact, "url") == NULL || !cJSON_IsString(cJSON_GetObjectItem(artifact, "url")) || strlen(cJSON_GetStringValue(cJSON_GetObjectItem(artifact, "url"))) == 0)
     {
         kpmio->log(KPM_VERBOSITY_ERROR, "Artifact has an empty URL field");
         return false;
@@ -116,6 +171,7 @@ bool indexArtifact(KPM *kpm, char *repository_id, char *package_id, cJSON *artif
 
 bool indexPackage(KPM *kpm, char *repository_id, cJSON *package, KPMIO *kpmio)
 {
+    sqlite3_exec(kpm->db, "SAVEPOINT package", NULL, NULL, NULL);
     // Ensure the package is well-formed
     if (cJSON_GetObjectItem(package, "name") == NULL ||
     cJSON_GetObjectItem(package, "author") == NULL ||
@@ -124,6 +180,7 @@ bool indexPackage(KPM *kpm, char *repository_id, cJSON *package, KPMIO *kpmio)
     cJSON_GetArraySize(cJSON_GetObjectItem(package, "artifacts")) == 0)
     {
         kpmio->log(KPM_VERBOSITY_ERROR, "Could not parse package %s", package->string);
+        sqlite3_exec(kpm->db, "ROLLBACK TRANSACTION TO SAVEPOINT package", NULL, NULL, NULL);
         return false;
     }
 
@@ -142,6 +199,7 @@ bool indexPackage(KPM *kpm, char *repository_id, cJSON *package, KPMIO *kpmio)
     {
         kpmio->log(KPM_VERBOSITY_ERROR, "SQLite error encountered when indexing package %s", package->string);
         sqlite3_finalize(statement);
+        sqlite3_exec(kpm->db, "ROLLBACK TRANSACTION TO SAVEPOINT package", NULL, NULL, NULL);
         return false;
     }
     sqlite3_finalize(statement);
@@ -149,33 +207,41 @@ bool indexPackage(KPM *kpm, char *repository_id, cJSON *package, KPMIO *kpmio)
 
 
     // Now we index artifacts
+    bool has_any_artifact=false;
     cJSON *artifact;
     cJSON_ArrayForEach(artifact, cJSON_GetObjectItem(package, "artifacts"))
     {
         // Check this artifact's supported_platforms
-        if (cJSON_IsArray(cJSON_GetObjectItem(artifact, "supported_platforms")))
+        if (!cJSON_IsArray(cJSON_GetObjectItem(artifact, "supported_platforms")))
+            continue;
+        
+        bool supported=false;
+        cJSON *supported_platform;
+        cJSON_ArrayForEach(supported_platform, cJSON_GetObjectItem(artifact, "supported_platforms"))
         {
-            bool supported=false;
-            cJSON *supported_platform;
-            cJSON_ArrayForEach(supported_platform, cJSON_GetObjectItem(artifact, "supported_platforms"))
+            if (strcmp(supported_platform->valuestring, KPM_PLATFORM) == 0)
             {
-                if (strcmp(supported_platform->valuestring, KPM_PLATFORM) == 0)
-                {
-                    supported = true;
-                    break;
-                }
+                supported = true;
+                break;
             }
-
-            if (!supported)
-                continue;
         }
 
-        if (!indexArtifact(kpm, repository_id, package->string, artifact, kpmio)) // Dependency failed
+        if (!supported)
+            continue;
+
+        if (!indexArtifact(kpm, repository_id, package->string, artifact, kpmio))
         {
             kpmio->log(KPM_VERBOSITY_ERROR, "Could not index artifact for [%s]", package->string);
+            sqlite3_exec(kpm->db, "ROLLBACK TRANSACTION TO SAVEPOINT package", NULL, NULL, NULL);
             return false; // Stop adding packages if one fails
         }
+        has_any_artifact = true;
     }
+
+    if (has_any_artifact)
+        sqlite3_exec(kpm->db, "RELEASE SAVEPOINT package", NULL, NULL, NULL);
+    else
+        sqlite3_exec(kpm->db, "ROLLBACK TRANSACTION TO SAVEPOINT package", NULL, NULL, NULL);
 
     return true;
 }
@@ -211,6 +277,7 @@ KPM_Result KPM_UpdateIndex(KPM *kpm, KPMIO *kpmio)
         {
             kpmio->log(KPM_VERBOSITY_ERROR, "Could not fetch url [%s] - CURL Error: %i - %s", repositories[i].url, curl_code, curl_easy_strerror(curl_code));
             SimpleGET_Cleanup(request);
+            all_ok = false;
             continue;
         }
 
@@ -219,6 +286,7 @@ KPM_Result KPM_UpdateIndex(KPM *kpm, KPMIO *kpmio)
         {
             kpmio->log(KPM_VERBOSITY_ERROR, "Could not fetch url [%s]", repositories[i].url);
             SimpleGET_Cleanup(request);
+            all_ok = false;
             continue;
         }
 
@@ -229,15 +297,22 @@ KPM_Result KPM_UpdateIndex(KPM *kpm, KPMIO *kpmio)
             kpmio->log(KPM_VERBOSITY_ERROR, "Could not parse manifest");
             SimpleGET_Cleanup(request);
             cJSON_Delete(json);
-            continue; // Move onto next repo
+            all_ok = false;
+            continue;
         }
 
-        if (cJSON_GetNumberValue(cJSON_GetObjectItem(json, "manifest_version")) > KPM_MANIFEST_VERSION)
+        if (
+            cJSON_GetObjectItem(json, "manifest_version") == NULL ||
+            !cJSON_IsNumber(cJSON_GetObjectItem(json, "manifest_version")) ||
+            cJSON_GetNumberValue(cJSON_GetObjectItem(json, "manifest_version")) < 0 ||
+            cJSON_GetNumberValue(cJSON_GetObjectItem(json, "manifest_version")) > KPM_MANIFEST_VERSION
+        )
         {
             kpmio->log(KPM_VERBOSITY_ERROR, "Invalid manifest version, got %.0f, expected %i", cJSON_GetNumberValue(cJSON_GetObjectItem(json, "manifest_version")), KPM_MANIFEST_VERSION);
             kpmio->log(KPM_VERBOSITY_ERROR, "You may need to update KPM, run: kpm install kpm or kpm upgrade");
             SimpleGET_Cleanup(request);
             cJSON_Delete(json);
+            all_ok = false;
             continue;
         }
 
@@ -263,31 +338,31 @@ KPM_Result KPM_UpdateIndex(KPM *kpm, KPMIO *kpmio)
             cJSON_Delete(json);
             SimpleGET_Cleanup(request);
             sqlite3_exec(kpm->db, "ROLLBACK", NULL, NULL, NULL);
-            continue; // Move onto next repo
+            all_ok = false;
+            continue;
         }
 
         // Index packages & artifacts
         // We COULD give progress status here... but nah - HD
-        bool ok = true;
+        bool any_ok = true;
         cJSON *package;
         cJSON_ArrayForEach(package, cJSON_GetObjectItem(json, "packages"))
         {
-            if (!indexPackage(kpm, repositories[i].id, package, kpmio))
-            {
-                sqlite3_exec(kpm->db, "ROLLBACK", NULL, NULL, NULL);
-                kpmio->log(KPM_VERBOSITY_ERROR, "Could not index repository [%s]", repositories[i].id);
-                ok = false;
-                break;
-            }
+            if (indexPackage(kpm, repositories[i].id, package, kpmio))
+                any_ok = true;
+            else
+                all_ok = false;
         }
 
-        if (!ok)
+        if (any_ok)
+        {
+            sqlite3_exec(kpm->db, "COMMIT", NULL, NULL, NULL);
+        }
+        else
         {
             all_ok = false;
             sqlite3_exec(kpm->db, "ROLLBACK", NULL, NULL, NULL);
         }
-        else
-            sqlite3_exec(kpm->db, "COMMIT", NULL, NULL, NULL);
         
         cJSON_Delete(json);
         SimpleGET_Cleanup(request);

@@ -1,0 +1,60 @@
+{
+    "manifest_version": 2,
+    "id": "testrepo_bad",
+    "name": "Test Repo Bad",
+    "description": "The test repo Bad",
+    "packages": {
+        "allgoodpackage": {
+            "name": "All good package",
+            "author": "Test Author",
+            "description": "Test Package Description",
+            "artifacts": [
+                {
+                    "url": "packages/allgood/artifacts/test_0.2.0_kindlehf-kindlepw2_compat.kpkg",
+                    "version": [
+                        0,
+                        0,
+                        1
+                    ],
+                    "dependencies": [
+                        {
+                            "id": "kpm",
+                            "min": [0, 0, 0],
+                            "max": [1, 0, 0]
+                        }
+                    ],
+                    "supported_platforms": [
+                        "kindlehf",
+                        "kindlepw2"
+                    ]
+                }
+            ]
+        },
+        "testpackage": {
+            "name": "Test Package",
+            "author": "Test Author",
+            "description": "Test Package Description",
+            "artifacts": [
+                {
+                    "url": "packages/test/artifacts/test_0.2.0_kindlehf-kindlepw2_compat.kpkg",
+                    "version": [
+                        -1,
+                        -2,
+                        -3
+                    ],
+                    "dependencies": [
+                        {
+                            "id": "kpm",
+                            "min": [0, 0, 0],
+                            "max": [1, 0, 0]
+                        }
+                    ],
+                    "supported_platforms": [
+                        "kindlehf",
+                        "kindlepw2"
+                    ]
+                }
+            ]
+        }
+    }
+}

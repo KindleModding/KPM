@@ -127,6 +127,20 @@ KPM_Result KPM_AddRepository(KPM *kpm, const char *url, KPM_Repository *reposito
     }
 
     if (
+        cJSON_GetObjectItem(json, "manifest_version") == NULL ||
+        !cJSON_IsNumber(cJSON_GetObjectItem(json, "manifest_version")) ||
+        cJSON_GetNumberValue(cJSON_GetObjectItem(json, "manifest_version")) < 0 ||
+        cJSON_GetNumberValue(cJSON_GetObjectItem(json, "manifest_version")) > KPM_MANIFEST_VERSION
+    )
+    {
+        kpmio->log(KPM_VERBOSITY_ERROR, "Invalid manifest version, got %.0f, expected %i", cJSON_GetNumberValue(cJSON_GetObjectItem(json, "manifest_version")), KPM_MANIFEST_VERSION);
+        kpmio->log(KPM_VERBOSITY_ERROR, "You may need to update KPM, run: kpm install kpm or kpm upgrade");
+        cJSON_Delete(json);
+        SimpleGET_Cleanup(request);
+        return KPM_INVALID_RESPONSE_CONTENT;
+    }
+
+    if (
         !cJSON_IsString(cJSON_GetObjectItem(json, "id")) ||
         !cJSON_IsString(cJSON_GetObjectItem(json, "name")) ||
         !cJSON_IsString(cJSON_GetObjectItem(json, "description")) ||
