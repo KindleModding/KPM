@@ -138,7 +138,7 @@ KPM *KPM_InitialiseAdv(char *db_path, char *pkg_path, char *tmp_path)
         ) STRICT;
     )", NULL, NULL, NULL);
 
-    sqlite3_exec(kpm->db, "INSERT INTO repositories (id, url, name, description) VALUES ('kindlemodding', 'https://repo.kindlemodding.org/manifest.v2.json', 'Official KMC Repo', 'The official KMC repo') ON CONFLICT(id) DO UPDATE SET url='https://repo.kindlemodding.org/manifest.v2.json'", NULL, NULL, NULL);
+    sqlite3_exec(kpm->db, "INSERT INTO repositories (id, url, name, description) VALUES ('kindlemodding', 'https://repo.kindlemodding.org/manifest.v3.json', 'Official KMC Repo', 'The official KMC repo') ON CONFLICT(id) DO UPDATE SET url='https://repo.kindlemodding.org/manifest.v3.json'", NULL, NULL, NULL);
 
     char *query = asprintf_hd("INSERT OR REPLACE INTO installed_packages (id, repository, name, author, description, version_major, version_minor, version_patch, installed_as_dependency) VALUES ('kpm', 'kindlemodding', 'KPM', 'Hackerdude', 'The Kindle Package Manager allows you to install and uninstall apps and programs easily on your Kindle', %i, %i, %i, 0)", KPM_VERSION_MAJOR, KPM_VERSION_MINOR, KPM_VERSION_PATCH);
     sqlite3_exec(kpm->db, query, NULL, NULL, NULL);

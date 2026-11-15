@@ -5,18 +5,44 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-KPM initialise_kpm();
+KPM *initialise_kpm();
 
 char *vasprintf_hd(const char *format, va_list args);
 char *asprintf_hd(const char *format, ...);
+char *get_path(int argc, char* argv[]);
 
-inline void assert_hd(bool assertion)
-{
-    if (!assertion)
-    {
-        fprintf(stderr, "Assertion failed at %s:%i.", __FILE__, __LINE__);
-        exit(1);
+#define GET_FORMAT(a) _Generic(a,     \
+    int : "%i",     \
+    char* : "%s",   \
+    char : "%c",    \
+    size_t: "%zu",  \
+    long: "%li",    \
+    default : "%i"  \
+)
+
+#define ASSERT_HD(a, b)                                                         \
+    if (a != b) {                                                               \
+        fflush(stderr);                                                         \
+        fprintf(stderr, "Assertion failed at %s:%i.\n", __FILE__, __LINE__);    \
+        fprintf(stderr, "Expected: ");                                          \
+        fprintf(stderr, GET_FORMAT(b), b);                                      \
+        fprintf(stderr, ", got: ");                                             \
+        fprintf(stderr, GET_FORMAT(a), a);                                      \
+        fprintf(stderr, "\n");                                                  \
+        exit(1);                                                                \
     }
-}
+
+
+#define ASSERT_HD_STR(a, b)                                                     \
+    if (strcmp(a, b)) {                                                        \
+        fflush(stderr);                                                         \
+        fprintf(stderr, "Assertion failed at %s:%i.\n", __FILE__, __LINE__);    \
+        fprintf(stderr, "Expected: ");                                          \
+        fprintf(stderr, GET_FORMAT(b), b);                                      \
+        fprintf(stderr, ", got: ");                                             \
+        fprintf(stderr, GET_FORMAT(a), a);                                      \
+        fprintf(stderr, "\n");                                                  \
+        exit(1);                                                                \
+    }
 
 #endif

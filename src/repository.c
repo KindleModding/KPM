@@ -120,6 +120,11 @@ KPM_Result KPM_AddRepository(KPM *kpm, const char *url, KPM_Repository *reposito
 
     kpmio->log(KPM_VERBOSITY_DEBUG, "Got JSON:\n%s", request->buffer);
     cJSON *json = cJSON_Parse((char*) request->buffer);
+    if (!json)
+    {
+        SimpleGET_Cleanup(request);
+        return KPM_PARSE_ERROR;
+    }
 
     if (
         !cJSON_IsString(cJSON_GetObjectItem(json, "id")) ||
@@ -142,7 +147,7 @@ KPM_Result KPM_AddRepository(KPM *kpm, const char *url, KPM_Repository *reposito
     if (strlen(repo_id) == 0 || repo_id[0] == ' ' || repo_id[strlen(repo_id)-1] == ' ')
     {
         kpmio->log(KPM_VERBOSITY_ERROR, "Repository must have a valid id");
-        return KPM_PARSE_ERROR;
+        return KPM_INVALID_RESPONSE_CONTENT;
     }
 
     sqlite3_exec(kpm->db, "BEGIN", NULL, NULL, NULL);
@@ -182,6 +187,11 @@ KPM_Result KPM_AddRepository(KPM *kpm, const char *url, KPM_Repository *reposito
 
 KPM_Result KPM_RemoveRepository(KPM *kpm, const char *repository_id)
 {
+    if (!strcmp(repository_id, "kindlemodding"))
+    {
+        return KPM_GENERIC_ERROR;
+    }
+
     sqlite3_exec(kpm->db, "BEGIN", NULL, NULL, NULL);
     const char *zSQL = "DELETE FROM repositories WHERE id=?;";
     sqlite3_stmt *statement;
