@@ -129,6 +129,156 @@
                     ]
                 }
             ]
+        },
+        "testnegativemin1": {
+            "name": "Test Negative Min 1",
+            "author": "Test Author",
+            "description": "Test Package Description",
+            "artifacts": [
+                {
+                    "url": "packages/test/artifacts/test1_0.2.0_kindlehf-kindlepw2_compat.kpkg",
+                    "version": [
+                        1,
+                        0,
+                        0
+                    ],
+                    "dependencies": [
+                        {
+                            "id": "kpm",
+                            "min": [-1, 0, 0]
+                        }
+                    ],
+                    "supported_platforms": [
+                        "kindlehf",
+                        "kindlepw2"
+                    ]
+                }
+            ]
+        },
+        "testnegativemin2": {
+            "name": "Test Negative Min 2",
+            "author": "Test Author",
+            "description": "Test Package Description",
+            "artifacts": [
+                {
+                    "url": "packages/test/artifacts/test2_0.2.0_kindlehf-kindlepw2_compat.kpkg",
+                    "version": [
+                        1,
+                        0,
+                        0
+                    ],
+                    "dependencies": [
+                        {
+                            "id": "kpm",
+                            "min": [0, -1, 0]
+                        }
+                    ],
+                    "supported_platforms": [
+                        "kindlehf",
+                        "kindlepw2"
+                    ]
+                }
+            ]
+        },
+        "testnegativemin3": {
+            "name": "Test Negative Min 3",
+            "author": "Test Author",
+            "description": "Test Package Description",
+            "artifacts": [
+                {
+                    "url": "packages/test/artifacts/test3_0.2.0_kindlehf-kindlepw2_compat.kpkg",
+                    "version": [
+                        1,
+                        0,
+                        0
+                    ],
+                    "dependencies": [
+                        {
+                            "id": "kpm",
+                            "min": [0, 0, -1]
+                        }
+                    ],
+                    "supported_platforms": [
+                        "kindlehf",
+                        "kindlepw2"
+                    ]
+                }
+            ]
+        },
+        "testlargemin1": {
+            "name": "Test Large Min 1",
+            "author": "Test Author",
+            "description": "Test Package Description",
+            "artifacts": [
+                {
+                    "url": "packages/test/artifacts/test1_0.2.0_kindlehf-kindlepw2_compat.kpkg",
+                    "version": [
+                        1,
+                        0,
+                        0
+                    ],
+                    "dependencies": [
+                        {
+                            "id": "kpm",
+                            "min": [4294967296, 0, 0]
+                        }
+                    ],
+                    "supported_platforms": [
+                        "kindlehf",
+                        "kindlepw2"
+                    ]
+                }
+            ]
+        },
+        "testlargemin2": {
+            "name": "Test Large Min 2",
+            "author": "Test Author",
+            "description": "Test Package Description",
+            "artifacts": [
+                {
+                    "url": "packages/test/artifacts/test2_0.2.0_kindlehf-kindlepw2_compat.kpkg",
+                    "version": [
+                        1,
+                        0,
+                        0
+                    ],
+                    "dependencies": [
+                        {
+                            "id": "kpm",
+                            "min": [0, 4294967296, 0]
+                        }
+                    ],
+                    "supported_platforms": [
+                        "kindlehf",
+                        "kindlepw2"
+                    ]
+                }
+            ]
+        },
+        "testlargemin3": {
+            "name": "Test Large Min 3",
+            "author": "Test Author",
+            "description": "Test Package Description",
+            "artifacts": [
+                {
+                    "url": "packages/test/artifacts/test3_0.2.0_kindlehf-kindlepw2_compat.kpkg",
+                    "version": [
+                        1,
+                        0,
+                        0
+                    ],
+                    "dependencies": [
+                        {
+                            "id": "kpm",
+                            "min": [0, 0, 4294967296]
+                        }
+                    ],
+                    "supported_platforms": [
+                        "kindlehf",
+                        "kindlepw2"
+                    ]
+                }
+            ]
         }
     }
 }

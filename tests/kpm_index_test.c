@@ -78,6 +78,7 @@ int main(int argc, char *argv[])
         "resources/bad_repo_manifests/bad_v3_artifact_missing_install_size.json",
         "resources/bad_repo_manifests/bad_v3_artifact_missing_url.json",
         "resources/bad_repo_manifests/duplicate_artifact_version.json",
+        "resources/bad_repo_manifests/empty_package_artifacts.json",
         "resources/bad_repo_manifests/malformed_artifact_version.json",
         "resources/bad_repo_manifests/malformed_dependency_empty.json",
         "resources/bad_repo_manifests/malformed_dependency_id.json",
@@ -89,10 +90,7 @@ int main(int argc, char *argv[])
         "resources/bad_repo_manifests/missing_package_artifacts.json",
         "resources/bad_repo_manifests/missing_package_author.json",
         "resources/bad_repo_manifests/missing_package_description.json",
-        "resources/bad_repo_manifests/missing_package_name.json",
-        "resources/bad_repo_manifests/negative_artifact_version.json",
-        "resources/bad_repo_manifests/negative_dependency_max.json",
-        "resources/bad_repo_manifests/negative_dependency_min.json"
+        "resources/bad_repo_manifests/missing_package_name.json"
     };
 
     for (int i=0; i < sizeof(array)/sizeof(array[0]); i++)
