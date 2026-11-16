@@ -144,15 +144,21 @@ All hooks are optional, however packages should provide a `launch.sh` hook.
 | `launch.sh` | Launch hook |
 | `startup.sh` | Startup hook |
 
+### Advice
+Ensure you do not make the following common mistakes:
+- Do not assume `uninstall.sh` is run after a succesful installation, ensure your file removal commands do not fail if the file does not exist
+- Do not assume `install.sh` is run on a clean system, be prepared to overwrite files that belong to your package
+- Ensure your hooks handle failure and unexpected situations gracefully
+
 ### Hook Execution
 Hooks are executed by `sh`.  
 
-|Filename|Execution|
-|:---:|:---:|
-| `install.sh` | Executed when installing the package after the package is unpacked |
-| `uninstall.sh` | Executed when uninstalling the package before the package files are deleted |
-| `launch.sh` | Executed by a launcher or scriptlet to launch the package |
-| `startup.sh` | Executed when the device boots |
+|    Filename    |                                  Execution                                  | Flags                     |
+|:--------------:|:---------------------------------------------------------------------------:|---------------------------|
+|  `install.sh`  |      Executed when installing the package after the package is unpacked     | `upgrade`                 |
+| `uninstall.sh` | Executed when uninstalling the package before the package files are deleted | `upgrade`, `install_fail` |
+|   `launch.sh`  |          Executed by a launcher or scriptlet to launch the package          |                           |
+|  `startup.sh`  |                        Executed when the device boots                       |                           |
 
 ### startup
 `startup.sh` is ran when the device boots and runs as `KPPMainApp` is initialised.  
@@ -172,6 +178,8 @@ Note that KPM handles file deletion for the unpacked package, the `uninstall.sh`
 `install.sh` and `uninstall.sh` **must** return 0 on succesful completion, otherwise the package deems the operation to be a failure.  
 
 When `install.sh` fails, `uninstall.sh` is run with the `install_fail` flag (ie: `sh uninstall.sh install_fail`)
+
+When `uninstall.sh` fails, `install.sh` is **NOT** run again, the package is **NOT** marked as uninstalled.
 
 ### Persistent Data
 If packages want to store data between upgrades, they **must not** store it in their unpacked package folder as it will be deleted during upgrades. It is recommended to store configuration and other such data under `/mnt/us/config/<packageid>/`.
