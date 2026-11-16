@@ -1,8 +1,11 @@
 #ifndef INTERNAL_UTILS_H
 #define INTERNAL_UTILS_H
 
+#include "sqlite3.h"
 #include <stdio.h>
 #include <sys/stat.h>
+
+void KPM_MigrateDB(sqlite3 *db);
 
 void mkdir_r(char *path, __mode_t mode);
 void rmdir_r(char *path);

@@ -4,6 +4,7 @@
 
 #include "kpm/kpm.h"
 #include "internal_utils.h"
+#include "sqlite3.h"
 
 const char *KPM_ErrorToString(KPM_Result error)
 {
@@ -34,6 +35,38 @@ const char *KPM_ErrorToString(KPM_Result error)
     }
 };
 
+void KPM_MigrateDB(sqlite3 *db)
+{
+    int db_version;
+
+    sqlite3_stmt *statement;
+    sqlite3_prepare_v2(db, "SELECT value FROM kpm_meta WHERE key='schema_version';", -1, &statement, NULL);
+    if (sqlite3_step(statement) == SQLITE_ROW)
+        db_version = atoi((const char*) sqlite3_column_text(statement, 0));
+    else
+        db_version = 0;
+    sqlite3_finalize(statement);
+
+    switch (db_version)
+    {
+    case 0:
+        // Allow installed packages with no repository
+        sqlite3_exec(db, "ALTER TABLE installed_packages ALTER COLUMN repository TEXT;", NULL, NULL, NULL);
+    case 1:
+        sqlite3_exec(db, "ALTER TABLE artifacts ADD COLUMN installed_size INTEGER;", NULL, NULL, NULL); // For KPKG3+ the installed size of the artifact
+        sqlite3_exec(db, "ALTER TABLE artifacts ADD COLUMN digest TEXT;", NULL, NULL, NULL); // For KPKG3+ the digest of the package header
+        sqlite3_exec(db, "ALTER TABLE packages ADD COLUMN icon TEXT;", NULL, NULL, NULL); // For KPKG3+ the package icon
+    };
+
+    db_version = 2;
+    sqlite3_prepare_v2(db, "INSERT OR REPLACE INTO kpm_meta (key, value) VALUES ('schema_version', ?);", -1, &statement, NULL);
+    char *db_version_str = asprintf_hd("%i", db_version);
+    sqlite3_bind_text(statement, 1, db_version_str, -1, SQLITE_STATIC);
+    sqlite3_step(statement);
+    sqlite3_finalize(statement);
+    free(db_version_str);
+}
+
 KPM *KPM_InitialiseAdv(char *db_path, char *pkg_path, char *tmp_path)
 {
     KPM *kpm = malloc(sizeof(KPM));
@@ -59,6 +92,13 @@ KPM *KPM_InitialiseAdv(char *db_path, char *pkg_path, char *tmp_path)
     sqlite3_exec(kpm->db, "PRAGMA foreign_keys=ON;", NULL, NULL, NULL); // @TODO: Ensure this succeeds
 
     sqlite3_exec(kpm->db, R"(
+        CREATE TABLE IF NOT EXISTS kpm_meta (
+            key TEXT PRIMARY KEY NOT NULL,
+            value TEXT
+        ) STRICT;
+    )", NULL, NULL, NULL);
+
+    sqlite3_exec(kpm->db, R"(
         CREATE TABLE IF NOT EXISTS repositories (
             id TEXT PRIMARY KEY NOT NULL,
             url TEXT NOT NULL,
@@ -74,6 +114,7 @@ KPM *KPM_InitialiseAdv(char *db_path, char *pkg_path, char *tmp_path)
             name TEXT NOT NULL,
             author TEXT NOT NULL,
             description TEXT NOT NULL,
+            icon TEXT,
             PRIMARY KEY (repository, id)
         ) STRICT;
     )", NULL, NULL, NULL);
@@ -83,6 +124,8 @@ KPM *KPM_InitialiseAdv(char *db_path, char *pkg_path, char *tmp_path)
             repository TEXT NOT NULL,
             id TEXT NOT NULL,
             url TEXT NOT NULL,
+            installed_size INTEGER,
+            digest TEXT,
             version_major INTEGER NOT NULL,
             version_minor INTEGER NOT NULL,
             version_patch INTEGER NOT NULL,
@@ -111,7 +154,7 @@ KPM *KPM_InitialiseAdv(char *db_path, char *pkg_path, char *tmp_path)
     sqlite3_exec(kpm->db, R"(
         CREATE TABLE IF NOT EXISTS installed_packages (
             id TEXT PRIMARY KEY NOT NULL,
-            repository TEXT NOT NULL,
+            repository TEXT,
             name TEXT NOT NULL,
             author TEXT NOT NULL,
             description TEXT NOT NULL,
@@ -121,9 +164,6 @@ KPM *KPM_InitialiseAdv(char *db_path, char *pkg_path, char *tmp_path)
             installed_as_dependency INTEGER NOT NULL
         ) STRICT;
     )", NULL, NULL, NULL);
-
-    // For old db format, update installed_packages to allow NULL values
-    sqlite3_exec(kpm->db, "ALTER TABLE installed_packages ALTER COLUMN repository TEXT", NULL, NULL, NULL);
 
     sqlite3_exec(kpm->db, R"(
         CREATE TABLE IF NOT EXISTS current_dependencies (
@@ -137,6 +177,8 @@ KPM *KPM_InitialiseAdv(char *db_path, char *pkg_path, char *tmp_path)
             max_version_patch INTEGER NOT NULL
         ) STRICT;
     )", NULL, NULL, NULL);
+
+    KPM_MigrateDB(kpm->db);
 
     sqlite3_exec(kpm->db, "INSERT INTO repositories (id, url, name, description) VALUES ('kindlemodding', 'https://repo.kindlemodding.org/manifest.v3.json', 'Official KMC Repo', 'The official KMC repo') ON CONFLICT(id) DO UPDATE SET url='https://repo.kindlemodding.org/manifest.v3.json'", NULL, NULL, NULL);
 

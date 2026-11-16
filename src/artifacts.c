@@ -9,10 +9,12 @@ void KPM_FreeArtifact(KPM_Artifact *artifact)
      free(artifact->repository);
      free(artifact->id);
      free(artifact->url);
+     free(artifact->digest);
  
      artifact->repository = NULL;
      artifact->id = NULL;
      artifact->url = NULL;
+     artifact->digest = NULL;
 }
  
 void KPM_FreeArtifactList(size_t artifact_count, KPM_Artifact *artifacts)
@@ -30,7 +32,7 @@ KPM_Result KPM_GetArtifact(KPM *kpm, const char *repository_id, const char *pack
 
     if (repository_id != NULL)
     {
-        zSQL = "SELECT url, repository, id, version_major, version_minor, version_patch FROM artifacts WHERE repository=? AND id=? AND version_major=? AND version_minor=? AND version_patch=? LIMIT 1;";
+        zSQL = "SELECT repository, id, url, installed_size, digest, version_major, version_minor, version_patch FROM artifacts WHERE repository=? AND id=? AND version_major=? AND version_minor=? AND version_patch=? LIMIT 1;";
         sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
         sqlite3_bind_text(statement, 1, repository_id, -1, SQLITE_STATIC);
         sqlite3_bind_text(statement, 2, package_id, -1, SQLITE_STATIC);
@@ -40,7 +42,7 @@ KPM_Result KPM_GetArtifact(KPM *kpm, const char *repository_id, const char *pack
     }
     else
     {
-        zSQL = "SELECT url, repository, id, version_major, version_minor, version_patch FROM artifacts WHERE id=? AND version_major=? AND version_minor=? AND version_patch=? LIMIT 1;";
+        zSQL = "SELECT repository, id, url, installed_size, digest, version_major, version_minor, version_patch FROM artifacts WHERE id=? AND version_major=? AND version_minor=? AND version_patch=? LIMIT 1;";
         sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
         sqlite3_bind_text(statement, 1, package_id, -1, SQLITE_STATIC);
         sqlite3_bind_int(statement, 2, version.major);
@@ -50,12 +52,23 @@ KPM_Result KPM_GetArtifact(KPM *kpm, const char *repository_id, const char *pack
 
     if (sqlite3_step(statement) == SQLITE_ROW)
     {
-        artifact->url = strdup((const char*) sqlite3_column_text(statement, 0));
-        artifact->repository = strdup((const char*) sqlite3_column_text(statement, 1));
-        artifact->id = strdup((const char*) sqlite3_column_text(statement, 2));
-        artifact->version.major = sqlite3_column_int(statement, 3);
-        artifact->version.minor = sqlite3_column_int(statement, 4);
-        artifact->version.patch = sqlite3_column_int(statement, 5);
+        artifact->repository = strdup((const char*) sqlite3_column_text(statement, 0));
+        artifact->id = strdup((const char*) sqlite3_column_text(statement, 1));
+        artifact->url = strdup((const char*) sqlite3_column_text(statement, 2));
+
+        if (sqlite3_column_type(statement, 3) != SQLITE_NULL)
+            artifact->installed_size = sqlite3_column_int64(statement, 3);
+        else
+            artifact->installed_size = 0;
+
+        if (sqlite3_column_type(statement, 4) != SQLITE_NULL)
+            artifact->digest = strdup((const char*) sqlite3_column_text(statement, 4));
+        else
+            artifact->digest = 0;
+
+        artifact->version.major = sqlite3_column_int(statement, 5);
+        artifact->version.minor = sqlite3_column_int(statement, 6);
+        artifact->version.patch = sqlite3_column_int(statement, 7);
     } else {
         return KPM_SQLITE_ERROR;
     }

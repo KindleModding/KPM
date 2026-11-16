@@ -93,22 +93,6 @@ size_t Internal_DownloadHeaderCallback(char *ptr, size_t size, size_t nitems, vo
 }
 
 /**
- * @brief Download specified packages from a dependency graph
- * 
- * @param kpm 
- * @param graph 
- * @param deduplicatedPackageCount 
- * @param deduplicatedPackages 
- * @return KPMResult 
- */
-KPM_Result Internal_DownloadGraphItems(KPM *kpm, DependencyGraph *graph, size_t deduplicatedPackageCount, NodeIdx *deduplicatedPackages, KPMIO *kpmio)
-{
-    
-
-    return KPM_OK;
-}
-
-/**
  * @brief Internally used to install a given kpkg package - DOES NOT CHECK DEPENDENCIES + ASSUMES PACKAGE IS NOT ALREADY PRESENT
  * 
  * @param kpm 

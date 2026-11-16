@@ -111,12 +111,17 @@ bool indexDependency(KPM *kpm, char *artifact_repository, char *artifact_id, cha
     return true;
 }
 
-bool indexArtifact(KPM *kpm, char *repository_id, char *package_id, cJSON *artifact, KPMIO *kpmio)
+bool indexArtifact(KPM *kpm, char *url, char *repository_id, char *package_id, cJSON *artifact, KPMIO *kpmio)
 {
-    if (cJSON_GetObjectItem(artifact, "url") == NULL || !cJSON_IsString(cJSON_GetObjectItem(artifact, "url")) || strlen(cJSON_GetStringValue(cJSON_GetObjectItem(artifact, "url"))) == 0)
+    char *artifact_url = url;
+    if (artifact_url == NULL)
     {
-        kpmio->log(KPM_VERBOSITY_ERROR, "Artifact has an empty URL field");
-        return false;
+        if (cJSON_GetObjectItem(artifact, "url") == NULL || !cJSON_IsString(cJSON_GetObjectItem(artifact, "url")) || strlen(cJSON_GetStringValue(cJSON_GetObjectItem(artifact, "url"))) == 0)
+        {
+            kpmio->log(KPM_VERBOSITY_ERROR, "Artifact has an empty URL field");
+            return false;
+        }
+        artifact_url = cJSON_GetStringValue(cJSON_GetObjectItem(artifact, "url"));
     }
 
     if (!cJSON_IsArray(cJSON_GetObjectItem(artifact, "version")) || cJSON_GetArraySize(cJSON_GetObjectItem(artifact, "version")) != 3)
@@ -135,16 +140,45 @@ bool indexArtifact(KPM *kpm, char *repository_id, char *package_id, cJSON *artif
         return false;
     }
 
+    if ((cJSON_GetObjectItem(artifact, "installed_size") == NULL) != (cJSON_GetObjectItem(artifact, "digest") == NULL))
+    {
+        kpmio->log(KPM_VERBOSITY_ERROR, "Artifact must contain both installed_size and digest when one of the two is present");
+        return false;
+    }
+
+    if (cJSON_GetObjectItem(artifact, "digest") != NULL && !cJSON_IsString(cJSON_GetObjectItem(artifact, "digest")))
+    {
+        kpmio->log(KPM_VERBOSITY_ERROR, "Artifact digest must be a string");
+        return false;
+    }
+
+    if (cJSON_GetObjectItem(artifact, "installed_size") != NULL && !cJSON_IsNumber(cJSON_GetObjectItem(artifact, "installed_size")))
+    {
+        kpmio->log(KPM_VERBOSITY_ERROR, "Artifact installed_size must be a number");
+        return false;
+    }
+
     kpmio->log(KPM_VERBOSITY_DEBUG, "  indexing artifact %s (%.0f.%.0f.%.0f)", package_id, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(artifact, "version"), 0)), cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(artifact, "version"), 1)), cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(artifact, "version"), 2)));
-    const char *zSQL = "INSERT INTO artifacts (url, repository, id, version_major, version_minor, version_patch) VALUES (?, ?, ?, ?, ?, ?);";
+    const char *zSQL = "INSERT INTO artifacts (repository, id, url, installed_size, digest, version_major, version_minor, version_patch) VALUES (?, ?, ?, ?, ?, ?, ?, ?);";
     sqlite3_stmt *statement;
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
-    sqlite3_bind_text(statement, 1, cJSON_GetStringValue(cJSON_GetObjectItem(artifact, "url")), -1, SQLITE_STATIC);
-    sqlite3_bind_text(statement, 2, repository_id, -1, SQLITE_STATIC);
-    sqlite3_bind_text(statement, 3, package_id, -1, SQLITE_STATIC);
-    sqlite3_bind_int64(statement, 4, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(artifact, "version"), 0)));
-    sqlite3_bind_int64(statement, 5, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(artifact, "version"), 1)));
-    sqlite3_bind_int64(statement, 6, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(artifact, "version"), 2)));
+    sqlite3_bind_text(statement, 1, repository_id, -1, SQLITE_STATIC);
+    sqlite3_bind_text(statement, 2, package_id, -1, SQLITE_STATIC);
+    sqlite3_bind_text(statement, 3, artifact_url, -1, SQLITE_STATIC);
+    
+    if (cJSON_GetObjectItem(artifact, "installed_size"))
+        sqlite3_bind_int64(statement, 4, cJSON_GetNumberValue(cJSON_GetObjectItem(artifact, "installed_size")));
+    else
+        sqlite3_bind_null(statement, 4);
+
+    if (cJSON_GetObjectItem(artifact, "digest"))
+        sqlite3_bind_text(statement, 5, cJSON_GetStringValue(cJSON_GetObjectItem(artifact, "digest")), -1, SQLITE_STATIC);
+    else
+        sqlite3_bind_null(statement, 5);
+
+    sqlite3_bind_int64(statement, 6, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(artifact, "version"), 0)));
+    sqlite3_bind_int64(statement, 7, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(artifact, "version"), 1)));
+    sqlite3_bind_int64(statement, 8, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(artifact, "version"), 2)));
 
     int status;
     if ((status = sqlite3_step(statement)) != SQLITE_DONE)
@@ -187,7 +221,7 @@ bool indexPackage(KPM *kpm, char *repository_id, cJSON *package, KPMIO *kpmio)
     kpmio->log(KPM_VERBOSITY_DEBUG, "indexing package [%s]", package->string);
 
     // INSERT that package INTO the DATABASE (deltarune reference???)
-    const char *zSQL = "INSERT INTO packages (repository, id, name, author, description) VALUES (?, ?, ?, ?, ?);";
+    const char *zSQL = "INSERT INTO packages (repository, id, name, author, description, icon) VALUES (?, ?, ?, ?, ?, ?);";
     sqlite3_stmt *statement;
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
     sqlite3_bind_text(statement, 1, repository_id, -1, SQLITE_STATIC);
@@ -195,6 +229,12 @@ bool indexPackage(KPM *kpm, char *repository_id, cJSON *package, KPMIO *kpmio)
     sqlite3_bind_text(statement, 3, cJSON_GetStringValue(cJSON_GetObjectItem(package, "name")), -1, SQLITE_STATIC);
     sqlite3_bind_text(statement, 4, cJSON_GetStringValue(cJSON_GetObjectItem(package, "author")), -1, SQLITE_STATIC);
     sqlite3_bind_text(statement, 5, cJSON_GetStringValue(cJSON_GetObjectItem(package, "description")), -1, SQLITE_STATIC);
+
+    if (cJSON_GetObjectItem(package, "icon"))
+        sqlite3_bind_text(statement, 6, cJSON_GetStringValue(cJSON_GetObjectItem(package, "icon")), -1, SQLITE_STATIC);
+    else
+        sqlite3_bind_null(statement, 6);
+
     if (sqlite3_step(statement) != SQLITE_DONE)
     {
         kpmio->log(KPM_VERBOSITY_ERROR, "SQLite error encountered when indexing package %s", package->string);
@@ -229,7 +269,7 @@ bool indexPackage(KPM *kpm, char *repository_id, cJSON *package, KPMIO *kpmio)
         if (!supported)
             continue;
 
-        if (!indexArtifact(kpm, repository_id, package->string, artifact, kpmio))
+        if (!indexArtifact(kpm, artifact->string, repository_id, package->string, artifact, kpmio))
         {
             kpmio->log(KPM_VERBOSITY_ERROR, "Could not index artifact for [%s]", package->string);
             sqlite3_exec(kpm->db, "ROLLBACK TRANSACTION TO SAVEPOINT package", NULL, NULL, NULL);

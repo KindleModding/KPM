@@ -132,7 +132,7 @@ The key must be the URL to the artifact's `kpkg` file.
 | Key                   | Description                                                                 |
 |-----------------------|-----------------------------------------------------------------------------|
 | `installed_size`      | The number of bytes that the full decompressed package's files will consume |
-| `digest`              | The digest of the package header                                            |
+| `digest`              | The SHA256 digest of the package header as hexadecimal |
 | `version`             | The package's version (see package spec for version format)                 |
 | `dependencies`        | The artifact's required dependencies (see package spec)                     |
 | `supported_platforms` | The list of supported platforms (see package spec)                          |
