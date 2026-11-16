@@ -64,7 +64,7 @@ KPM_Result KPM_GetArtifact(KPM *kpm, const char *repository_id, const char *pack
         if (sqlite3_column_type(statement, 4) != SQLITE_NULL)
             artifact->digest = strdup((const char*) sqlite3_column_text(statement, 4));
         else
-            artifact->digest = 0;
+            artifact->digest = NULL;
 
         artifact->version.major = sqlite3_column_int(statement, 5);
         artifact->version.minor = sqlite3_column_int(statement, 6);

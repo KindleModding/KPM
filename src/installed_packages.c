@@ -56,7 +56,10 @@ KPM_Result KPM_GetInstalledPackage(KPM *kpm, const char *package_id, KPM_Install
             package->name = strdup((const char*) sqlite3_column_text(statement, 2));
             package->author = strdup((const char*) sqlite3_column_text(statement, 3));
             package->description = strdup((const char*) sqlite3_column_text(statement, 4));
-            package->installed_size = sqlite3_column_int64(statement, 5);
+            if (sqlite3_column_type(statement, 5) != SQLITE_NULL)
+                package->installed_size = sqlite3_column_int64(statement, 5);
+            else
+                package->installed_size = 0;
             package->version.major = sqlite3_column_int(statement, 6);
             package->version.minor = sqlite3_column_int(statement, 7);
             package->version.patch = sqlite3_column_int(statement, 8);
@@ -103,7 +106,10 @@ KPM_Result KPM_ListInstalledPackages(KPM *kpm, size_t *package_count, KPM_Instal
             (*packages)[i].name = strdup((const char*) sqlite3_column_text(statement, 3));
             (*packages)[i].author = strdup((const char*) sqlite3_column_text(statement, 4));
             (*packages)[i].description = strdup((const char*) sqlite3_column_text(statement, 5));
-            (*packages)[i].installed_size = sqlite3_column_int64(statement, 6);
+            if (sqlite3_column_type(statement, 6) != SQLITE_NULL)
+                (*packages)[i].installed_size = sqlite3_column_int64(statement, 6);
+            else
+                (*packages)[i].installed_size = 0;
             (*packages)[i].version.major = sqlite3_column_int(statement, 7);
             (*packages)[i].version.minor = sqlite3_column_int(statement, 8);
             (*packages)[i].version.patch = sqlite3_column_int(statement, 9);

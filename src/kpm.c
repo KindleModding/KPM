@@ -105,7 +105,7 @@ void create_tables(sqlite3 *db)
             name TEXT NOT NULL,
             author TEXT NOT NULL,
             description TEXT NOT NULL,
-            installed_size INTEGER NOT NULL,
+            installed_size INTEGER,
             version_major INTEGER NOT NULL,
             version_minor INTEGER NOT NULL,
             version_patch INTEGER NOT NULL,
@@ -142,12 +142,12 @@ void KPM_MigrateDB(sqlite3 *db)
     switch (db_version)
     {
     case 0:
-        // Allow installed packages with no repository
-        sqlite3_exec(db, "ALTER TABLE installed_packages ALTER COLUMN repository TEXT;", NULL, NULL, NULL);
+        // No new columns, only constraint updates, installed_packages becomes NULLable
     case 1:
-        sqlite3_exec(db, "ALTER TABLE artifacts ADD COLUMN installed_size INTEGER;", NULL, NULL, NULL); // For KPKG3+ the installed size of the artifact
-        sqlite3_exec(db, "ALTER TABLE artifacts ADD COLUMN digest TEXT;", NULL, NULL, NULL); // For KPKG3+ the digest of the package header
-        sqlite3_exec(db, "ALTER TABLE packages ADD COLUMN icon TEXT;", NULL, NULL, NULL); // For KPKG3+ the package icon
+        sqlite3_exec(db, "ALTER TABLE artifacts ADD COLUMN installed_size DEFAULT NULL;", NULL, NULL, NULL); // For KPKG3+ the installed size of the artifact
+        sqlite3_exec(db, "ALTER TABLE artifacts ADD COLUMN digest TEXT DEFAULT NULL;", NULL, NULL, NULL); // For KPKG3+ the digest of the package header
+        sqlite3_exec(db, "ALTER TABLE packages ADD COLUMN icon TEXT DEFAULT NULL;", NULL, NULL, NULL); // For KPKG3+ the package icon
+        sqlite3_exec(db, "ALTER TABLE installed_packages ADD COLUMN installed_size INTEGER DEFAULT NULL;", NULL, NULL, NULL); // For KPKG3+ the package icon
 
         // Update constraints
         sqlite3_exec(db, "PRAGMA foreign_keys=off;", NULL, NULL, NULL);
@@ -160,13 +160,13 @@ void KPM_MigrateDB(sqlite3 *db)
         sqlite3_exec(db, "ALTER TABLE installed_packages RENAME TO old_installed_packages;", NULL, NULL, NULL);
         sqlite3_exec(db, "ALTER TABLE current_dependencies RENAME TO old_current_dependencies;", NULL, NULL, NULL);
         create_tables(db);
-        sqlite3_exec(db, "INSERT INTO kpm_meta SELECT * FROM old_kpm_meta;", NULL, NULL, NULL);
-        sqlite3_exec(db, "INSERT INTO repositories SELECT * FROM old_repositories;", NULL, NULL, NULL);
-        sqlite3_exec(db, "INSERT INTO packages SELECT * FROM old_packages;", NULL, NULL, NULL);
-        sqlite3_exec(db, "INSERT INTO artifacts SELECT * FROM old_artifacts;", NULL, NULL, NULL);
-        sqlite3_exec(db, "INSERT INTO artifact_dependencies SELECT * FROM old_artifact_dependencies;", NULL, NULL, NULL);
-        sqlite3_exec(db, "INSERT INTO installed_packages SELECT * FROM old_installed_packages;", NULL, NULL, NULL);
-        sqlite3_exec(db, "INSERT INTO current_dependencies SELECT * FROM old_current_dependencies;", NULL, NULL, NULL);
+        sqlite3_exec(db, "INSERT INTO kpm_meta SELECT (key, value) FROM old_kpm_meta;", NULL, NULL, NULL);
+        sqlite3_exec(db, "INSERT INTO repositories SELECT (id, url, name, description) FROM old_repositories;", NULL, NULL, NULL);
+        sqlite3_exec(db, "INSERT INTO packages SELECT (repository, id, name, author, description, icon) FROM old_packages;", NULL, NULL, NULL);
+        sqlite3_exec(db, "INSERT INTO artifacts SELECT (repository, id, url, installed_size, digest, version_major, version_minor, version_patch) FROM old_artifacts;", NULL, NULL, NULL);
+        sqlite3_exec(db, "INSERT INTO artifact_dependencies SELECT (artifact_repository, artifact_id, artifact_url, id, min_version_major, min_version_minor, min_version_patch, max_version_major, max_version_minor, max_version_patch) FROM old_artifact_dependencies;", NULL, NULL, NULL);
+        sqlite3_exec(db, "INSERT INTO installed_packages SELECT (id, repository, name, author, description, installed_size, version_major, version_minor, version_patch) FROM old_installed_packages;", NULL, NULL, NULL);
+        sqlite3_exec(db, "INSERT INTO current_dependencies SELECT (dependent, dependency_id, min_version_major, min_version_minor, min_version_patch, max_version_major, max_version_minor, max_version_patch) FROM old_current_dependencies;", NULL, NULL, NULL);
         sqlite3_exec(db, "DROP TABLE old_kpm_meta;", NULL, NULL, NULL);
         sqlite3_exec(db, "DROP TABLE old_repositories;", NULL, NULL, NULL);
         sqlite3_exec(db, "DROP TABLE old_packages;", NULL, NULL, NULL);
