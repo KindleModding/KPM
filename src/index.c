@@ -359,6 +359,12 @@ KPM_Result KPM_UpdateIndex(KPM *kpm, KPMIO *kpmio)
             continue;
         }
 
+        uint32_t manifest_version = cJSON_GetNumberValue(cJSON_GetObjectItem(json, "manifest_version"));
+        if (manifest_version >= 3)
+        {
+            // @TODO: Calculate signature
+        }
+
         // V1 - Requires no special logic, only difference is packages are lzma compressed, not gzip
 
         // Start a transaction for every repository

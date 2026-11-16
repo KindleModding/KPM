@@ -107,6 +107,7 @@ typedef struct
     char *name; /**< The package name */
     char *author; /**< The package author */
     char *description; /**< The package description */
+    uint64_t installed_size; /**< The size of this package on-disk */
     SemVer version; /**< The package version */
     bool installed_as_dependency; /**< Whether or not this package was installed as a dependency of another package */
 } KPM_InstalledPackage;
