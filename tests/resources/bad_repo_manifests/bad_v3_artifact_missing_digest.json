@@ -26,7 +26,8 @@
                     },
                     "supported_platforms": [
                         "kindlehf",
-                        "kindlepw2"
+                        "kindlepw2",
+                        "x86_64"
                     ]
                 }
             }
@@ -47,7 +48,8 @@
                     "dependencies": {},
                     "supported_platforms": [
                         "kindlehf",
-                        "kindlepw2"
+                        "kindlepw2",
+                        "x86_64"
                     ]
                 }
             }

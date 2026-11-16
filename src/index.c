@@ -161,6 +161,8 @@ bool indexArtifact(KPM *kpm, char *url, char *repository_id, char *package_id, c
         return false;
     }
 
+    kpmio->log(KPM_VERBOSITY_DEBUG, "IS NULL: %i", cJSON_GetObjectItem(artifact, "digest") != NULL);
+    kpmio->log(KPM_VERBOSITY_DEBUG, "IS NOT STRING: %i", !cJSON_IsString(cJSON_GetObjectItem(artifact, "digest")));
     if (cJSON_GetObjectItem(artifact, "digest") != NULL && !cJSON_IsString(cJSON_GetObjectItem(artifact, "digest")))
     {
         kpmio->log(KPM_VERBOSITY_ERROR, "Artifact digest must be a string");

@@ -7,7 +7,6 @@
 
 #include "kpm/kpm.h"
 #include "array.h"
-#include <__stddef_unreachable.h>
 #include <assert.h>
 #include <curl/curl.h>
 #include <curl/multi.h>
@@ -319,7 +318,7 @@ bool DownloadOperationFiles(KPM *kpm, OperationArray *operations, KPMIO *kpmio)
             break;
         case GT_DEPENDENCY:
         case GT_INSTALLED:
-            unreachable();
+            assert(false); // Unreachable
         };
     }
     return true;

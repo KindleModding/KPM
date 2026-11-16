@@ -322,8 +322,6 @@ KPM_Result DepGraph_GetTargetDependencies(KPM *kpm, DepGraph_Target target, size
 {
     switch (target.type)
     {
-    case GT_DEPENDENCY:
-        unreachable(); // UB
     case GT_INSTALL_TARGET:
         if (target.target.type == INSTALL_ARTIFACT)
             return KPM_ListArtifactDependencies(kpm, target.target.artifact.repository, target.target.artifact.id, target.target.artifact.url, targetDependencyCount, targetDependencies);
@@ -332,6 +330,8 @@ KPM_Result DepGraph_GetTargetDependencies(KPM *kpm, DepGraph_Target target, size
         return KPM_OK;
     case GT_INSTALLED:
         return KPM_ListInstalledPackageDependencies(kpm, target.installed.id, targetDependencyCount, targetDependencies);
+    case GT_DEPENDENCY:
+        assert(false);
     };
 }
 

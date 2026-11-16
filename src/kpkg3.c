@@ -312,7 +312,9 @@ KPKG_Result KPKG3_HandleRangeMap(KPKG_File *file, uint32_t range_count, KPKG3_Do
             int fd = open(range.out_path, O_WRONLY);
             if (fd == -1)
                 return KPKG_FILESYSTEM_ERROR;
-            ftruncate(fd, range.file_entry.installed_size);
+            if (ftruncate(fd, range.file_entry.installed_size) == -1)
+                return KPKG_FILESYSTEM_ERROR;
+            
             void *mapped_file = mmap(NULL, range.file_entry.installed_size, PROT_WRITE, MAP_PRIVATE, fd, 0);
             if (!mapped_file)
             {
