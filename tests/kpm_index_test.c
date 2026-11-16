@@ -89,6 +89,7 @@ int main(int argc, char *argv[])
     ASSERT_HD_STR(artifacts[0].id, "testpackage");
     ASSERT_HD_STR(artifacts[0].url, "packages/test/artifacts/test_0.2.0_kindlehf-kindlepw2_compat.kpkg");
     ASSERT_HD_SEMVER(artifacts[0].version, target);
+    KPM_FreeArtifactList(artifact_count, artifacts);
     ASSERT_HD(KPM_RemoveRepository(kpm, "testrepo"), KPM_OK);
     KPM_FreeIndexedPackageList(package_count, packages);
 
@@ -133,7 +134,17 @@ int main(int argc, char *argv[])
     ASSERT_HD_STR(packages[0].name, "Test Package");
     ASSERT_HD_STR(packages[0].author, "Test Author");
     ASSERT_HD_STR(packages[0].description, "Test Package Description");
-
+    ASSERT_HD_STR(packages[0].icon, "test.png");
+    ASSERT_HD(KPM_ListPackageArtifacts(kpm, "testrepo3", packages[0].id, &artifact_count, NULL), KPM_OK);
+    ASSERT_HD(KPM_ListPackageArtifacts(kpm, "testrepo3", packages[0].id, &artifact_count, &artifacts), KPM_OK);
+    ASSERT_HD(artifact_count, 1);
+    ASSERT_HD_STR(artifacts[0].repository, "testrepo3");
+    ASSERT_HD_STR(artifacts[0].id, "testpackage");
+    ASSERT_HD_STR(artifacts[0].url, "packages/test/artifacts/test_0.2.0_kindlehf-kindlepw2_compat.kpkg");
+    ASSERT_HD_SEMVER(artifacts[0].version, target);
+    ASSERT_HD(artifacts[0].installed_size, 1024);
+    ASSERT_HD_STR(artifacts[0].digest, "2e7d221c96fa73a85172ac4440fdf2bbbada6b0b3400cbf5eac07741a4680e5a");
+    KPM_FreeArtifactList(artifact_count, artifacts);
     KPM_FreeIndexedPackageList(package_count, packages);
 
     ASSERT_HD(KPM_RemoveRepository(kpm, "testrepo1"), KPM_OK);
