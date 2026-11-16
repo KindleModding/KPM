@@ -1,5 +1,6 @@
 #include "kpm/kpkg.h"
 #include "kpm/kpm.h"
+#include <stdlib.h>
 
 char *KPM_GetInstallTargetId(KPM_InstallTarget target)
 {
@@ -30,4 +31,26 @@ int KPM_GetInstallTargetDependencies(KPM *kpm, KPM_InstallTarget target, KPM_Dep
     {
         return KPKG_GetDependencies(target.file, (KPKG_DependencyEntry**) dependencies);
     }
+}
+
+void KPM_FreeInstallTarget(KPM_InstallTarget *target)
+{
+    if (target->type == INSTALL_FILE)
+    {
+        KPKG_CloseFile(target->file);
+        target->file = NULL;
+    }
+    else
+    {
+        KPM_FreeArtifact(&target->artifact);
+    }
+}
+
+void KPM_FreeInstallTargetList(size_t target_count, KPM_InstallTarget *targets)
+{
+    for (size_t i=0; i < target_count; i++)
+    {
+        KPM_FreeInstallTarget(&targets[i]);
+    }
+    free(targets);
 }

@@ -2,7 +2,6 @@ sources = files(
     'artifacts.c',
     'callback.c',
     'dependencies.c',
-    'device.c',
     'index.c',
     'install_target.c',
     'installed_packages.c',
@@ -15,8 +14,7 @@ sources = files(
     'package.c',
     'repository.c',
     'simpleGET.c',
-    'uninstall.c',
-    'utils.c'
+    'uninstall.c'
 )
 include_dir = include_directories('./include')
 

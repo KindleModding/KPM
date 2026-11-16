@@ -13,7 +13,7 @@ void add_repository(KPM *kpm, char *cur_path, char *path)
     free(repo_path);
 }
 
-int main(int argc, char* argv[])
+int main(int argc, char *argv[])
 {
     KPM *kpm = initialise_kpm();
     sqlite3_exec(kpm->db, "DELETE FROM repositories WHERE id='kindlemodding';", NULL, NULL, NULL);

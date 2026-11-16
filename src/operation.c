@@ -315,8 +315,8 @@ bool DownloadOperationFiles(KPM *kpm, OperationArray *operations, KPMIO *kpmio)
                 return false;
             }
 
-            char* tmp_pkg_path = asprintf_hd("%s/%s", kpm->tmp_path, DepGraph_GetTargetId(operation.target));
-            char* pkg_cmp_path = asprintf_hd("%s/%s", kpm->pkg_path, DepGraph_GetTargetId(operation.target));
+            char *tmp_pkg_path = asprintf_hd("%s/%s", kpm->tmp_path, DepGraph_GetTargetId(operation.target));
+            char *pkg_cmp_path = asprintf_hd("%s/%s", kpm->pkg_path, DepGraph_GetTargetId(operation.target));
             rmdir_r(tmp_pkg_path);
             if ((res = KPKG_Unpack(file, tmp_pkg_path, pkg_cmp_path, kpmio)) != KPKG_OK)
             {

@@ -8,7 +8,7 @@
 
 KPM *initialise_kpm();
 
-char *get_path(int argc, char* argv[]);
+char *get_path(int argc, char *argv[]);
 
 #define GET_FORMAT(a) _Generic(a,     \
     int : "%i",     \

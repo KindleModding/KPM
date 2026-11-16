@@ -12,7 +12,7 @@ KPM *initialise_kpm()
     return KPM_InitialiseAdv("./repo_test.db", "./packages", "./kpm_tmp");
 }
 
-char *get_path(int argc, char* argv[])
+char *get_path(int argc, char *argv[])
 {
     ASSERT_HD(argc > 0, 1);
     char cur_path[PATH_MAX];
