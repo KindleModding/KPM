@@ -27,6 +27,42 @@
                         "kindlehf",
                         "kindlepw2"
                     ]
+                },
+                {
+                    "url": "packages/test/artifacts/mintest_0.2.0_kindlehf-kindlepw2_compat.kpkg",
+                    "version": [
+                        0,
+                        2,
+                        0
+                    ],
+                    "dependencies": [
+                        {
+                            "id": "unsupportedpackage",
+                            "min": [1, 0, 0]
+                        }
+                    ],
+                    "supported_platforms": [
+                        "kindlehf",
+                        "kindlepw2"
+                    ]
+                },
+                {
+                    "url": "packages/test/artifacts/maxtest_0.2.0_kindlehf-kindlepw2_compat.kpkg",
+                    "version": [
+                        0,
+                        2,
+                        0
+                    ],
+                    "dependencies": [
+                        {
+                            "id": "unsupportedpackage",
+                            "max": [1, 0, 0]
+                        }
+                    ],
+                    "supported_platforms": [
+                        "kindlehf",
+                        "kindlepw2"
+                    ]
                 }
             ]
         },

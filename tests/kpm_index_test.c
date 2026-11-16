@@ -3,6 +3,7 @@
 #include "kpm_test_common.h"
 #include "kpm_test_io.h"
 #include <libgen.h>
+#include <sqlite3.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -21,11 +22,53 @@ int main(int argc, char *argv[])
     size_t package_count;
     KPM_IndexedPackage *packages;
 
+    sqlite3_exec(kpm->db, "INSERT INTO repositories (id, url, name, description) VALUES ('testrepo_invalid', 'https://repo.kindlemodding.org/404', 'Test Repo Invalid', 'Invalid Test Repo');", NULL, NULL, NULL);
+    ASSERT_HD(KPM_UpdateIndex(kpm, &kpmio), KPM_GENERIC_ERROR);
+    ASSERT_HD(KPM_ListRepositoryPackages(kpm, "testrepo_invalid", &package_count, NULL), KPM_OK);
+    ASSERT_HD(package_count, 0);
+    ASSERT_HD(KPM_RemoveRepository(kpm, "testrepo_invalid"), KPM_OK);
+
+    char *invalid_repo_manifests[] = {
+        "bad_repo_version.json",
+        "empty_id.json",
+        "malformed_repo_version.json",
+        "missing_repo_version.json",
+        "negative_repo_version.json",
+        "no_description.json",
+        "no_id.json",
+        "no_name.json",
+        "not_json.txt"
+    };
+
+    for (int i=0; i < sizeof(invalid_repo_manifests)/sizeof(invalid_repo_manifests[0]); i++)
+    {
+        char *repo_path = asprintf_hd("file://%s/resources/invalid_repo_manifests/%s", cur_path, invalid_repo_manifests[i]);
+        sqlite3_stmt *statement;
+        sqlite3_prepare_v2(kpm->db, "INSERT INTO repositories (id, url, name, description) VALUES ('testrepo_invalid', ?, 'Test Repo Invalid', 'Invalid Test Repo');", -1, &statement, NULL);
+        sqlite3_bind_text(statement, 1, repo_path, -1, SQLITE_STATIC);
+        sqlite3_step(statement);
+        sqlite3_finalize(statement);
+        ASSERT_HD(KPM_UpdateIndex(kpm, &kpmio), KPM_GENERIC_ERROR);
+        ASSERT_HD(KPM_ListRepositoryPackages(kpm, "testrepo_invalid", &package_count, NULL), KPM_OK);
+        ASSERT_HD(package_count, 0);
+        ASSERT_HD(KPM_RemoveRepository(kpm, "testrepo_invalid"), KPM_OK);
+        free(repo_path);
+    }
+
+    fprintf(stderr, "Testing repository: %s\n", "resources/bad_repo_manifests/all_bad.json");
+    add_repository(kpm, cur_path, "resources/bad_repo_manifests/all_bad.json");
+    ASSERT_HD(KPM_UpdateIndex(kpm, &kpmio), KPM_GENERIC_ERROR);
+    ASSERT_HD(KPM_ListRepositoryPackages(kpm, "testrepo_bad", &package_count, NULL), KPM_OK);
+    ASSERT_HD(package_count, 0);
+    ASSERT_HD(KPM_RemoveRepository(kpm, "testrepo_bad"), KPM_OK);
+
     char *array[] = {
+        "resources/bad_repo_manifests/bad_v3_artifact_digest_number.json",
+        "resources/bad_repo_manifests/bad_v3_artifact_install_size_string.json",
+        "resources/bad_repo_manifests/bad_v3_artifact_missing_all_v3.json",
         "resources/bad_repo_manifests/bad_v3_artifact_missing_digest.json",
         "resources/bad_repo_manifests/bad_v3_artifact_missing_install_size.json",
         "resources/bad_repo_manifests/bad_v3_artifact_missing_url.json",
-        "resources/bad_repo_manifests/bad_v3_artifact_missing_all_v3.json",
         "resources/bad_repo_manifests/malformed_artifact_version.json",
         "resources/bad_repo_manifests/malformed_dependency_empty.json",
         "resources/bad_repo_manifests/malformed_dependency_id.json",
@@ -52,11 +95,6 @@ int main(int argc, char *argv[])
         ASSERT_HD(package_count, 1);
         ASSERT_HD(KPM_RemoveRepository(kpm, "testrepo_bad"), KPM_OK);
     }
-
-    char *repo_path = asprintf_hd("file://%s/resources/bad_repo_manifests/bad_repo_version.json", cur_path);
-    ASSERT_HD(KPM_AddRepository(kpm, repo_path, NULL, &kpmio), KPM_INVALID_RESPONSE_CONTENT);
-    free(repo_path);
-
 
     size_t artifact_count;
     KPM_Artifact *artifacts;

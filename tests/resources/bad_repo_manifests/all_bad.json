@@ -1,0 +1,17 @@
+{
+    "manifest_version": 2,
+    "id": "testrepo_bad",
+    "name": "Test Repo Bad",
+    "description": "The test repo Bad",
+    "packages": {
+        "meh": {
+            "name": "All mid package",
+            "author": "Test Author",
+            "description": "Test Package Description"
+        },
+        "testpackage": {
+            "name": "Test Package",
+            "artifacts": []
+        }
+    }
+}

@@ -4,6 +4,7 @@
 
 int main(int argc, char *argv[])
 {
+    remove("./migration_test.db");
     sqlite3 *db;
     sqlite3_open("./migration_test.db", &db);
     sqlite3_exec(db, "PRAGMA foreign_keys=ON;", NULL, NULL, NULL); // @TODO: Ensure this succeeds
@@ -92,8 +93,7 @@ int main(int argc, char *argv[])
         ) STRICT;
     )", NULL, NULL, NULL);
 
-    KPM_MigrateDB(db);
+    sqlite3_exec(db, "INSERT INTO repositories VALUES ('testrepo', 'tbd', 'Test Repo', 'A Test Repo')", NULL, NULL, NULL);
 
-    sqlite3_exec(db, "INSERT INTO repositories (id, url, name, description) VALUES ('kindlemodding', 'https://repo.kindlemodding.org/manifest.v3.json', 'Official KMC Repo', 'The official KMC repo') ON CONFLICT(id) DO UPDATE SET url='https://repo.kindlemodding.org/manifest.v3.json'", NULL, NULL, NULL);
-    sqlite3_exec(db, "INSERT INTO packages (repository, id, name, author, description, icon) VALUES ('kindlemodding', 'test', 'name', 'author', 'description', 'icon');", NULL, NULL, NULL);
+    KPM_MigrateDB(db);
 }
