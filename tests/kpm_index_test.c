@@ -22,6 +22,10 @@ int main(int argc, char *argv[])
     KPM_IndexedPackage *packages;
 
     char *array[] = {
+        "resources/bad_repo_manifests/bad_v3_artifact_missing_digest.json",
+        "resources/bad_repo_manifests/bad_v3_artifact_missing_install_size.json",
+        "resources/bad_repo_manifests/bad_v3_artifact_missing_url.json",
+        "resources/bad_repo_manifests/bad_v3_artifact_missing_all_v3.json",
         "resources/bad_repo_manifests/malformed_artifact_version.json",
         "resources/bad_repo_manifests/malformed_dependency_empty.json",
         "resources/bad_repo_manifests/malformed_dependency_id.json",
