@@ -1,6 +1,7 @@
 #include "cjson/cJSON.h"
 #include "curl/curl.h"
 #include "kpm/kpm.h"
+#include "kpm/kpmio.h"
 #include "kpm/semver.h"
 #include "simpleGET.h"
 #include <limits.h>
@@ -8,21 +9,23 @@
 #include "callback.h"
 #include "sqlite3.h"
 
-bool indexDependency(KPM *kpm, char *artifact_repository, char *artifact_id, char *artifact_url, cJSON *dependency, KPMIO *kpmio)
+bool indexDependency(KPM *kpm, char *dependency_id, char *artifact_repository, char *artifact_id, char *artifact_url, cJSON *dependency, KPMIO *kpmio)
 {
+    char *actual_dependency_id = dependency_id;
+    if (actual_dependency_id == NULL)
+        actual_dependency_id = cJSON_GetStringValue(cJSON_GetObjectItem(dependency, "id"));
+    
+    if (actual_dependency_id == NULL || strlen(actual_dependency_id) == 0)
+        return false;
+    kpmio->log(KPM_VERBOSITY_DEBUG, "    - D: %s", actual_dependency_id);
+    
     const char *zSQL = "INSERT INTO artifact_dependencies (artifact_repository, artifact_id, artifact_url, id, min_version_major, min_version_minor, min_version_patch, max_version_major, max_version_minor, max_version_patch) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
     sqlite3_stmt *statement;
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
     sqlite3_bind_text(statement, 1, artifact_repository, -1, SQLITE_STATIC);
     sqlite3_bind_text(statement, 2, artifact_id, -1, SQLITE_STATIC);
     sqlite3_bind_text(statement, 3, artifact_url, -1, SQLITE_STATIC);
-    sqlite3_bind_text(statement, 4, cJSON_GetStringValue(cJSON_GetObjectItem(dependency, "id")), -1, SQLITE_STATIC);
-
-    if (cJSON_GetObjectItem(dependency, "id") == NULL || strlen(cJSON_GetStringValue(cJSON_GetObjectItem(dependency, "id"))) == 0)
-    {
-        sqlite3_finalize(statement);
-        return false;
-    }
+    sqlite3_bind_text(statement, 4, actual_dependency_id, -1, SQLITE_STATIC);
     
     if (cJSON_GetObjectItem(dependency, "min") != NULL)
     {
@@ -115,13 +118,13 @@ bool indexArtifact(KPM *kpm, char *url, char *repository_id, char *package_id, c
 {
     char *artifact_url = url;
     if (artifact_url == NULL)
-    {
-        if (cJSON_GetObjectItem(artifact, "url") == NULL || !cJSON_IsString(cJSON_GetObjectItem(artifact, "url")) || strlen(cJSON_GetStringValue(cJSON_GetObjectItem(artifact, "url"))) == 0)
-        {
-            kpmio->log(KPM_VERBOSITY_ERROR, "Artifact has an empty URL field");
-            return false;
-        }
         artifact_url = cJSON_GetStringValue(cJSON_GetObjectItem(artifact, "url"));
+    kpmio->log(KPM_VERBOSITY_DEBUG, "  - A: %s", artifact_url);
+
+    if (artifact_url == NULL || strlen(artifact_url) == 0)
+    {
+        kpmio->log(KPM_VERBOSITY_ERROR, "Artifact has an empty URL field");
+        return false;
     }
 
     if (!cJSON_IsArray(cJSON_GetObjectItem(artifact, "version")) || cJSON_GetArraySize(cJSON_GetObjectItem(artifact, "version")) != 3)
@@ -140,9 +143,9 @@ bool indexArtifact(KPM *kpm, char *url, char *repository_id, char *package_id, c
         return false;
     }
 
-    if ((cJSON_GetObjectItem(artifact, "installed_size") == NULL) != (cJSON_GetObjectItem(artifact, "digest") == NULL))
+    if (url != NULL && (cJSON_GetObjectItem(artifact, "installed_size") == NULL || cJSON_GetObjectItem(artifact, "digest") == NULL))
     {
-        kpmio->log(KPM_VERBOSITY_ERROR, "Artifact must contain both installed_size and digest when one of the two is present");
+        kpmio->log(KPM_VERBOSITY_ERROR, "Artifact v3 must contain both installed_size and digest");
         return false;
     }
 
@@ -193,9 +196,9 @@ bool indexArtifact(KPM *kpm, char *url, char *repository_id, char *package_id, c
     cJSON *dependency;
     cJSON_ArrayForEach(dependency, cJSON_GetObjectItem(artifact, "dependencies"))
     {
-        if (!indexDependency(kpm, repository_id, package_id, cJSON_GetStringValue(cJSON_GetObjectItem(artifact, "url")), dependency, kpmio))
+        if (!indexDependency(kpm, dependency->string, repository_id, package_id, artifact_url, dependency, kpmio))
         {
-            kpmio->log(KPM_VERBOSITY_ERROR, "Could not index artifact dependencies for [%s] (%s)", package_id, cJSON_GetStringValue(cJSON_GetObjectItem(artifact, "url")));
+            kpmio->log(KPM_VERBOSITY_ERROR, "Could not index artifact dependencies for [%s] (%s)", package_id, artifact_url);
             return false;
         }
     }
@@ -384,7 +387,7 @@ KPM_Result KPM_UpdateIndex(KPM *kpm, KPMIO *kpmio)
 
         // Index packages & artifacts
         // We COULD give progress status here... but nah - HD
-        bool any_ok = true;
+        bool any_ok = false;
         cJSON *package;
         cJSON_ArrayForEach(package, cJSON_GetObjectItem(json, "packages"))
         {
