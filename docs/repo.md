@@ -2,6 +2,9 @@
 This is part of the KPM specification for `REPOv3`
 This repository format is supported from KPM `v2.0.0` and above.
 
+## Note on Artifacts
+- Each package may only have on artifact per version per set of supported_platforms
+
 ## Changelog
 ### v3
 - Add signed repo manifest support
@@ -22,8 +25,6 @@ This repository format is supported from KPM `v2.0.0` and above.
   "id": "repo_id",
   "name": "Example Repository",
   "description": "An example repository",
-  "pubkey": "/repo.pub",
-  "signature": "/repo.sig",
   "packages": {
     "package1": {
       "name": "Package 1",
@@ -32,7 +33,6 @@ This repository format is supported from KPM `v2.0.0` and above.
       "icon": "/icons/package1.png",
       "artifacts": {
         "packages/package1/artifacts/package1_2026.3.0_kindlehf.kpkg": {
-          "url": ,
           "installed_size": 1232,
           "digest": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
           "version": [2026, 3, 0],
@@ -95,8 +95,6 @@ This repository format is supported from KPM `v2.0.0` and above.
 | `id`               | The repository id, must not be empty or `null`                         |
 | `name`             | The human-readable repository name, must not be empty or `null`        |
 | `description`      | The human-readable repository description, must not be empty or `null` |
-| `pubkey`           | The URL to the public key*                                             |
-| `signature`        | The URL to the manifest signature*                                     |
 | `packages`         | The repository packages, must not be empty or `null`                   |
 
 > *optional fields, both must either be present or omitted at the same time. Should be a relative path rather or a URL on the same domain.

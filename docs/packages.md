@@ -80,6 +80,7 @@ The package manifest is a JSON file containing a single object with the followin
 ### Version Arrays
 KPM packages use version arrays to describe their version.  
 The version array is an array which must contain 3 non-negative integer values.  
+Integer values must be from `0` to `4294967295` (inclusive).
 The version array is defined such that the first element in the array is the major version number, the second element in the array is the minor version number and the final element in the array is the patch version number.
 
 For example: `[1, 0, 0]` is newer than `[0, 2, 3]` as the major version is larger.
