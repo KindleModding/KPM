@@ -4,6 +4,7 @@
 #include "archive_entry.h"
 #include "cjson/cJSON.h"
 #include "internal_utils.h"
+#include "kpm/semver.h"
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
@@ -98,6 +99,12 @@ KPKG_Result KPKG1_LoadFile(KPKG_File *kpkg_file, const char *location, FILE *in_
         !cJSON_IsNumber(cJSON_GetArrayItem(cJSON_GetObjectItem(json, "version"), 0)) ||
         !cJSON_IsNumber(cJSON_GetArrayItem(cJSON_GetObjectItem(json, "version"), 1)) ||
         !cJSON_IsNumber(cJSON_GetArrayItem(cJSON_GetObjectItem(json, "version"), 2)) ||
+        cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(json, "version"), 0)) < 0 ||
+        cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(json, "version"), 1)) < 0 ||
+        cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(json, "version"), 2)) < 0 ||
+        cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(json, "version"), 0)) > SEMVER_VERSION_MAX ||
+        cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(json, "version"), 1)) > SEMVER_VERSION_MAX ||
+        cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(json, "version"), 2)) > SEMVER_VERSION_MAX ||
         !cJSON_IsArray(cJSON_GetObjectItem(json, "dependencies"))
     )
     {
@@ -170,7 +177,13 @@ KPKG_Result KPKG1_LoadFile(KPKG_File *kpkg_file, const char *location, FILE *in_
                     cJSON_GetArraySize(min) != 3 ||
                     !cJSON_IsNumber(cJSON_GetArrayItem(min, 0)) ||
                     !cJSON_IsNumber(cJSON_GetArrayItem(min, 1)) ||
-                    !cJSON_IsNumber(cJSON_GetArrayItem(min, 2))
+                    !cJSON_IsNumber(cJSON_GetArrayItem(min, 2)) ||
+                    cJSON_GetNumberValue(cJSON_GetArrayItem(min, 0)) < 0 ||
+                    cJSON_GetNumberValue(cJSON_GetArrayItem(min, 1)) < 0 ||
+                    cJSON_GetNumberValue(cJSON_GetArrayItem(min, 2)) < 0 ||
+                    cJSON_GetNumberValue(cJSON_GetArrayItem(min, 0)) > SEMVER_VERSION_MAX ||
+                    cJSON_GetNumberValue(cJSON_GetArrayItem(min, 1)) > SEMVER_VERSION_MAX ||
+                    cJSON_GetNumberValue(cJSON_GetArrayItem(min, 2)) > SEMVER_VERSION_MAX
                 )
             ) ||
             (
@@ -180,7 +193,13 @@ KPKG_Result KPKG1_LoadFile(KPKG_File *kpkg_file, const char *location, FILE *in_
                     cJSON_GetArraySize(max) != 3 ||
                     !cJSON_IsNumber(cJSON_GetArrayItem(max, 0)) ||
                     !cJSON_IsNumber(cJSON_GetArrayItem(max, 1)) ||
-                    !cJSON_IsNumber(cJSON_GetArrayItem(max, 2))
+                    !cJSON_IsNumber(cJSON_GetArrayItem(max, 2)) ||
+                    cJSON_GetNumberValue(cJSON_GetArrayItem(max, 0)) < 0 ||
+                    cJSON_GetNumberValue(cJSON_GetArrayItem(max, 1)) < 0 ||
+                    cJSON_GetNumberValue(cJSON_GetArrayItem(max, 2)) < 0 ||
+                    cJSON_GetNumberValue(cJSON_GetArrayItem(max, 0)) > SEMVER_VERSION_MAX ||
+                    cJSON_GetNumberValue(cJSON_GetArrayItem(max, 1)) > SEMVER_VERSION_MAX ||
+                    cJSON_GetNumberValue(cJSON_GetArrayItem(max, 2)) > SEMVER_VERSION_MAX
                 )
             )
         )

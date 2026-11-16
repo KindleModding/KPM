@@ -36,7 +36,10 @@ bool indexDependency(KPM *kpm, char *dependency_id, char *artifact_repository, c
             !cJSON_IsNumber(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "min"), 2)) ||
             cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "min"), 0)) < 0 ||
             cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "min"), 1)) < 0 ||
-            cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "min"), 2)) < 0
+            cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "min"), 2)) < 0 ||
+            cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "min"), 0)) > SEMVER_VERSION_MAX ||
+            cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "min"), 1)) > SEMVER_VERSION_MAX ||
+            cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "min"), 2)) > SEMVER_VERSION_MAX
         )
         {
             sqlite3_finalize(statement);
@@ -63,7 +66,10 @@ bool indexDependency(KPM *kpm, char *dependency_id, char *artifact_repository, c
             !cJSON_IsNumber(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "max"), 2)) ||
             cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "max"), 0)) < 0 ||
             cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "max"), 1)) < 0 ||
-            cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "max"), 2)) < 0
+            cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "max"), 2)) < 0 ||
+            cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "max"), 0)) > SEMVER_VERSION_MAX ||
+            cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "max"), 1)) > SEMVER_VERSION_MAX ||
+            cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "max"), 2)) > SEMVER_VERSION_MAX
         )
         {
             sqlite3_finalize(statement);
@@ -134,9 +140,15 @@ bool indexArtifact(KPM *kpm, char *url, char *repository_id, char *package_id, c
     }
 
     if (
+        !cJSON_IsNumber(cJSON_GetArrayItem(cJSON_GetObjectItem(artifact, "version"), 0)) ||
+        !cJSON_IsNumber(cJSON_GetArrayItem(cJSON_GetObjectItem(artifact, "version"), 1)) ||
+        !cJSON_IsNumber(cJSON_GetArrayItem(cJSON_GetObjectItem(artifact, "version"), 2)) ||
         cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(artifact, "version"), 0)) < 0 ||
         cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(artifact, "version"), 1)) < 0 ||
-        cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(artifact, "version"), 2)) < 0
+        cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(artifact, "version"), 2)) < 0 ||
+        cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(artifact, "version"), 0)) > SEMVER_VERSION_MAX ||
+        cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(artifact, "version"), 1)) > SEMVER_VERSION_MAX ||
+        cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(artifact, "version"), 2)) > SEMVER_VERSION_MAX
     )
     {
         kpmio->log(KPM_VERBOSITY_ERROR, "Artifact version field contains invalid entries");
