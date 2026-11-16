@@ -54,6 +54,81 @@
                     ]
                 }
             ]
+        },
+        "testbadmax1": {
+            "name": "Test Bad Max 1",
+            "author": "Test Author",
+            "description": "Test Package Description",
+            "artifacts": [
+                {
+                    "url": "packages/test/artifacts/badmax1.kpkg",
+                    "version": [
+                        0,
+                        2,
+                        0
+                    ],
+                    "dependencies": [
+                        {
+                            "id": "kpm",
+                            "max": ["0", 0, 0]
+                        }
+                    ],
+                    "supported_platforms": [
+                        "kindlehf",
+                        "kindlepw2"
+                    ]
+                }
+            ]
+        },
+        "testbadmax2": {
+            "name": "Test Bad Max 2",
+            "author": "Test Author",
+            "description": "Test Package Description",
+            "artifacts": [
+                {
+                    "url": "packages/test/artifacts/badmax2.kpkg",
+                    "version": [
+                        0,
+                        2,
+                        0
+                    ],
+                    "dependencies": [
+                        {
+                            "id": "kpm",
+                            "max": [0, "0", 0]
+                        }
+                    ],
+                    "supported_platforms": [
+                        "kindlehf",
+                        "kindlepw2"
+                    ]
+                }
+            ]
+        },
+        "testbadmax3": {
+            "name": "Test Bad Max 3",
+            "author": "Test Author",
+            "description": "Test Package Description",
+            "artifacts": [
+                {
+                    "url": "packages/test/artifacts/badmax3.kpkg",
+                    "version": [
+                        0,
+                        2,
+                        0
+                    ],
+                    "dependencies": [
+                        {
+                            "id": "kpm",
+                            "max": [0, 0, "0"]
+                        }
+                    ],
+                    "supported_platforms": [
+                        "kindlehf",
+                        "kindlepw2"
+                    ]
+                }
+            ]
         }
     }
 }

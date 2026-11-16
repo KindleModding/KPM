@@ -56,6 +56,84 @@
                     ]
                 }
             ]
+        },
+        "testpackage_badver1": {
+            "name": "Bad Version 1",
+            "author": "Test Author",
+            "description": "Test Package Description",
+            "artifacts": [
+                {
+                    "url": "packages/test/artifacts/badver1.kpkg",
+                    "version": [
+                        "0",
+                        0,
+                        0
+                    ],
+                    "dependencies": [
+                        {
+                            "id": "kpm",
+                            "min": [0, 0, 0],
+                            "max": [1, 0, 0]
+                        }
+                    ],
+                    "supported_platforms": [
+                        "kindlehf",
+                        "kindlepw2"
+                    ]
+                }
+            ]
+        },
+        "testpackage_badver2": {
+            "name": "Bad Version 2",
+            "author": "Test Author",
+            "description": "Test Package Description",
+            "artifacts": [
+                {
+                    "url": "packages/test/artifacts/badver2.kpkg",
+                    "version": [
+                        0,
+                        "0",
+                        0
+                    ],
+                    "dependencies": [
+                        {
+                            "id": "kpm",
+                            "min": [0, 0, 0],
+                            "max": [1, 0, 0]
+                        }
+                    ],
+                    "supported_platforms": [
+                        "kindlehf",
+                        "kindlepw2"
+                    ]
+                }
+            ]
+        },
+        "testpackage_badver3": {
+            "name": "Bad Version 3",
+            "author": "Test Author",
+            "description": "Test Package Description",
+            "artifacts": [
+                {
+                    "url": "packages/test/artifacts/badver3.kpkg",
+                    "version": [
+                        0,
+                        0,
+                        "0"
+                    ],
+                    "dependencies": [
+                        {
+                            "id": "kpm",
+                            "min": [0, 0, 0],
+                            "max": [1, 0, 0]
+                        }
+                    ],
+                    "supported_platforms": [
+                        "kindlehf",
+                        "kindlepw2"
+                    ]
+                }
+            ]
         }
     }
 }
