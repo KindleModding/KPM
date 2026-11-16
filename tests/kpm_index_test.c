@@ -21,8 +21,16 @@ int main(int argc, char *argv[])
     char *cur_path = get_path(argc, argv);
     size_t package_count;
     KPM_IndexedPackage *packages;
+    size_t artifact_count;
+    KPM_Artifact *artifacts;
 
     sqlite3_exec(kpm->db, "INSERT INTO repositories (id, url, name, description) VALUES ('testrepo_invalid', 'https://repo.kindlemodding.org/404', 'Test Repo Invalid', 'Invalid Test Repo');", NULL, NULL, NULL);
+    ASSERT_HD(KPM_UpdateIndex(kpm, &kpmio), KPM_GENERIC_ERROR);
+    ASSERT_HD(KPM_ListRepositoryPackages(kpm, "testrepo_invalid", &package_count, NULL), KPM_OK);
+    ASSERT_HD(package_count, 0);
+    ASSERT_HD(KPM_RemoveRepository(kpm, "testrepo_invalid"), KPM_OK);
+
+    sqlite3_exec(kpm->db, "INSERT INTO repositories (id, url, name, description) VALUES ('testrepo_invalid', 'not_a_url', 'Test Repo Invalid', 'Invalid Test Repo');", NULL, NULL, NULL);
     ASSERT_HD(KPM_UpdateIndex(kpm, &kpmio), KPM_GENERIC_ERROR);
     ASSERT_HD(KPM_ListRepositoryPackages(kpm, "testrepo_invalid", &package_count, NULL), KPM_OK);
     ASSERT_HD(package_count, 0);
@@ -69,6 +77,7 @@ int main(int argc, char *argv[])
         "resources/bad_repo_manifests/bad_v3_artifact_missing_digest.json",
         "resources/bad_repo_manifests/bad_v3_artifact_missing_install_size.json",
         "resources/bad_repo_manifests/bad_v3_artifact_missing_url.json",
+        "resources/bad_repo_manifests/duplicate_artifact_version.json",
         "resources/bad_repo_manifests/malformed_artifact_version.json",
         "resources/bad_repo_manifests/malformed_dependency_empty.json",
         "resources/bad_repo_manifests/malformed_dependency_id.json",
@@ -93,11 +102,16 @@ int main(int argc, char *argv[])
         ASSERT_HD(KPM_UpdateIndex(kpm, &kpmio), KPM_GENERIC_ERROR);
         ASSERT_HD(KPM_ListRepositoryPackages(kpm, "testrepo_bad", &package_count, NULL), KPM_OK);
         ASSERT_HD(package_count, 1);
+        ASSERT_HD(KPM_ListRepositoryPackages(kpm, "testrepo_bad", &package_count, &packages), KPM_OK);
+        
+        ASSERT_HD(KPM_ListPackageArtifacts(kpm, "testrepo_bad", packages[0].id, &artifact_count, NULL), KPM_OK);
+        ASSERT_HD(artifact_count, 1);
+        ASSERT_HD(KPM_ListPackageArtifacts(kpm, "testrepo_bad", packages[0].id, &artifact_count, &artifacts), KPM_OK);
+        KPM_FreeIndexedPackageList(package_count, packages);
+        KPM_FreeArtifactList(artifact_count, artifacts);
         ASSERT_HD(KPM_RemoveRepository(kpm, "testrepo_bad"), KPM_OK);
     }
 
-    size_t artifact_count;
-    KPM_Artifact *artifacts;
     add_repository(kpm, cur_path, "resources/valid_repo_manifests/nonexistent_dependency.json");
     ASSERT_HD(KPM_UpdateIndex(kpm, &kpmio), KPM_OK);
     ASSERT_HD(KPM_ListRepositoryPackages(kpm, "testrepo", &package_count, &packages), KPM_OK);
@@ -156,6 +170,17 @@ int main(int argc, char *argv[])
     ASSERT_HD_STR(packages[0].name, "Test Package");
     ASSERT_HD_STR(packages[0].author, "Test Author");
     ASSERT_HD_STR(packages[0].description, "Test Package Description");
+    ASSERT_HD(packages[0].icon, NULL);
+    ASSERT_HD(KPM_ListPackageArtifacts(kpm, "testrepo2", packages[0].id, &artifact_count, NULL), KPM_OK);
+    ASSERT_HD(KPM_ListPackageArtifacts(kpm, "testrepo2", packages[0].id, &artifact_count, &artifacts), KPM_OK);
+    ASSERT_HD(artifact_count, 1);
+    ASSERT_HD_STR(artifacts[0].repository, "testrepo2");
+    ASSERT_HD_STR(artifacts[0].id, "testpackage");
+    ASSERT_HD_STR(artifacts[0].url, "packages/test/artifacts/test_0.2.0_kindlehf-kindlepw2_compat.kpkg");
+    ASSERT_HD_SEMVER(artifacts[0].version, target);
+    ASSERT_HD(artifacts[0].installed_size, 0);
+    ASSERT_HD(artifacts[0].digest, NULL);
+    KPM_FreeArtifactList(artifact_count, artifacts);
     KPM_FreeIndexedPackageList(package_count, packages);
 
     ASSERT_HD(KPM_ListRepositoryPackages(kpm, "testrepo2", &package_count, NULL), KPM_OK);
@@ -166,6 +191,17 @@ int main(int argc, char *argv[])
     ASSERT_HD_STR(packages[0].name, "Test Package");
     ASSERT_HD_STR(packages[0].author, "Test Author");
     ASSERT_HD_STR(packages[0].description, "Test Package Description");
+    ASSERT_HD(packages[0].icon, NULL);
+    ASSERT_HD(KPM_ListPackageArtifacts(kpm, "testrepo2", packages[0].id, &artifact_count, NULL), KPM_OK);
+    ASSERT_HD(KPM_ListPackageArtifacts(kpm, "testrepo2", packages[0].id, &artifact_count, &artifacts), KPM_OK);
+    ASSERT_HD(artifact_count, 1);
+    ASSERT_HD_STR(artifacts[0].repository, "testrepo2");
+    ASSERT_HD_STR(artifacts[0].id, "testpackage");
+    ASSERT_HD_STR(artifacts[0].url, "packages/test/artifacts/test_0.2.0_kindlehf-kindlepw2_compat.kpkg");
+    ASSERT_HD_SEMVER(artifacts[0].version, target);
+    ASSERT_HD(artifacts[0].installed_size, 0);
+    ASSERT_HD(artifacts[0].digest, NULL);
+    KPM_FreeArtifactList(artifact_count, artifacts);
     KPM_FreeIndexedPackageList(package_count, packages);
 
     ASSERT_HD(KPM_ListRepositoryPackages(kpm, "testrepo3", &package_count, NULL), KPM_OK);
