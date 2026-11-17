@@ -108,19 +108,19 @@ void kpm_log(KPMIO_Verbosity verbosity, const char *format, ...)
         case KPM_VERBOSITY_DEBUG:
             if (!cli_state.debug)
                 return;
-            prefixed_format = asprintf_hd("\x1b[0;1;36m[DEBUG] %s", format);
+            prefixed_format = asprintf_hd("\x1b[0;1;36m[DEBUG] %s\x1b[0m", format);
             prefixed_format_fbink = asprintf_hd("[DEBUG] %s", format);
             break;
         case KPM_VERBOSITY_WARN:
-            prefixed_format = asprintf_hd("\x1b[0;33m[WARN] %s", format);
+            prefixed_format = asprintf_hd("\x1b[0;33m[WARN] %s\x1b[0m", format);
             prefixed_format_fbink = asprintf_hd("[WARN] %s", format);
             break;
         case KPM_VERBOSITY_ERROR:
-            prefixed_format = asprintf_hd("\x1b[0;1;31m[ERR] %s", format);
+            prefixed_format = asprintf_hd("\x1b[0;1;31m[ERR] %s\x1b[0m", format);
             prefixed_format_fbink = asprintf_hd("[ERR] %s", format);
             break;
         default:
-            prefixed_format = asprintf_hd("\x1b[0m%s", format);
+            prefixed_format = asprintf_hd("\x1b[0m%s\x1b[0m", format);
             prefixed_format_fbink = strdup(format);
             break;
     }
