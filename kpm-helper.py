@@ -29,6 +29,60 @@ BLOCKED_IDS = [
     "btfd"              #
 ]
 
+VALID_CATEGORIES = [
+    "audiovideo",
+    "audio",
+    "video",
+    "book",
+    "development",
+    "education",
+    "health",
+    "game",
+    "graphics",
+    "network",
+    "office",
+    "science",
+    "settings",
+    "system",
+    "utility",
+    "miscellaneous"
+]
+
+class ValidationWarning(Exception):
+    def __init__(self, message, *args):
+        self.message = message
+        super().__init__(message, *args)
+
+class ValidationException(Exception):
+    def __init__(self, message, *args):
+        self.message = message
+        super().__init__(message, *args)
+
+def validate_id(id: str):
+    if (id in BLOCKED_IDS):
+        raise ValidationException(f"ID must not be f{id} (reserved)")
+    if (len(id) < 2):
+        raise ValidationException("ID must contain at least 2 characters")
+    if (not any( [ c.isalpha() for c in id ] )):
+        raise ValidationException("ID must contain at least one letter")
+    if (not all( [ c.isalnum() or c == '-' or c == '_' for c in id ] )):
+        raise ValidationException(f"ID must only contain characters that are alphanumeric, '-', or '_' ")
+    if (id[-1] == '-' or id[-1] == '_'):
+        raise ValidationException(f"ID not end with '-', or '_' ")
+    if (not id.islower()):
+        raise ValidationException(f"ID must be lowercase")
+
+def validate_category(category: str, allow_empty: bool = False):
+    if len(category) == 0 and allow_empty:
+        return
+    if len(category) == 0:
+        raise ValidationException("Category must not be empty")
+    if not category.isalpha():
+        raise ValidationException("Category must only contain letters")
+    if not category.islower():
+        raise ValidationException("Category must be lowercase")
+    if not (category in VALID_CATEGORIES):
+        raise ValidationWarning(f"Continuing anyway, but category should be one of {','.join(VALID_CATEGORIES)}")
 
 @dataclass
 class Version:
@@ -156,6 +210,8 @@ class Package:
     name: str
     author: str
     description: str
+    category: str|None
+    subcategory: str
     version: Version
     dependencies: dict[str, Dependency]
     supported_platforms: list[str]
@@ -166,6 +222,8 @@ class Package:
             logging.info(f"Name:\t\t{self.name}")
             logging.info(f"Author:\t\t{self.author}")
             logging.info(f"Description:\t{self.description}")
+            logging.info(f"Category:\t{self.category}")
+            logging.info(f"Subcategory:\t{self.subcategory}")
             logging.info(f"Version:\t\t{self.version}")
             logging.info(f"Supports:\t{','.join(self.supported_platforms)}")
             if len(self.dependencies) != 0:
@@ -182,9 +240,12 @@ class Package:
                 "name": self.name,
                 "author": self.author,
                 "description": self.description,
-                "version": self.version.encode_obj(),
-                "dependencies": { dep_id: self.dependencies[dep_id].encode_obj() for dep_id in self.dependencies }
+                "category": self.category
             }
+            if not self.subcategory is None:
+                manifest["subcategory"] = self.subcategory
+            manifest["version"] = self.version.encode_obj()
+            manifest["dependencies"] = { dep_id: self.dependencies[dep_id].encode_obj() for dep_id in self.dependencies }
             if self.supported_platforms:
                 manifest["supported_platforms"] = self.supported_platforms
             file.write(json.dumps(manifest, indent=2))
@@ -198,30 +259,24 @@ class Package:
             raw_manifest["name"],
             raw_manifest["author"],
             raw_manifest["description"],
+            raw_manifest["category"],
+            raw_manifest.get("subcategory", None),
             Version.decode_obj(raw_manifest["version"]),
             { dep_id: Dependency.decode_obj(raw_manifest["dependencies"][dep_id]) for dep_id in raw_manifest["dependencies"] },
             raw_manifest.get("supported_platforms")
         )
 
     def pack(self, compression: int, in_path: str, out_file: BytesIO):
-        if (self.id in BLOCKED_IDS):
-            logging.error(f"ID must not be f{self.id} (reserved)")
-            exit(1)
-        if (len(self.id) < 2):
-            logging.error("ID must contain at least 2 characters")
-            exit(1)
-        if (not any( [ c.isalpha() for c in self.id ] )):
-            logging.error("ID must contain at least one letter")
-            exit(1)
-        if (not all( [ c.isalnum() or c == '-' or c == '_' for c in self.id ] )):
-            logging.error(f"ID must only contain characters that are alphanumeric, '-', or '_' ")
-            exit(1)
-        if (not self.id.islower()):
-            logging.error(f"ID must be lowercase")
-            exit(1)
+        validate_id(self.id)
+        validate_category(self.category)
+        try:
+            if not self.subcategory is None:
+                validate_category(self.subcategory, True)
+        except ValidationWarning:
+            pass
 
         strings: list[str] = []
-        strings.extend([self.id, self.name, self.author, self.description])
+        strings.extend([self.id, self.name, self.author, self.description, self.category, self.subcategory if not self.subcategory is None else ""])
 
         logging.debug("Walking package files")
         old_path = os.getcwd()
@@ -367,12 +422,16 @@ class Package:
         name: bytes = Package.__read_str(string_buf, len(id) + 1)
         author: bytes = Package.__read_str(string_buf, len(id) + 1 + len(name) + 1)
         description: bytes = Package.__read_str(string_buf, len(id) + 1 + len(name) + 1 + len(author) + 1)
+        category: bytes = Package.__read_str(string_buf, len(id) + 1 + len(name) + 1 + len(author) + 1 + len(description) + 1)
+        subcategory: bytes = Package.__read_str(string_buf, len(id) + 1 + len(name) + 1 + len(author) + 1 + len(description) + 1 + len(category) + 1)
         return (
             Package(
                 id.decode(),
                 name.decode(),
                 author.decode(),
                 description.decode(),
+                category.decode(),
+                subcategory.decode(),
                 package_version,
                 dependencies,
                 Package.__bitmap_to_supported(supported_bitmap)
@@ -448,6 +507,8 @@ class RepoPackage:
     name: str
     author: str
     description: str
+    category: str
+    subcategory: str|None
     icon: str|None
     artifacts: list[RepoArtifact]
 
@@ -455,8 +516,11 @@ class RepoPackage:
         encoded = {
             "name": self.name,
             "author": self.author,
-            "description": self.description
+            "description": self.description,
+            "category": self.category
         }
+        if (self.subcategory):
+            encoded["subcategory"] = self.subcategory
         if (self.icon):
             encoded["icon"] = self.icon
         encoded["artifacts"] = {}
@@ -523,6 +587,8 @@ class Repo:
         repo_package.name = package.name
         repo_package.author = package.author
         repo_package.description = package.description
+        repo_package.category = package.category
+        repo_package.subcategory = package.subcategory
 
     def add_package(self, package: RepoPackage):
         self.packages.append(package)
@@ -547,6 +613,8 @@ class Repo:
                 package.name,
                 package.author,
                 package.description,
+                package.category,
+                package.subcategory,
                 None,
                 []
             ))
@@ -626,6 +694,8 @@ class Repo:
                     data["packages"][package_id]["name"],
                     data["packages"][package_id]["author"],
                     data["packages"][package_id]["description"],
+                    data["packages"][package_id]["category"],
+                    data["packages"][package_id].get("subcategory", None),
                     data["packages"][package_id].get("icon", None),
                     [
                         RepoArtifact(
@@ -666,20 +736,10 @@ if __name__ == "__main__":
     def get_id(prompt: str = "Enter id: "):
         while True:
             id = input(prompt).strip()
-            if (id in BLOCKED_IDS):
-                logging.warning(f"ID must not be f{id} (reserved)")
-                continue
-            if (len(id) < 2):
-                logging.warning("ID must contain at least 2 characters")
-                continue
-            if (not any( [ c.isalpha() for c in id ] )):
-                logging.warning("ID must contain at least one letter")
-                continue
-            if (not all( [ c.isalnum() or c == '-' or c == '_' for c in id ] )):
-                logging.warning(f"ID must only contain characters that are alphanumeric, '-', or '_' ")
-                continue
-            if (not id.islower()):
-                logging.warning(f"ID must be lowercase")
+            try:
+                validate_id(id)
+            except ValidationException as e:
+                logging.warning(e.message)
                 continue
             return id
 
@@ -689,7 +749,7 @@ if __name__ == "__main__":
             supported_platform = input(prompt).strip()
             if len(supported_platform) == 0:
                 if (len(supported_platforms) == 0):
-                    logging.warning("You must enter at least one supported version")
+                    logging.warning(f"You must enter at least one supported version from: {','.join(SUPPORTED_PLATFORMS.keys())}")
                     continue
                 else:
                     return supported_platforms
@@ -710,6 +770,20 @@ if __name__ == "__main__":
                 if (type(e) is KeyboardInterrupt or type(e) is InterruptedError):
                     return
                 logger.warning("Invalid version, please try again.")
+
+    def get_category(prompt: str = "Enter category: ", allow_empty: bool = False):
+        while True:
+            category = input(prompt).strip()
+            try:
+                validate_category(category, allow_empty)
+            except ValidationWarning as e:
+                logging.warning(e.message)
+            except ValidationException as e:
+                logging.warning(e.message)
+                continue
+            if len(category) == 0:
+                category = None
+            return category
 
     parser = argparse.ArgumentParser(
         prog="KPM Helper",
@@ -735,14 +809,13 @@ if __name__ == "__main__":
                 break
             logger.warning("Package name must not be empty.")
 
-        author = input("Enter package author: ").strip()
-        description = input("Enter package description: ").strip()
-
         package = Package(
             id,
             name,
-            author,
-            description,
+            input("Enter package author: ").strip(),
+            input("Enter package description: ").strip(),
+            get_category(),
+            get_category("Enter subcategory: ", allow_empty=True),
             Version(1, 0, 0),
             {},
             get_supported_platforms()
