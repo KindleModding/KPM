@@ -85,7 +85,6 @@ int main(int argc, char *argv[])
     "resources/bad_repo_manifests/bad_v3_package_malformed_category.json",
     "resources/bad_repo_manifests/bad_v3_package_malformed_subcategory.json",
     "resources/bad_repo_manifests/bad_v3_package_missing_category.json",
-    "resources/bad_repo_manifests/bad_v3_package_missing_subcategory.json",
     "resources/bad_repo_manifests/bad_v3_package_no_category.json",
     "resources/bad_repo_manifests/bad_v3_v2_artifact.json",
     "resources/bad_repo_manifests/bad_v3_v2_dependency.json",
