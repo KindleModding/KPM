@@ -4,13 +4,15 @@
 #include "kpm/kpmio.h"
 #include "kpm/semver.h"
 #include "simpleGET.h"
+#include <assert.h>
 #include <limits.h>
 #include <string.h>
 #include "callback.h"
 #include "sqlite3.h"
 
-bool indexDependency(KPM *kpm, char *dependency_id, char *artifact_repository, char *artifact_id, char *artifact_url, cJSON *dependency, KPMIO *kpmio)
+bool index_dependency(KPM *kpm, uint32_t repository_version, char *dependency_id, char *artifact_repository, char *artifact_id, char *artifact_url, cJSON *dependency, KPMIO *kpmio)
 {
+    assert(repository_version < 3 || dependency_id != NULL);
     char *actual_dependency_id = dependency_id;
     if (actual_dependency_id == NULL)
         actual_dependency_id = cJSON_GetStringValue(cJSON_GetObjectItem(dependency, "id"));
@@ -120,8 +122,9 @@ bool indexDependency(KPM *kpm, char *dependency_id, char *artifact_repository, c
     return true;
 }
 
-bool indexArtifact(KPM *kpm, char *url, char *repository_id, char *package_id, cJSON *artifact, KPMIO *kpmio)
+bool index_artifact(KPM *kpm, uint32_t repository_version, char *url, char *repository_id, char *package_id, cJSON *artifact, KPMIO *kpmio)
 {
+    assert(repository_version < 3 || url != NULL);
     char *artifact_url = url;
     if (artifact_url == NULL)
         artifact_url = cJSON_GetStringValue(cJSON_GetObjectItem(artifact, "url"));
@@ -155,14 +158,18 @@ bool indexArtifact(KPM *kpm, char *url, char *repository_id, char *package_id, c
         return false;
     }
 
-    if (url != NULL && (cJSON_GetObjectItem(artifact, "installed_size") == NULL || cJSON_GetObjectItem(artifact, "digest") == NULL))
+    if (repository_version >= 3 && (cJSON_GetObjectItem(artifact, "installed_size") == NULL || cJSON_GetObjectItem(artifact, "digest") == NULL))
     {
         kpmio->log(KPM_VERBOSITY_ERROR, "Artifact v3 must contain both installed_size and digest");
         return false;
     }
 
-    kpmio->log(KPM_VERBOSITY_DEBUG, "IS NULL: %i", cJSON_GetObjectItem(artifact, "digest") != NULL);
-    kpmio->log(KPM_VERBOSITY_DEBUG, "IS NOT STRING: %i", !cJSON_IsString(cJSON_GetObjectItem(artifact, "digest")));
+    if (repository_version < 3 && (cJSON_GetObjectItem(artifact, "installed_size") != NULL || cJSON_GetObjectItem(artifact, "digest") != NULL))
+    {
+        kpmio->log(KPM_VERBOSITY_ERROR, "Artifact v2 must not contain either installed_size or digest");
+        return false;
+    }
+
     if (cJSON_GetObjectItem(artifact, "digest") != NULL && !cJSON_IsString(cJSON_GetObjectItem(artifact, "digest")))
     {
         kpmio->log(KPM_VERBOSITY_ERROR, "Artifact digest must be a string");
@@ -206,11 +213,24 @@ bool indexArtifact(KPM *kpm, char *url, char *repository_id, char *package_id, c
     }
     sqlite3_finalize(statement);
 
+    if (
+        (repository_version >= 3 && (
+                cJSON_GetObjectItem(artifact, "dependencies") == NULL ||
+                !cJSON_IsObject(cJSON_GetObjectItem(artifact, "dependencies"))
+            )
+        ) ||
+        (repository_version < 3 && cJSON_GetObjectItem(artifact, "dependencies") != NULL && !cJSON_IsArray(cJSON_GetObjectItem(artifact, "dependencies")))
+    )
+    {
+        kpmio->log(KPM_VERBOSITY_ERROR, "Invalid dependencies in artifact");
+        return false;
+    }
+
     // Index this artifact's dependencies
     cJSON *dependency;
     cJSON_ArrayForEach(dependency, cJSON_GetObjectItem(artifact, "dependencies"))
     {
-        if (!indexDependency(kpm, dependency->string, repository_id, package_id, artifact_url, dependency, kpmio))
+        if (!index_dependency(kpm, repository_version, dependency->string, repository_id, package_id, artifact_url, dependency, kpmio))
         {
             kpmio->log(KPM_VERBOSITY_ERROR, "Could not index artifact dependencies for [%s] (%s)", package_id, artifact_url);
             return false;
@@ -220,7 +240,7 @@ bool indexArtifact(KPM *kpm, char *url, char *repository_id, char *package_id, c
     return true;
 }
 
-bool indexPackage(KPM *kpm, char *repository_id, cJSON *package, KPMIO *kpmio)
+bool index_package(KPM *kpm, uint32_t repository_version, char *repository_id, cJSON *package, KPMIO *kpmio)
 {
     sqlite3_exec(kpm->db, "SAVEPOINT package", NULL, NULL, NULL);
     // Ensure the package is well-formed
@@ -229,8 +249,26 @@ bool indexPackage(KPM *kpm, char *repository_id, cJSON *package, KPMIO *kpmio)
         cJSON_GetObjectItem(package, "description") == NULL ||
         cJSON_GetObjectItem(package, "artifacts") == NULL ||
         cJSON_GetArraySize(cJSON_GetObjectItem(package, "artifacts")) == 0 ||
-        (cJSON_GetObjectItem(package, "category") != NULL && (!cJSON_IsString(cJSON_GetObjectItem(package, "category")) || strlen(cJSON_GetStringValue(cJSON_GetObjectItem(package, "category"))) == 0)) ||
-        (cJSON_GetObjectItem(package, "subcategory") != NULL && (!cJSON_IsString(cJSON_GetObjectItem(package, "subcategory")) || strlen(cJSON_GetStringValue(cJSON_GetObjectItem(package, "subcategory"))) == 0))
+        (
+            repository_version >= 3 && (
+                !cJSON_IsObject(cJSON_GetObjectItem(package, "artifacts")) ||
+                cJSON_GetObjectItem(package, "category") == NULL ||
+                !cJSON_IsString(cJSON_GetObjectItem(package, "category")) ||
+                strlen(cJSON_GetStringValue(cJSON_GetObjectItem(package, "category"))) == 0 ||
+                (cJSON_GetObjectItem(package, "subcategory") != NULL && (
+                        !cJSON_IsString(cJSON_GetObjectItem(package, "subcategory")) ||
+                        strlen(cJSON_GetStringValue(cJSON_GetObjectItem(package, "subcategory"))) == 0
+                    )
+                )
+            )
+        ) ||
+        (
+            repository_version < 3 && (
+                !cJSON_IsArray(cJSON_GetObjectItem(package, "artifacts")) ||
+                cJSON_GetObjectItem(package, "category") != NULL ||
+                cJSON_GetObjectItem(package, "subcategory") != NULL
+            )
+        )
     )
     {
         kpmio->log(KPM_VERBOSITY_ERROR, "Could not parse package %s", package->string);
@@ -302,7 +340,7 @@ bool indexPackage(KPM *kpm, char *repository_id, cJSON *package, KPMIO *kpmio)
         if (!supported)
             continue;
 
-        if (!indexArtifact(kpm, artifact->string, repository_id, package->string, artifact, kpmio))
+        if (!index_artifact(kpm, repository_version, artifact->string, repository_id, package->string, artifact, kpmio))
         {
             kpmio->log(KPM_VERBOSITY_ERROR, "Could not index artifact for [%s]", package->string);
             sqlite3_exec(kpm->db, "ROLLBACK TRANSACTION TO SAVEPOINT package", NULL, NULL, NULL);
@@ -389,6 +427,8 @@ KPM_Result KPM_UpdateIndex(KPM *kpm, KPMIO *kpmio)
             continue;
         }
 
+        uint32_t repository_version = cJSON_GetNumberValue(cJSON_GetObjectItem(json, "manifest_version"));
+
         // V1 - Requires no special logic, only difference is packages are lzma compressed, not gzip
 
         // Start a transaction for every repository
@@ -421,7 +461,7 @@ KPM_Result KPM_UpdateIndex(KPM *kpm, KPMIO *kpmio)
         cJSON *package;
         cJSON_ArrayForEach(package, cJSON_GetObjectItem(json, "packages"))
         {
-            if (indexPackage(kpm, repositories[i].id, package, kpmio))
+            if (index_package(kpm, repository_version, repositories[i].id, package, kpmio))
                 any_ok = true;
             else
                 all_ok = false;

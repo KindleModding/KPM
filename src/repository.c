@@ -40,16 +40,12 @@ KPM_Result KPM_ListRepositories(KPM *kpm, size_t *repository_count, KPM_Reposito
     for (int i=0; (status = sqlite3_step(statement)) == SQLITE_ROW; i++)
     {
         if (i == 0)
-        {
             *repository_count = sqlite3_column_int64(statement, 0);
-        }
 
         if (repositories != NULL && *repository_count > 0)
         {
             if (*repositories == NULL)
-            {
                 *repositories = malloc(*repository_count * sizeof(KPM_Repository));
-            }
 
             (*repositories)[i].id = strdup((char*) sqlite3_column_text(statement, 1));
             (*repositories)[i].url = strdup((char*) sqlite3_column_text(statement, 2));
@@ -202,9 +198,7 @@ KPM_Result KPM_AddRepository(KPM *kpm, const char *url, KPM_Repository *reposito
 KPM_Result KPM_RemoveRepository(KPM *kpm, const char *repository_id)
 {
     if (!strcmp(repository_id, "kindlemodding"))
-    {
         return KPM_GENERIC_ERROR;
-    }
 
     sqlite3_exec(kpm->db, "BEGIN", NULL, NULL, NULL);
     const char *zSQL = "DELETE FROM repositories WHERE id=?;";
@@ -240,16 +234,12 @@ KPM_Result KPM_ListRepositoryPackages(KPM *kpm, const char *repository_id, size_
     for (int i=0; (status = sqlite3_step(statement)) == SQLITE_ROW; i++)
     {
         if (i == 0)
-        {
             *package_count = sqlite3_column_int64(statement, 0);
-        }
 
         if (packages != NULL && *package_count > 0)
         {
             if (!*packages)
-            {
                 *packages = malloc(*package_count * sizeof(KPM_IndexedPackage));
-            }
 
             (*packages)[i].repository = strdup((const char*) sqlite3_column_text(statement, 1));
             (*packages)[i].id = strdup((const char*) sqlite3_column_text(statement, 2));

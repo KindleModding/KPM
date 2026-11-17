@@ -96,16 +96,12 @@ KPM_Result KPM_GetPackages(KPM *kpm, const char *id, size_t *package_count, KPM_
     for (int i=0; (status = sqlite3_step(statement)) == SQLITE_ROW; i++)
     {
         if (i == 0)
-        {
             *package_count = sqlite3_column_int64(statement, 0);
-        }
 
         if (packages != NULL && *package_count > 0)
         {
             if (!*packages)
-            {
                 *packages = malloc(*package_count * sizeof(KPM_IndexedPackage));
-            }
 
             (*packages)[i].repository = strdup((const char*) sqlite3_column_text(statement, 1));
             (*packages)[i].id = strdup((const char*) sqlite3_column_text(statement, 2));
@@ -154,16 +150,12 @@ KPM_Result KPM_SearchPackages(KPM *kpm, const char *query, size_t *package_count
     for (int i=0; (status = sqlite3_step(statement)) == SQLITE_ROW; i++)
     {
         if (i == 0)
-        {
             *package_count = sqlite3_column_int64(statement, 0);
-        }
 
         if (packages != NULL && *package_count > 0)
         {
             if (!*packages)
-            {
                 *packages = malloc(*package_count * sizeof(KPM_IndexedPackage));
-            }
 
             (*packages)[i].repository = strdup((const char*) sqlite3_column_text(statement, 1));
             (*packages)[i].id = strdup((const char*) sqlite3_column_text(statement, 2));
@@ -230,16 +222,12 @@ KPM_Result KPM_ListPackageArtifacts(KPM *kpm, const char *repository_id, const c
     for (int i=0; (status = sqlite3_step(statement)) == SQLITE_ROW; i++)
     {
         if (i == 0)
-        {
             *artifact_count = sqlite3_column_int64(statement, 0);
-        }
         
         if (artifacts != NULL && *artifact_count > 0)
         {
             if (!*artifacts)
-            {
                 *artifacts = malloc(*artifact_count * sizeof(KPM_Artifact));
-            }
 
             (*artifacts)[i].repository = strdup((const char*) sqlite3_column_text(statement, 1));
             (*artifacts)[i].id = strdup((const char*) sqlite3_column_text(statement, 2));
