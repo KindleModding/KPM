@@ -3,7 +3,7 @@ This is part of the KPM specification for `REPOv3`
 This repository format is supported from KPM `v2.0.0` and above.
 
 ## Note on Artifacts
-- Each package may only have on artifact per version per set of supported_platforms
+- Each package may only have one artifact per version per set of supported_platforms
 
 ## Changelog
 ### v3
@@ -122,6 +122,7 @@ Each package is stored on the `packages` object, the `key` is the package id, an
 | `artifacts`   | An object storing package artifacts, must contain at least one item |
 
 > *Package icon should be a relative URL rather than an absolute one. Package icons should be hosted under the same domain as the package artifacts.
+> The presence of a package icon and the package metadata values are determined by the latest artifact
 
 ## Artifacts
 Artifacts are stored in the `artifacts` object of packages.  

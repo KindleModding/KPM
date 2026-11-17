@@ -51,6 +51,8 @@ struct KPKG_Header
     char name[] @ addressof(id) + sizeof(id);
     char author[] @ addressof(name) + sizeof(name);
     char description[] @ addressof(author) + sizeof(author);
+    char category[] @ addressof(description) + sizeof(description);
+    char subcategory[] @ addressof(category) + sizeof(category);
 };
 
 KPKG_Header header @ 0x00;

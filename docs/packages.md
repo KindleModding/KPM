@@ -5,7 +5,9 @@ This package format is supported from KPM `v2.0.0` and above.
 ## Changelog
 ### v3
 - Switch to zstd compression format
-- Switch to custom packing format
+- Switch to custom packing format for differential upgrades
+- Implement root overlay support
+- Implement category/subcategory support
 - Make `supported_platforms` mandatory
 
 ### v2
@@ -34,14 +36,14 @@ A KPM package must have a `manifest.json` file at the top level.
 
 The following file/folder names are reserved at the top-level of the archive and must only be used as described in this document:
 ### Manifest
-- `manifest.json` (used only during packing process, not visible when package is installed)
+- `manifest.json` (used only during packing process, **not visible** when package is installed, **not packed** in kpkg file)
 ### Hooks
 - `install.sh`
 - `uninstall.sh`
 - `launch.sh`
 - `startup.sh`
 ### Misc
-- `icon.png` - Should be a 256x256 png image under 1MB - An *optional* icon to represent the package in GUIs
+- `icon.png` - If present, must be a png image, recommended to be a full-colour 256x256 image under 1MB
 ### Special Folders
 - `rootfs/`
 
@@ -53,6 +55,7 @@ The following file/folder names are reserved at the top-level of the archive and
   "name": "Test Package",
   "author": "Hackerdude",
   "description": "This is an example manifest file!",
+  "category": "miscellaneous",
   "version": [ 1, 0, 0 ],
   "dependencies": {
     "foobar": {
@@ -73,9 +76,32 @@ The package manifest is a JSON file containing a single object with the followin
 | `name` | The human-readable name of the package, must not be `null` |
 | `author` | The human-readable name of the package author, must not be `null` |
 | `description` | The human-readable description of the package, must not be `null` |
+| `category` | The category of this package, must not be `null` |
+| `subcategory` | The subcategory of this package, optional, must not be `null` |
 | `version` | The KPM version array representing the version of this package, must not be `null` |
 | `dependencies` | An object describing the dependencies of a package, must not be `null`, may be empty |
 | `supported_platforms` | A list of supported platform strings, must not be empty or `null` |
+
+### Categories
+The package's category must be a lowercase string with no spaces and should be from the following list:
+|     Category    |                           Description                          |
+|:---------------:|:--------------------------------------------------------------:|
+|   `audiovideo`  |   Multimedia applications that work with both audio and video  |
+|     `audio`     |       Applications primarily designed to work with audio       |
+|     `video`     |       Applications primarily designed to work with video       |
+|      `book`     |       Applications primarily designed to work with books       |
+|  `development`  |              Applications for software development             |
+|   `education`   |                    Educational applications                    |
+|     `health`    |              Health & Fitness related applications             |
+|      `game`     |                Applications that are videogames                |
+|    `graphics`   |                    Applications for graphics                   |
+|    `network`    |                   Applications for networking                  |
+|     `office`    |                       Office applications                      |
+|    `science`    |                     Scientific applications                    |
+|    `settings`   |             Applications designed for configuration            |
+|     `system`    |                        System utilities                        |
+|    `utility`    |                   Small utility applications                   |
+| `miscellaneous` |      Applications that do not fit into any other category      |
 
 ### Version Arrays
 KPM packages use version arrays to describe their version.  
@@ -187,7 +213,7 @@ If packages want to store data between upgrades, they **must not** store it in t
 `uninstall.sh` **must** delete this configuration data if it is run without the `upgrade` argument.
 
 ### Arguments
-The `install.sh` and `uninstall.sh` hooks will be executed with an `upgrade` argument (accessible via `$1`) when the following operation is part of a package upgrade.
+The `upgrade` and `install_fail` flags (when applicable) will be passed as the first argument to the script, ie: `sh install.sh upgrade`, and can be accessed via `$1`.
 
 ### Environment Variables
 The following environment variables are available within hooks:
@@ -205,8 +231,7 @@ For example, the hook `install.sh` would be able to access files `foo` and `bar`
 .
 ├── bar
 ├── foo
-├── install.sh
-└── manifest.json
+└── install.sh
 ```
 
 ### Scriptlets
