@@ -53,6 +53,19 @@ class Version:
     def decode_obj(obj: list):
         return Version(obj[0], obj[1], obj[2])
 
+    def __repr__(self):
+        return f"{self.major}.{self.minor}.{self.patch}"
+
+    def __str__(self):
+        return self.__repr__()
+
+    def __eq__(a, b):
+        return (
+            a.major == b.major and
+            a.minor == b.minor and
+            a.patch == b.patch
+        )
+
 
 @dataclass
 class Dependency:
@@ -129,7 +142,21 @@ class Package:
     description: str
     version: Version
     dependencies: dict[str, Dependency]
-    supported_platforms: list[str]|None
+    supported_platforms: list[str]
+
+    def log(self):
+            logging.info("=== PACKAGE INFO ===")
+            logging.info(f"ID:\t{self.id}")
+            logging.info(f"Name:\t{self.name}")
+            logging.info(f"Author:\t{self.author}")
+            logging.info(f"Description:\t{self.description}")
+            logging.info(f"Version:\t{self.version}")
+            logging.info(f"Supports:\t{','.join(self.supported_platforms)}")
+            if len(self.dependencies) != 0:
+                logging.info(f"Depends on:")
+                for dependency_id in self.dependencies:
+                    logging.info(f"\t- {dependency_id} @ {self.dependencies[dependency_id].min_version} - {self.dependencies[dependency_id].max_version}")
+            logging.info("")
 
     def write_manifest(self, package_path: str):
         with open(os.path.join(package_path, "manifest.json"), 'w') as file:
@@ -191,6 +218,8 @@ class Package:
                     continue
                 walked_files.append(os.path.join(root, file).replace('./', ''))
         os.chdir(old_path)
+        if len(walked_files) == 0:
+            raise Exception("Package must contain at least one file besides manifest.json.")
 
         dependencies: list[BinaryDependency] = []
         str_off = len(b'\x00'.join([ string.encode() for string in strings ])) + 1
@@ -285,7 +314,8 @@ class Package:
                 supported.append(key)
         return supported
 
-    def read_header(in_file: BytesIO) -> tuple[Package, list[BinaryFileEntry], bytes]:
+    def read_header(in_file: BytesIO) -> tuple[Package, list[BinaryFileEntry], bytes, hashlib._Hash]:
+        in_file.seek(0)
         if in_file.read(4) != b'KPKG':
             raise Exception("File is not a KPKG file")
 
@@ -310,6 +340,13 @@ class Package:
         for dep in binary_deps:
             dependencies[Package.__read_str(string_buf, dep.id_ptr).decode()] = Dependency( dep.min_version, dep.max_version )
 
+        # Compute header digest
+        digest = hashlib.sha256()
+        end = in_file.tell()
+        in_file.seek(0)
+        while in_file.tell() < end:
+            digest.update(in_file.read(min(8192, end - in_file.tell())))
+
         id: bytes = Package.__read_str(string_buf, 0)
         name: bytes = Package.__read_str(string_buf, len(id) + 1)
         author: bytes = Package.__read_str(string_buf, len(name) + 1)
@@ -325,29 +362,36 @@ class Package:
                 Package.__bitmap_to_supported(supported_bitmap)
             ),
             file_entries,
-            string_buf
+            string_buf,
+            digest
         )
 
-    def unpack(in_file: BytesIO, out_path: str):
-        package, file_entries, string_buf = Package.read_header(in_file)
+    def try_unpack(in_file: BytesIO, out_path: str, target_path: str = None) -> bool:
+        package, file_entries, string_buf, hash = Package.read_header(in_file)
+        unpacked = False
+        file_section_start = in_file.tell()
 
         for i in range(len(file_entries)):
             file_entry = file_entries[i]
             size = -1
             if i < len(file_entries)-1:
                 size = file_entries[i+1] - file_entry.offset
-            filepath = os.path.join(out_path, Package.__read_str(string_buf, file_entry.path_ptr).decode())
+
+            entry_path = Package.__read_str(string_buf, file_entry.path_ptr).decode()
+            if (not target_path is None) and entry_path != target_path:
+                continue
+
+            unpacked = True
+            filepath = os.path.join(out_path, entry_path)
             logging.info(f"Unpacking '{filepath}' ({file_entry.installed_checksum.hex()})")
             os.makedirs(os.path.dirname(filepath), exist_ok=True)
 
             current = 0
-            in_file.seek(file_entry.offset)
+            in_file.seek(file_section_start + file_entry.offset)
             with open(filepath, 'wb') as file:
                 d = zstd.ZstdDecompressor()
                 while True:
-                    chunk_size = COMPRESS_CHUNK_SIZE
-                    if current+chunk_size > size:
-                        chunk_size = size - current
+                    chunk_size = min(COMPRESS_CHUNK_SIZE, size - current)
 
                     file.write(d.decompress(in_file.read(chunk_size)))
                     current += chunk_size
@@ -355,27 +399,218 @@ class Package:
                     if current == size:
                         break
 
-        package.write_manifest(out_path)
+        if target_path is None or target_path == "manifest.json":
+            package.write_manifest(out_path)
+            unpacked = True
+        return unpacked
+
+@dataclass
+class RepoDependency:
+    id: str
+    min: Version|None
+    max: Version|None
+
+    def encode_obj(self):
+        encoded = {}
+        if (self.min):
+            encoded["min"] = self.min.encode_obj()
+        if (self.max):
+            encoded["max"] = self.max.encode_obj()
+
+@dataclass
+class RepoArtifact:
+    url: str
+    installed_size: int
+    digest: str
+    version: Version
+    dependencies: list[RepoDependency]
+    supported_platforms: list[str]
 
 @dataclass
 class RepoPackage:
+    id: str
     name: str
     author: str
     description: str
-    icon: str
-    artifacts: str
+    icon: str|None
+    artifacts: list[RepoArtifact]
 
+    def encode_obj(self):
+        encoded = {
+            "name": self.name,
+            "author": self.name,
+            "description": self.name
+        }
+        if (self.icon):
+            encoded["icon"] = self.icon
+        encoded["artifacts"] = {}
+
+        for artifact in self.artifacts:
+            encoded["artifacts"][artifact.url] = {
+                "installed_size": artifact.installed_size,
+                "digest": artifact.digest,
+                "version": artifact.version.encode_obj(),
+                "dependencies": {
+                    dependency_id: artifact.dependencies[dependency_id].encode_obj() for dependency_id in artifact.dependencies
+                },
+                "supported_platforms": artifact.supported_platforms
+            }
+        return encoded
+
+class ArtifactExistsException(Exception):
+    def __init__(self, package_id: str, artifact: RepoArtifact, *args):
+        super().__init__(*args)
+        self.package_id = package_id
+        self.artifact = artifact
 
 @dataclass
 class Repo:
     """ Repository class """
+    repo_path: str
+    version: int
     id: str
     name: str
     description: str
-    pubkey: str|None
-    signature: str|None
-    packages: dict[str, RepoPackage]
+    packages: list[RepoPackage]
+
+    def add_package(self, package: RepoPackage):
+        self.packages.append(package)
+
+    def add_from_file(self, in_file: BytesIO, overwrite: bool = False):
+        package: Package
+        file_entries: list[BinaryFileEntry]
+        strings: bytes
+        hash: hashlib._Hash
+
+        package, file_entries, strings, hash = Package.read_header(in_file)
+        header_hash = hash.hexdigest()
+
+        repo_package = None
+        for potential in self.packages:
+            if potential.id == package.id:
+                repo_package = potential
+
+        if repo_package is None:
+            self.packages.append(RepoPackage(
+                package.id,
+                package.name,
+                package.author,
+                package.description,
+                None,
+                []
+            ))
+            repo_package = self.packages[-1]
+
+        package_path = os.path.join(self.repo_path, "packages", repo_package.id)
+        if (Package.try_unpack(in_file, package_path, "icon.png")):
+            repo_package.icon = f"/packages/{repo_package.id}/icon.png"
+
+        artifact_filename = f"{package.id}_{package.version}_{'_'.join(package.supported_platforms)}.kpkg"
+        artifact = RepoArtifact(
+            f"/packages/{repo_package.id}/artifacts/{artifact_filename}",
+            sum([ entry.installed_size for entry in file_entries ]),
+            header_hash,
+            package.version,
+            [
+                RepoDependency(
+                    dependency_id,
+                    package.dependencies[dependency_id].min_version,
+                    package.dependencies[dependency_id].max_version
+                ) for dependency_id in package.dependencies
+            ],
+            package.supported_platforms
+        )
+
+        found = False
+        for potential_artifact in repo_package.artifacts:
+            if (potential_artifact.version == artifact.version):
+                found = True
+
+            for platform in potential_artifact.supported_platforms:
+                if not platform in artifact.supported_platforms:
+                    found = False
             
+            for platform in artifact.supported_platforms:
+                if not platform in potential_artifact.supported_platforms:
+                    found = False
+
+            if found:
+                if overwrite:
+                    repo_package.artifacts.remove(potential_artifact)
+                    break
+                else:
+                    raise ArtifactExistsException(repo_package.id, artifact)
+        repo_package.artifacts.append(artifact)
+
+        dest_path = os.path.join(self.repo_path, "packages", repo_package.id, "artifacts", artifact_filename)
+        if os.path.exists(dest_path):
+            if not overwrite:
+                raise ArtifactExistsException(repo_package.id, artifact)
+            else:
+                os.remove(dest_path)
+
+        os.makedirs(os.path.join(self.repo_path, "packages", repo_package.id, "artifacts"), exist_ok=True)
+        in_file.seek(0, os.SEEK_END)
+        in_size = in_file.tell()
+        in_file.seek(0, os.SEEK_SET)
+        with open(dest_path, 'wb') as out_file:
+            os.sendfile(out_file.fileno(), in_file.fileno(), 0, in_size)
+
+        return package
+
+    def read_manifest(manifest_path: str):
+        with open(manifest_path, 'r') as file:
+            data = json.loads(file.read())
+
+        repo = Repo(
+            os.path.dirname(manifest_path),
+            data["manifest_version"],
+            data["id"],
+            data["name"],
+            data["description"],
+            []
+        )
+        
+        for package_id in data["packages"]:
+            repo.add_package(RepoPackage(
+                    package_id,
+                    data["packages"][package_id]["name"],
+                    data["packages"][package_id]["author"],
+                    data["packages"][package_id]["description"],
+                    data["packages"][package_id].get("icon", None),
+                    [
+                        RepoArtifact(
+                            url,
+                            data["packages"][package_id]["artifacts"][url]["installed_size"],
+                            data["packages"][package_id]["artifacts"][url]["digest"],
+                            Version.decode_obj(data["packages"][package_id]["artifacts"][url]["version"]),
+                            [
+                                RepoDependency(
+                                    dependency_id,
+                                    Version.decode_obj(data["packages"][package_id]["artifacts"][url]["dependencies"]["min"]) if "min" in data["packages"][package_id]["artifacts"][url]["dependencies"] else None,
+                                    Version.decode_obj(data["packages"][package_id]["artifacts"][url]["dependencies"]["max"]) if "max" in data["packages"][package_id]["artifacts"][url]["dependencies"] else None
+                                ) for dependency_id in data["packages"][package_id]["artifacts"][url]["dependencies"]
+                            ],
+                            data["packages"][package_id]["artifacts"][url]["supported_platforms"],
+                        )
+                        for url in data["packages"][package_id]["artifacts"]
+                    ]
+                )
+            )
+
+        return repo
+
+    def write_manifest(self, manifest_path: str):
+        with open(manifest_path, 'w') as file:
+            file.write(json.dumps({
+                "manifest_version": KPKG_VERSION,
+                "id": self.id,
+                "name": self.name,
+                "description": self.description,
+                "packages": {
+                    package.id : package.encode_obj() for package in self.packages
+                }
+            }))
 
 
 if __name__ == "__main__":
@@ -398,6 +633,21 @@ if __name__ == "__main__":
                 logging.warning(f"ID must be lowercase")
                 continue
             return id
+
+    def get_supported_platforms(prompt: str = "Enter a supported platform to add (leave blank to stop): "):
+        supported_platforms = []
+        while True:
+            supported_platform = input(prompt).strip()
+            if len(supported_platform) == 0:
+                if (len(supported_platforms) == 0):
+                    logging.warning("You must enter at least one supported version")
+                    continue
+                else:
+                    return supported_platforms
+            if not supported_platform in SUPPORTED_PLATFORMS:
+                logging.warning(f"Supported platform must be one of: {','.join(SUPPORTED_PLATFORMS.keys())}")
+                continue
+            supported_platforms.append(supported_platform)
 
     def get_version(prompt: str = "Enter version: "):
         while True:
@@ -444,11 +694,13 @@ if __name__ == "__main__":
             author,
             description,
             Version(1, 0, 0),
-            [],
-            args.supported_platform if len(args.supported_platform) > 0 else None,
+            {},
+            get_supported_platforms()
         )
         os.makedirs(args.path, exist_ok=True)
+        package.log()
         package.write_manifest(args.path)
+        logging.info(f"Initialised package at {args.path}")
 
     package_init_parser = pack_subparsers.add_parser(
         "init",
@@ -457,21 +709,22 @@ if __name__ == "__main__":
     package_init_parser.add_argument(
         "path", help="The path to the package folder", type=pathlib.Path
     )
-    package_init_parser.add_argument(
-        "--supported_platform",
-        help="Add a supported platform to the manifest",
-        action="append",
-        default=[],
-        choices=list(SUPPORTED_PLATFORMS.keys()),
-    )
     package_init_parser.set_defaults(func=init_package)
 
     # pack
     def pack_package(args):
         assert os.path.isdir(args.pkg_path)
         package: Package = Package.read_manifest(args.pkg_path) # @TODO: Output path stuff
-        with open(args.output_path, 'wb') as file:
+        package.log()
+
+        output_path = args.output_path
+        if os.path.isdir(output_path):
+            output_path = os.path.join(output_path, f"{package.id}_{package.version}_{'_'.join(package.supported_platforms)}.kpkg")
+
+        logging.info("Packing...")
+        with open(output_path, 'wb') as file:
             package.pack(args.compression, args.pkg_path, file)
+        logging.info(f"Packed to {output_path}")
 
     package_pack_parser = pack_subparsers.add_parser(
         "pack", help="Pack a package folder into a kpkg file"
@@ -494,7 +747,8 @@ if __name__ == "__main__":
     def unpack_package(args):
         assert os.path.isfile(args.kpkg_path)
         with open(args.kpkg_path, 'rb') as file:
-            Package.unpack(file, args.output_path)
+            Package.try_unpack(file, args.output_path)
+        logging.info(f"Unpacked to {args.output_path}")
 
     package_unpack_parser = pack_subparsers.add_parser(
         "unpack", help="Extract a package"
@@ -517,7 +771,9 @@ if __name__ == "__main__":
             get_version("Enter maximum version (exclusive) or leave blank: ")
         )
 
+        package.log()
         package.write_manifest(args.pkg_path)
+        logging.info(f"Package manifest updated.")
 
     package_add_dependency_parser = pack_subparsers.add_parser(
         "add_dependency", help="Pack a package folder into a kpkg file"
@@ -538,7 +794,10 @@ if __name__ == "__main__":
             logging.info(f"Dependency '{target_id}' not found in package!")
             return
         del package.dependencies[target_id]
+        
+        package.log()
         package.write_manifest(args.pkg_path)
+        logging.info("Package manifest updated.")
 
     package_remove_dependency_parser = pack_subparsers.add_parser(
         "remove_dependency", help="Pack a package folder into a kpkg file"
@@ -567,8 +826,9 @@ if __name__ == "__main__":
             raise RuntimeError("Repository must have a non-empty name")
         description = input("Enter repository description: ").strip()
 
-        repo = Repo(manifest_path, id, name, description, [])
-        repo.write_manifest()
+        repo = Repo(os.path.dirname(manifest_path), KPKG_VERSION, id, name, description, [])
+        repo.write_manifest(manifest_path)
+        logging.info(f"Initialised repository manifest at {manifest_path}")
 
     repo_init_parser = repo_subparsers.add_parser(
         "init",
@@ -586,10 +846,19 @@ if __name__ == "__main__":
         manifest_path = args.repo_path
         if os.path.isdir(manifest_path):
             manifest_path = os.path.join(manifest_path, "manifest.json")
-        repo = Repo(manifest_path)
+        repo: Repo = Repo.read_manifest(manifest_path)
 
-        repo.add_artifact(args.package_path)
-        repo.write_manifest()
+        try:
+            with open(args.package_path, 'rb') as file:
+                package = repo.add_from_file(file, args.force)
+        except ArtifactExistsException as e:
+            logging.error(f"{e.package_id} @ {e.artifact.version} : {','.join(e.artifact.supported_platforms)} already exists in repository")
+            logging.error("Specify --force if you wish to overwrite this artifact")
+            exit(1)
+
+        repo.write_manifest(manifest_path)
+        package.log()
+        logging.info("Package added to repository.")
 
     repo_add_parser = repo_subparsers.add_parser(
         "add", help="Add an artifact to the repository"
@@ -600,6 +869,9 @@ if __name__ == "__main__":
     repo_add_parser.add_argument(
         "package_path", help="The path to the package file", type=pathlib.Path
     )
+    repo_add_parser.add_argument(
+        "--force", help="Whether or not to overwrite an existing artifact", action='store_true', default=False
+    )
     repo_add_parser.set_defaults(func=repo_add)
 
     # remove
@@ -607,23 +879,55 @@ if __name__ == "__main__":
         manifest_path = args.repo_path
         if os.path.isdir(manifest_path):
             manifest_path = os.path.join(manifest_path, "manifest.json")
-        repo = Repo(manifest_path)
+        repo: Repo = Repo.read_manifest(manifest_path)
 
         target_version = None
         if args.version != None:
             target_version = Version.decode(args.version.split("."))
 
-        repo.remove_artifact(args.id, target_version, args.supported_platform)
-        repo.write_manifest()
+        for_removal: list[RepoArtifact] = []
+        target_package = None
+        for package in repo.packages:
+            if package.id == args.id:
+                target_package = package
+                for artifact in package.artifacts:
+                    should_remove_artifact = False
+                    if target_version is None or artifact.version == target_version:
+                        if len(args.supported_platform) == 0:
+                            should_remove_artifact = True
+                        else:
+                            for supported_platform in args.supported_platform:
+                                if supported_platform in artifact.supported_platforms:
+                                    should_remove_artifact = True
+                    if should_remove_artifact:
+                        for_removal.append(artifact)
+                break
+
+        for artifact in for_removal:
+            artifact_url = artifact.url
+            if artifact_url[0] == '/':
+                artifact_url = artifact_url[1:]
+            artifact_path = os.path.join(repo.repo_path, artifact_url)
+            logging.info(f"Removing artifact {target_package.id} @ {artifact.version} : {','.join(artifact.supported_platforms)}")
+            if os.path.exists(artifact_path):
+                os.remove(artifact_path)
+            target_package.artifacts.remove(artifact)
+
+        if args.version is None and len(args.supported_platform) == 0:
+            logging.info(f"Removing package {target_package.id}")
+            repo.packages.remove(target_package)
+        
+        repo.write_manifest(manifest_path)
+        logging.info("Repository updated.")
 
     repo_remove_parser = repo_subparsers.add_parser(
-        "remove", help="Remove an artifact from the repository"
+        "remove", help="Remove a package or artifact from the repository"
     )
     repo_remove_parser.add_argument(
         "repo_path", help="The path to the repository folder", type=pathlib.Path
     )
     repo_remove_parser.add_argument(
-        "id", help="The id of the artifact to remove", type=str
+        "id", help="The id of the package to remove", type=str
     )
     repo_remove_parser.add_argument(
         "--version", help="The specific version to remove", type=str
