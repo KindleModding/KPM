@@ -1,0 +1,146 @@
+{
+    "manifest_version": 2,
+    "id": "testrepo_bad",
+    "name": "Test Repo Bad",
+    "description": "The test repo Bad",
+    "packages": {
+        "allgoodpackage": {
+            "name": "All good package",
+            "author": "Test Author",
+            "description": "Test Package Description",
+            "artifacts": [
+                {
+                    "url": "packages/allgood/artifacts/test_0.2.0_kindlehf-kindlepw2_compat.kpkg",
+                    "version": [
+                        0,
+                        2,
+                        0
+                    ],
+                    "dependencies": [
+                        {
+                            "id": "kpm",
+                            "min": [0, 0, 0],
+                            "max": [1, 0, 0]
+                        }
+                    ],
+                    "supported_platforms": [
+                        "kindlehf",
+                        "kindlepw2",
+                        "x86_64"
+                    ]
+                }
+            ]
+        },
+        "testpackage": {
+            "name": "Test Package",
+            "author": "Test Author",
+            "description": "Test Package Description",
+            "category": "miscellaneous",
+            "subcategory": "game",
+            "icon": "test.png",
+            "artifacts": [
+                {
+                    "url": "packages/test/artifacts/test_0.2.0_kindlehf-kindlepw2_compat.kpkg",
+                    "version": [
+                        0,
+                        2,
+                        0
+                    ],
+                    "dependencies": [
+                        {
+                            "id": "kpm",
+                            "min": [0, 0, 0]
+                        }
+                    ],
+                    "supported_platforms": [
+                        "kindlehf",
+                        "kindlepw2",
+                        "x86_64"
+                    ]
+                }
+            ]
+        },
+        "testpackage2": {
+            "name": "Test Package 2",
+            "author": "Test Author",
+            "description": "Test Package Description",
+            "category": "miscellaneous",
+            "subcategory": "game",
+            "artifacts": [
+                {
+                    "url": "packages/test/artifacts/test2_0.2.0_kindlehf-kindlepw2_compat.kpkg",
+                    "version": [
+                        0,
+                        2,
+                        0
+                    ],
+                    "dependencies": [
+                        {
+                            "id": "kpm",
+                            "min": [0, 0, 0]
+                        }
+                    ],
+                    "supported_platforms": [
+                        "kindlehf",
+                        "kindlepw2",
+                        "x86_64"
+                    ]
+                }
+            ]
+        },
+        "testpackage3": {
+            "name": "Test Package 3",
+            "author": "Test Author",
+            "description": "Test Package Description",
+            "category": "miscellaneous",
+            "artifacts": [
+                {
+                    "url": "packages/test/artifacts/test3_0.2.0_kindlehf-kindlepw2_compat.kpkg",
+                    "version": [
+                        0,
+                        2,
+                        0
+                    ],
+                    "dependencies": [
+                        {
+                            "id": "kpm",
+                            "min": [0, 0, 0]
+                        }
+                    ],
+                    "supported_platforms": [
+                        "kindlehf",
+                        "kindlepw2",
+                        "x86_64"
+                    ]
+                }
+            ]
+        },
+        "testpackage4": {
+            "name": "Test Package 4",
+            "author": "Test Author",
+            "description": "Test Package Description",
+            "subcategory": "game",
+            "artifacts": [
+                {
+                    "url": "packages/test/artifacts/test4_0.2.0_kindlehf-kindlepw2_compat.kpkg",
+                    "version": [
+                        0,
+                        2,
+                        0
+                    ],
+                    "dependencies": [
+                        {
+                            "id": "kpm",
+                            "min": [0, 0, 0]
+                        }
+                    ],
+                    "supported_platforms": [
+                        "kindlehf",
+                        "kindlepw2",
+                        "x86_64"
+                    ]
+                }
+            ]
+        }
+    }
+}

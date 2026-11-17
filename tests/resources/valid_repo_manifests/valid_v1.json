@@ -16,7 +16,13 @@
                         2,
                         0
                     ],
-                    "dependencies": [],
+                    "dependencies": [
+                        {
+                            "id": "kpm",
+                            "min": [1, 0, 0],
+                            "max": [2, 0, 0]
+                        }
+                    ],
                     "supported_platforms": [
                         "kindlehf",
                         "kindlepw2",

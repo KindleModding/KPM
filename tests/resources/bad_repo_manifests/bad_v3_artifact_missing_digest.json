@@ -1,5 +1,5 @@
 {
-    "manifest_version": 1,
+    "manifest_version": 3,
     "id": "testrepo_bad",
     "name": "Test Repo Bad",
     "description": "The test repo Bad",
@@ -8,6 +8,8 @@
             "name": "All good package",
             "author": "Test Author",
             "description": "Test Package Description",
+            "category": "miscellaneous",
+            "subcategory": "game",
             "icon": "test.png",
             "artifacts": {
                 "packages/allgood/artifacts/test_0.2.0_kindlehf-kindlepw2_compat.kpkg": {
@@ -36,6 +38,8 @@
             "name": "Test Package",
             "author": "Test Author",
             "description": "Test Package Description",
+            "category": "miscellaneous",
+            "subcategory": "game",
             "icon": "test.png",
             "artifacts": {
                 "packages/test/artifacts/test_0.2.0_kindlehf-kindlepw2_compat.kpkg": {

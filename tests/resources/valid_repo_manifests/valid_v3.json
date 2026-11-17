@@ -1,5 +1,5 @@
 {
-    "manifest_version": 1,
+    "manifest_version": 3,
     "id": "testrepo3",
     "name": "Test Repo 3",
     "description": "The test repo 3",
@@ -8,6 +8,8 @@
             "name": "Test Package",
             "author": "Test Author",
             "description": "Test Package Description",
+            "category": "miscellaneous",
+            "subcategory": "game",
             "icon": "test.png",
             "artifacts": {
                 "packages/test/artifacts/test_0.2.0_kindlehf-kindlepw2_compat.kpkg": {
@@ -18,7 +20,12 @@
                         2,
                         0
                     ],
-                    "dependencies": {},
+                    "dependencies": {
+                        "kpm": {
+                            "min": [1, 0, 0],
+                            "max": [2, 0, 0]
+                        }
+                    },
                     "supported_platforms": [
                         "kindlehf",
                         "kindlepw2",

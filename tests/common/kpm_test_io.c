@@ -28,16 +28,16 @@ void kpm_log(KPMIO_Verbosity verbosity, const char *format, ...)
     switch (verbosity)
     {
         case KPM_VERBOSITY_DEBUG:
-            prefixed_format = asprintf_hd("\x1b[0;1;36m[DEBUG] %s", format);
+            prefixed_format = asprintf_hd("\x1b[0;1;36m[DEBUG] %s\x1b[0m", format);
             break;
         case KPM_VERBOSITY_WARN:
-            prefixed_format = asprintf_hd("\x1b[0;33m[WARN] %s", format);
+            prefixed_format = asprintf_hd("\x1b[0;33m[WARN] %s\x1b[0m", format);
             break;
         case KPM_VERBOSITY_ERROR:
-            prefixed_format = asprintf_hd("\x1b[0;1;31m[ERR] %s", format);
+            prefixed_format = asprintf_hd("\x1b[0;1;31m[ERR] %s\x1b[0m", format);
             break;
         default:
-            prefixed_format = asprintf_hd("\x1b[0m%s", format);
+            prefixed_format = asprintf_hd("\x1b[0m%s\x1b[0m", format);
             break;
     }
 
