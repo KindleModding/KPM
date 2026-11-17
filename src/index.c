@@ -248,7 +248,7 @@ bool indexPackage(KPM *kpm, char *repository_id, cJSON *package, KPMIO *kpmio)
         subcategory = cJSON_GetStringValue(cJSON_GetObjectItem(package, "subcategory"));
 
     // INSERT that package INTO the DATABASE (deltarune reference???)
-    const char *zSQL = "INSERT INTO packages (repository, id, name, author, description, category, subcategory, icon) VALUES (?, ?, ?, ?, ?, ?);";
+    const char *zSQL = "INSERT INTO packages (repository, id, name, author, description, category, subcategory, icon) VALUES (?, ?, ?, ?, ?, ?, ?, ?);";
     sqlite3_stmt *statement;
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
     sqlite3_bind_text(statement, 1, repository_id, -1, SQLITE_STATIC);

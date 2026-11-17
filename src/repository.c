@@ -230,7 +230,7 @@ KPM_Result KPM_ListRepositoryPackages(KPM *kpm, const char *repository_id, size_
     if (packages != NULL)
         *packages = NULL;
     
-    const char *zSQL = "SELECT (SELECT COUNT() FROM packages WHERE repository=?), repository, id, name, author, description, icon FROM packages WHERE repository=?;";
+    const char *zSQL = "SELECT (SELECT COUNT() FROM packages WHERE repository=?), repository, id, name, author, description, category, subcategory, icon FROM packages WHERE repository=?;";
     sqlite3_stmt *statement;
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
     sqlite3_bind_text(statement, 1, repository_id, -1, SQLITE_STATIC);
@@ -256,8 +256,13 @@ KPM_Result KPM_ListRepositoryPackages(KPM *kpm, const char *repository_id, size_
             (*packages)[i].name = strdup((const char*) sqlite3_column_text(statement, 3));
             (*packages)[i].author = strdup((const char*) sqlite3_column_text(statement, 4));
             (*packages)[i].description = strdup((const char*) sqlite3_column_text(statement, 5));
-            if (sqlite3_column_type(statement, 6) != SQLITE_NULL)
-                (*packages)[i].icon = strdup((const char*) sqlite3_column_text(statement, 6));
+            (*packages)[i].category = strdup((const char*) sqlite3_column_text(statement, 6));
+            if (sqlite3_column_type(statement, 7) != SQLITE_NULL)
+                (*packages)[i].subcategory = strdup((const char*) sqlite3_column_text(statement, 7));
+            else
+                (*packages)[i].subcategory = NULL;
+            if (sqlite3_column_type(statement, 8) != SQLITE_NULL)
+                (*packages)[i].icon = strdup((const char*) sqlite3_column_text(statement, 8));
             else
                 (*packages)[i].icon = NULL;
         }
