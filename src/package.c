@@ -12,6 +12,8 @@ void KPM_FreeIndexedPackage(KPM_IndexedPackage *package)
     free(package->id);
     free(package->name);
     free(package->description);
+    free(package->category);
+    free(package->subcategory);
     free(package->author);
     free(package->icon);
 
@@ -19,6 +21,8 @@ void KPM_FreeIndexedPackage(KPM_IndexedPackage *package)
     package->id = NULL;
     package->name = NULL;
     package->description = NULL;
+    package->category = NULL;
+    package->subcategory = NULL;
     package->author = NULL;
     package->icon = NULL;
 }
@@ -37,18 +41,20 @@ KPM_Result KPM_GetPackage(KPM *kpm, const char *repository, const char *id, KPM_
     package->id = NULL;
     package->name = NULL;
     package->description = NULL;
+    package->category = NULL;
+    package->subcategory = NULL;
     package->author = NULL;
     package->icon = NULL;
 
     sqlite3_stmt *statement;
     if (repository == NULL)
     {
-        const char *zSQL = "SELECT repository, id, name, author, description, icon FROM packages WHERE AND id=? LIMIT 1;";
+        const char *zSQL = "SELECT repository, id, name, author, description, category, subcategory, icon FROM packages WHERE AND id=? LIMIT 1;";
         sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
         sqlite3_bind_text(statement, 1, id, -1, SQLITE_STATIC);
     }
     else {
-        const char *zSQL = "SELECT repository, id, name, author, description, icon FROM packages WHERE repository=? AND id=? LIMIT 1;";
+        const char *zSQL = "SELECT repository, id, name, author, description, category, subcategory, icon FROM packages WHERE repository=? AND id=? LIMIT 1;";
         sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
         sqlite3_bind_text(statement, 1, repository, -1, SQLITE_STATIC);
         sqlite3_bind_text(statement, 2, id, -1, SQLITE_STATIC);
@@ -61,8 +67,11 @@ KPM_Result KPM_GetPackage(KPM *kpm, const char *repository, const char *id, KPM_
         package->name = strdup((const char*) sqlite3_column_text(statement, 2));
         package->author = strdup((const char*) sqlite3_column_text(statement, 3));
         package->description = strdup((const char*) sqlite3_column_text(statement, 4));
+        package->category = strdup((const char*) sqlite3_column_text(statement, 5));
+        if (sqlite3_column_type(statement, 6) != SQLITE_NULL)
+            package->subcategory = strdup((const char*) sqlite3_column_text(statement, 6));
         if (sqlite3_column_type(statement, 5) != SQLITE_NULL)
-            package->icon = strdup((const char*) sqlite3_column_text(statement, 5));
+            package->icon = strdup((const char*) sqlite3_column_text(statement, 7));
     } else {
         return KPM_SQLITE_ERROR;
     }
@@ -77,7 +86,7 @@ KPM_Result KPM_GetPackages(KPM *kpm, const char *id, size_t *package_count, KPM_
     if (packages != NULL)
         *packages = NULL;
 
-    const char *zSQL = "SELECT (SELECT COUNT() FROM packages WHERE id=?), repository, id, name, author, description, icon FROM packages WHERE id=?;";
+    const char *zSQL = "SELECT (SELECT COUNT() FROM packages WHERE id=?), repository, id, name, author, description, category, subcategory, icon FROM packages WHERE id=?;";
     sqlite3_stmt *statement;
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
     sqlite3_bind_text(statement, 1, id, -1, SQLITE_STATIC);
@@ -103,8 +112,13 @@ KPM_Result KPM_GetPackages(KPM *kpm, const char *id, size_t *package_count, KPM_
             (*packages)[i].name = strdup((const char*) sqlite3_column_text(statement, 3));
             (*packages)[i].author = strdup((const char*) sqlite3_column_text(statement, 4));
             (*packages)[i].description = strdup((const char*) sqlite3_column_text(statement, 5));
-            if (sqlite3_column_type(statement, 6) != SQLITE_NULL)
-                (*packages)[i].icon = strdup((const char*) sqlite3_column_text(statement, 6));
+            (*packages)[i].category = strdup((const char*) sqlite3_column_text(statement, 6));
+            if (sqlite3_column_type(statement, 7) != SQLITE_NULL)
+                (*packages)[i].subcategory = strdup((const char*) sqlite3_column_text(statement, 7));
+            else
+                (*packages)[i].subcategory = NULL;
+            if (sqlite3_column_type(statement, 8) != SQLITE_NULL)
+                (*packages)[i].icon = strdup((const char*) sqlite3_column_text(statement, 8));
             else
                 (*packages)[i].icon = NULL;
         }
@@ -128,7 +142,7 @@ KPM_Result KPM_SearchPackages(KPM *kpm, const char *query, size_t *package_count
 
     char *paddedQuery = asprintf_hd("%%%s%%", query);    
 
-    const char *zSQL = "SELECT (SELECT COUNT() FROM packages WHERE id LIKE ? OR name LIKE ?), repository, id, name, author, description, icon FROM packages WHERE id LIKE ? OR name LIKE ?;";
+    const char *zSQL = "SELECT (SELECT COUNT() FROM packages WHERE id LIKE ? OR name LIKE ?), repository, id, name, author, description, category, subcategory, icon FROM packages WHERE id LIKE ? OR name LIKE ?;";
     sqlite3_stmt *statement;
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
     sqlite3_bind_text(statement, 1, paddedQuery, -1, SQLITE_STATIC);
@@ -156,8 +170,13 @@ KPM_Result KPM_SearchPackages(KPM *kpm, const char *query, size_t *package_count
             (*packages)[i].name = strdup((const char*) sqlite3_column_text(statement, 3));
             (*packages)[i].author = strdup((const char*) sqlite3_column_text(statement, 4));
             (*packages)[i].description = strdup((const char*) sqlite3_column_text(statement, 5));
-            if (sqlite3_column_type(statement, 6) != SQLITE_NULL)
-                (*packages)[i].icon = strdup((const char*) sqlite3_column_text(statement, 6));
+            (*packages)[i].category = strdup((const char*) sqlite3_column_text(statement, 6));
+            if (sqlite3_column_type(statement, 7) != SQLITE_NULL)
+                (*packages)[i].subcategory = strdup((const char*) sqlite3_column_text(statement, 7));
+            else
+                (*packages)[i].subcategory = NULL;
+            if (sqlite3_column_type(statement, 8) != SQLITE_NULL)
+                (*packages)[i].icon = strdup((const char*) sqlite3_column_text(statement, 8));
             else
                 (*packages)[i].icon = NULL;
         }

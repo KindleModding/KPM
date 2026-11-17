@@ -294,46 +294,58 @@ char *KPKG_GetId(KPKG_File *file)
 char *KPKG_GetName(KPKG_File *file)
 {
     if (file->kpkg_version == KPKG_VERSION_1 || file->kpkg_version == KPKG_VERSION_2)
-    {
         return file->kpkg1_payload.name;
-    }
-    else
-    {
-        int offset = 0;
-        for (int i = 0; i < 1; i++)
-            while (file->kpkg3_payload.strings[offset++] != '\0') {}
-        return file->kpkg3_payload.strings + offset + 1;
-    }
+
+    int offset = 0;
+    for (int i = 0; i < 1; i++)
+        while (file->kpkg3_payload.strings[offset++] != '\0') {}
+    return file->kpkg3_payload.strings + offset + 1;
 }
 
 char *KPKG_GetAuthor(KPKG_File *file)
 {
     if (file->kpkg_version == KPKG_VERSION_1 || file->kpkg_version == KPKG_VERSION_2)
-    {
         return file->kpkg1_payload.author;
-    }
-    else
-    {
-        int offset = 0;
-        for (int i = 0; i < 2; i++)
-            while (file->kpkg3_payload.strings[offset++] != '\0') {}
-        return file->kpkg3_payload.strings + offset + 1;
-    }
+
+    int offset = 0;
+    for (int i = 0; i < 2; i++)
+        while (file->kpkg3_payload.strings[offset++] != '\0') {}
+    return file->kpkg3_payload.strings + offset + 1;
 }
 
 char *KPKG_GetDescription(KPKG_File *file)
 {
     if (file->kpkg_version == KPKG_VERSION_1 || file->kpkg_version == KPKG_VERSION_2)
-    {
         return file->kpkg1_payload.description;
-    }
-    else
-    {
-        int offset = 0;
-        for (int i = 0; i < 3; i++)
-            while (file->kpkg3_payload.strings[offset++] != '\0') {}
-        return file->kpkg3_payload.strings + offset + 1;
-    }
+
+    int offset = 0;
+    for (int i = 0; i < 3; i++)
+        while (file->kpkg3_payload.strings[offset++] != '\0') {}
+    return file->kpkg3_payload.strings + offset + 1;
+}
+
+char *KPKG_GetCategory(KPKG_File *file)
+{
+    if (file->kpkg_version == KPKG_VERSION_1 || file->kpkg_version == KPKG_VERSION_2)
+        return "miscellaneous";
+
+    int offset = 0;
+    for (int i = 0; i < 4; i++)
+        while (file->kpkg3_payload.strings[offset++] != '\0') {}
+    return file->kpkg3_payload.strings + offset + 1;
+}
+
+char *KPKG_GetSubcategory(KPKG_File *file)
+{
+    if (file->kpkg_version == KPKG_VERSION_1 || file->kpkg_version == KPKG_VERSION_2)
+        return NULL;
+
+    int offset = 0;
+    for (int i = 0; i < 5; i++)
+        while (file->kpkg3_payload.strings[offset++] != '\0') {}
+    if (strlen(file->kpkg3_payload.strings + offset + 1) == 0)
+        return NULL;
+    return file->kpkg3_payload.strings + offset + 1;
 }
 
 SemVer KPKG_GetVersion(KPKG_File *file)

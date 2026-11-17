@@ -128,6 +128,8 @@ char *KPKG_GetId(KPKG_File *file);
 char *KPKG_GetName(KPKG_File *file);
 char *KPKG_GetAuthor(KPKG_File *file);
 char *KPKG_GetDescription(KPKG_File *file);
+char *KPKG_GetCategory(KPKG_File *file);
+char *KPKG_GetSubcategory(KPKG_File *file); // Note: May return NULL
 SemVer KPKG_GetVersion(KPKG_File *file);
 size_t KPKG_GetDependencies(KPKG_File *file, KPKG_DependencyEntry **dependencies);
 KPKG_Result KPKG_Unpack(KPKG_File *file, const char *out_path, const char *cmp_path, KPMIO *kpmio);

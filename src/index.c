@@ -225,10 +225,13 @@ bool indexPackage(KPM *kpm, char *repository_id, cJSON *package, KPMIO *kpmio)
     sqlite3_exec(kpm->db, "SAVEPOINT package", NULL, NULL, NULL);
     // Ensure the package is well-formed
     if (cJSON_GetObjectItem(package, "name") == NULL ||
-    cJSON_GetObjectItem(package, "author") == NULL ||
-    cJSON_GetObjectItem(package, "description") == NULL ||
-    cJSON_GetObjectItem(package, "artifacts") == NULL ||
-    cJSON_GetArraySize(cJSON_GetObjectItem(package, "artifacts")) == 0)
+        cJSON_GetObjectItem(package, "author") == NULL ||
+        cJSON_GetObjectItem(package, "description") == NULL ||
+        cJSON_GetObjectItem(package, "artifacts") == NULL ||
+        cJSON_GetArraySize(cJSON_GetObjectItem(package, "artifacts")) == 0 ||
+        (cJSON_GetObjectItem(package, "category") != NULL && (!cJSON_IsString(cJSON_GetObjectItem(package, "category")) || strlen(cJSON_GetStringValue(cJSON_GetObjectItem(package, "category"))) == 0)) ||
+        (cJSON_GetObjectItem(package, "subcategory") != NULL && (!cJSON_IsString(cJSON_GetObjectItem(package, "subcategory")) || strlen(cJSON_GetStringValue(cJSON_GetObjectItem(package, "subcategory"))) == 0))
+    )
     {
         kpmio->log(KPM_VERBOSITY_ERROR, "Could not parse package %s", package->string);
         sqlite3_exec(kpm->db, "ROLLBACK TRANSACTION TO SAVEPOINT package", NULL, NULL, NULL);
@@ -237,8 +240,15 @@ bool indexPackage(KPM *kpm, char *repository_id, cJSON *package, KPMIO *kpmio)
 
     kpmio->log(KPM_VERBOSITY_DEBUG, "indexing package [%s]", package->string);
 
+    char *category = "miscellaneous";
+    if (cJSON_GetObjectItem(package, "category") != NULL)
+        category = cJSON_GetStringValue(cJSON_GetObjectItem(package, "category"));
+    char *subcategory = NULL;
+    if (cJSON_GetObjectItem(package, "subcategory") != NULL)
+        subcategory = cJSON_GetStringValue(cJSON_GetObjectItem(package, "subcategory"));
+
     // INSERT that package INTO the DATABASE (deltarune reference???)
-    const char *zSQL = "INSERT INTO packages (repository, id, name, author, description, icon) VALUES (?, ?, ?, ?, ?, ?);";
+    const char *zSQL = "INSERT INTO packages (repository, id, name, author, description, category, subcategory, icon) VALUES (?, ?, ?, ?, ?, ?);";
     sqlite3_stmt *statement;
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
     sqlite3_bind_text(statement, 1, repository_id, -1, SQLITE_STATIC);
@@ -246,11 +256,17 @@ bool indexPackage(KPM *kpm, char *repository_id, cJSON *package, KPMIO *kpmio)
     sqlite3_bind_text(statement, 3, cJSON_GetStringValue(cJSON_GetObjectItem(package, "name")), -1, SQLITE_STATIC);
     sqlite3_bind_text(statement, 4, cJSON_GetStringValue(cJSON_GetObjectItem(package, "author")), -1, SQLITE_STATIC);
     sqlite3_bind_text(statement, 5, cJSON_GetStringValue(cJSON_GetObjectItem(package, "description")), -1, SQLITE_STATIC);
+    sqlite3_bind_text(statement, 6, category, -1, SQLITE_STATIC);    
+
+    if (subcategory)
+        sqlite3_bind_text(statement, 7, subcategory, -1, SQLITE_STATIC);
+    else
+        sqlite3_bind_null(statement, 7);
 
     if (cJSON_GetObjectItem(package, "icon"))
-        sqlite3_bind_text(statement, 6, cJSON_GetStringValue(cJSON_GetObjectItem(package, "icon")), -1, SQLITE_STATIC);
+        sqlite3_bind_text(statement, 8, cJSON_GetStringValue(cJSON_GetObjectItem(package, "icon")), -1, SQLITE_STATIC);
     else
-        sqlite3_bind_null(statement, 6);
+        sqlite3_bind_null(statement, 8);
 
     if (sqlite3_step(statement) != SQLITE_DONE)
     {
@@ -361,7 +377,7 @@ KPM_Result KPM_UpdateIndex(KPM *kpm, KPMIO *kpmio)
         if (
             cJSON_GetObjectItem(json, "manifest_version") == NULL ||
             !cJSON_IsNumber(cJSON_GetObjectItem(json, "manifest_version")) ||
-            cJSON_GetNumberValue(cJSON_GetObjectItem(json, "manifest_version")) < 0 ||
+            cJSON_GetNumberValue(cJSON_GetObjectItem(json, "manifest_version")) < 1 ||
             cJSON_GetNumberValue(cJSON_GetObjectItem(json, "manifest_version")) > KPM_MANIFEST_VERSION
         )
         {
@@ -371,12 +387,6 @@ KPM_Result KPM_UpdateIndex(KPM *kpm, KPMIO *kpmio)
             cJSON_Delete(json);
             all_ok = false;
             continue;
-        }
-
-        uint32_t manifest_version = cJSON_GetNumberValue(cJSON_GetObjectItem(json, "manifest_version"));
-        if (manifest_version >= 3)
-        {
-            // @TODO: Calculate signature
         }
 
         // V1 - Requires no special logic, only difference is packages are lzma compressed, not gzip

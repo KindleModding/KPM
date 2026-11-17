@@ -66,6 +66,8 @@ typedef struct
     char *name; /**< The name of the package */
     char *author; /**< The author of the package */
     char *description; /**< The description of the package */
+    char *category; /**< The category of the package */
+    char *subcategory; /**< The subcategory of the package, may be NULL */
     char *icon; /**< The package icon */
 } KPM_IndexedPackage;
 
@@ -107,6 +109,8 @@ typedef struct
     char *name; /**< The package name */
     char *author; /**< The package author */
     char *description; /**< The package description */
+    char *category; /**< The package category */
+    char *subcategory; /**< The package subcategory - may be NULL */
     uint64_t installed_size; /**< The size of this package on-disk */
     SemVer version; /**< The package version */
     bool installed_as_dependency; /**< Whether or not this package was installed as a dependency of another package */
