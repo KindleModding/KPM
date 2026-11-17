@@ -13,9 +13,6 @@ import struct
 from compression import zstd
 import hashlib
 
-logging.basicConfig(format="[%(levelname)s] %(message)s", level=logging.INFO)
-logger = logging.getLogger(__name__)
-
 COMPRESS_CHUNK_SIZE = (1024 ** 2) * 64
 
 KPKG_VERSION = 3
@@ -59,12 +56,31 @@ class Version:
     def __str__(self):
         return self.__repr__()
 
-    def __eq__(a, b):
+    def __eq__(self, other):
         return (
-            a.major == b.major and
-            a.minor == b.minor and
-            a.patch == b.patch
+            self.major == other.major and
+            self.minor == other.minor and
+            self.patch == other.patch
         )
+
+    def __gt__(self, other):
+        if self.major != other.major:
+            return self.major > other.major
+        if self.minor != other.minor:
+            return self.minor > other.minor
+        if self.patch != other.patch:
+            return self.patch > other.patch
+        return False
+
+    def __lt__(self, other):
+        if self.major != other.major:
+            return self.major < other.major
+        if self.minor != other.minor:
+            return self.minor < other.minor
+        if self.patch != other.patch:
+            return self.patch < other.patch
+        return False
+        
 
 
 @dataclass
@@ -146,11 +162,11 @@ class Package:
 
     def log(self):
             logging.info("=== PACKAGE INFO ===")
-            logging.info(f"ID:\t{self.id}")
-            logging.info(f"Name:\t{self.name}")
-            logging.info(f"Author:\t{self.author}")
+            logging.info(f"ID:\t\t{self.id}")
+            logging.info(f"Name:\t\t{self.name}")
+            logging.info(f"Author:\t\t{self.author}")
             logging.info(f"Description:\t{self.description}")
-            logging.info(f"Version:\t{self.version}")
+            logging.info(f"Version:\t\t{self.version}")
             logging.info(f"Supports:\t{','.join(self.supported_platforms)}")
             if len(self.dependencies) != 0:
                 logging.info(f"Depends on:")
@@ -349,8 +365,8 @@ class Package:
 
         id: bytes = Package.__read_str(string_buf, 0)
         name: bytes = Package.__read_str(string_buf, len(id) + 1)
-        author: bytes = Package.__read_str(string_buf, len(name) + 1)
-        description: bytes = Package.__read_str(string_buf, len(author) + 1)
+        author: bytes = Package.__read_str(string_buf, len(id) + 1 + len(name) + 1)
+        description: bytes = Package.__read_str(string_buf, len(id) + 1 + len(name) + 1 + len(author) + 1)
         return (
             Package(
                 id.decode(),
@@ -372,10 +388,10 @@ class Package:
         file_section_start = in_file.tell()
 
         for i in range(len(file_entries)):
-            file_entry = file_entries[i]
+            file_entry: BinaryFileEntry = file_entries[i]
             size = -1
             if i < len(file_entries)-1:
-                size = file_entries[i+1] - file_entry.offset
+                size = file_entries[i+1].offset - file_entry.offset
 
             entry_path = Package.__read_str(string_buf, file_entry.path_ptr).decode()
             if (not target_path is None) and entry_path != target_path:
@@ -383,7 +399,7 @@ class Package:
 
             unpacked = True
             filepath = os.path.join(out_path, entry_path)
-            logging.info(f"Unpacking '{filepath}' ({file_entry.installed_checksum.hex()})")
+            logging.info(f"Unpacking '{entry_path}' ({file_entry.installed_checksum.hex()})")
             os.makedirs(os.path.dirname(filepath), exist_ok=True)
 
             current = 0
@@ -438,8 +454,8 @@ class RepoPackage:
     def encode_obj(self):
         encoded = {
             "name": self.name,
-            "author": self.name,
-            "description": self.name
+            "author": self.author,
+            "description": self.description
         }
         if (self.icon):
             encoded["icon"] = self.icon
@@ -473,6 +489,41 @@ class Repo:
     description: str
     packages: list[RepoPackage]
 
+    def update_package_metadata(self, package_id):
+        logging.debug(f"Updating package metadata for {package_id}")
+        repo_package = None
+        for package in self.packages:
+            if package.id == package_id:
+                repo_package = package
+        if repo_package is None:
+            raise Exception(f"Could not find package {package_id}")
+
+        latest_artifact: RepoArtifact = None
+        for artifact in repo_package.artifacts:
+            if latest_artifact == None or artifact.version > latest_artifact.version:
+                latest_artifact = artifact
+
+        if latest_artifact is None:
+            raise Exception(f"Could not find artifact for {package_id}")
+        logging.debug(f"Got latest artifact: {latest_artifact.version}")
+
+        artifact_path = latest_artifact.url
+        if artifact_path[0] == '/':
+            artifact_path = artifact_path[1:]
+
+        with open(os.path.join(self.repo_path, artifact_path), 'rb') as file:
+            package, _, _, _ = Package.read_header(file)
+
+            package_path = os.path.join(self.repo_path, "packages", repo_package.id)
+            if os.path.exists(os.path.join(package_path, "icon.png")):
+                os.remove(os.path.join(package_path, "icon.png"))
+            if Package.try_unpack(file, package_path, "icon.png"):
+                repo_package.icon = f"/packages/{repo_package.id}/icon.png"
+
+        repo_package.name = package.name
+        repo_package.author = package.author
+        repo_package.description = package.description
+
     def add_package(self, package: RepoPackage):
         self.packages.append(package)
 
@@ -500,10 +551,6 @@ class Repo:
                 []
             ))
             repo_package = self.packages[-1]
-
-        package_path = os.path.join(self.repo_path, "packages", repo_package.id)
-        if (Package.try_unpack(in_file, package_path, "icon.png")):
-            repo_package.icon = f"/packages/{repo_package.id}/icon.png"
 
         artifact_filename = f"{package.id}_{package.version}_{'_'.join(package.supported_platforms)}.kpkg"
         artifact = RepoArtifact(
@@ -555,7 +602,9 @@ class Repo:
         in_file.seek(0, os.SEEK_SET)
         with open(dest_path, 'wb') as out_file:
             os.sendfile(out_file.fileno(), in_file.fileno(), 0, in_size)
+            out_file.truncate(out_file.tell())
 
+        self.update_package_metadata(package.id)
         return package
 
     def read_manifest(manifest_path: str):
@@ -667,6 +716,7 @@ if __name__ == "__main__":
         description="Kindle Package Manager Helper is used for a ton of stuff",
         epilog="v3.0.0 - Created by Hackerdude (https://hackerdude.tech)",
     )
+    parser.add_argument("--verbose", action='store_true', default=False)
     subparsers = parser.add_subparsers(title="command", required=True)
 
     ###
@@ -883,7 +933,11 @@ if __name__ == "__main__":
 
         target_version = None
         if args.version != None:
-            target_version = Version.decode(args.version.split("."))
+            target_version = Version(
+                int(args.version.split(".")[0]),
+                int(args.version.split(".")[1]),
+                int(args.version.split(".")[2])
+            )
 
         for_removal: list[RepoArtifact] = []
         target_package = None
@@ -913,10 +967,11 @@ if __name__ == "__main__":
                 os.remove(artifact_path)
             target_package.artifacts.remove(artifact)
 
-        if args.version is None and len(args.supported_platform) == 0:
+        if (args.version is None and len(args.supported_platform) == 0) or len(target_package.artifacts) == 0:
             logging.info(f"Removing package {target_package.id}")
             repo.packages.remove(target_package)
-        
+        else:
+            repo.update_package_metadata(target_package.id)
         repo.write_manifest(manifest_path)
         logging.info("Repository updated.")
 
@@ -942,4 +997,9 @@ if __name__ == "__main__":
     repo_remove_parser.set_defaults(func=repo_remove)
 
     args = parser.parse_args()
+    if args.verbose:
+        logging.basicConfig(format="[%(levelname)s] %(message)s", level=logging.DEBUG)
+    else:
+        logging.basicConfig(format="[%(levelname)s] %(message)s", level=logging.INFO)
+    logger = logging.getLogger(__name__)
     args.func(args)
