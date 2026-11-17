@@ -135,6 +135,7 @@ int main(int argc, char *argv[])
     ASSERT_HD_STR(artifacts[0].url, "packages/test/artifacts/test_0.2.0_kindlehf-kindlepw2_compat.kpkg");
     SemVer target = { .major=0,.minor=2,.patch=0 };
     ASSERT_HD_SEMVER(artifacts[0].version, target);
+    KPM_FreeArtifactList(artifact_count, artifacts);
     ASSERT_HD(KPM_RemoveRepository(kpm, "testrepo"), KPM_OK);
     KPM_FreeIndexedPackageList(package_count, packages);
 
@@ -241,5 +242,6 @@ int main(int argc, char *argv[])
     ASSERT_HD(KPM_RemoveRepository(kpm, "testrepo3"), KPM_OK);
 
     free(cur_path);
+    KPM_Cleanup(kpm);
     return 0;
 }
