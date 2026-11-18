@@ -24,6 +24,9 @@ jobs:
       shell: bash
       run: |
             meson setup --reconfigure --buildtype=release builddir
+    - name: Test
+      shell: bash
+      run: |
             cd builddir
             meson test
     - uses: actions/upload-artifact@v4
