@@ -291,6 +291,7 @@ class Package:
         os.chdir(old_path)
         if len(walked_files) == 0:
             raise Exception("Package must contain at least one file besides manifest.json.")
+        walked_files.sort() # Make KPKG files more reproducible
 
         dependencies: list[BinaryDependency] = []
         str_off = len(b'\x00'.join([ string.encode() for string in strings ])) + 1
