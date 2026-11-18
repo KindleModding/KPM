@@ -1,4 +1,3 @@
-python_exe = find_program('python3', 'python')
 run_command(
     'bash', '-c', 'cp -ar $MESON_SOURCE_ROOT/tests/resources $MESON_BUILD_ROOT/tests/',
     check: true
@@ -10,7 +9,7 @@ run_command(
 )
 
 run_command(
-    'bash', '-c', python_exe, '$MESON_BUILD_ROOT/tests/resources/gen_resources.py',
+    'bash', '-c', 'python $MESON_BUILD_ROOT/tests/resources/gen_resources.py',
     check: true
 )
 
