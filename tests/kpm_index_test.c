@@ -220,7 +220,7 @@ int main(int argc, char *argv[])
 
     ASSERT_HD(KPM_ListRepositoryPackages(kpm, "testrepo3", &package_count, NULL), KPM_OK);
     ASSERT_HD(KPM_ListRepositoryPackages(kpm, "testrepo3", &package_count, &packages), KPM_OK);
-    ASSERT_HD(package_count, 1);
+    ASSERT_HD(package_count, 3);
     ASSERT_HD_STR(packages[0].repository, "testrepo3");
     ASSERT_HD_STR(packages[0].id, "testpackage");
     ASSERT_HD_STR(packages[0].name, "Test Package");
