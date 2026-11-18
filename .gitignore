@@ -7,3 +7,4 @@ subprojects/*
 build/
 tests/resources/test_repo
 tests/resources/test_repo_src
+__pycache__
