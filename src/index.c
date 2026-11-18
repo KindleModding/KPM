@@ -57,15 +57,15 @@ bool index_dependency(KPM *kpm, uint32_t repository_version, char *dependency_id
             return false;
         }
 
-        sqlite3_bind_int(statement, 5, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "min"), 0)));
-        sqlite3_bind_int(statement, 6, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "min"), 1)));
-        sqlite3_bind_int(statement, 7, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "min"), 2)));
+        sqlite3_bind_int64(statement, 5, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "min"), 0)));
+        sqlite3_bind_int64(statement, 6, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "min"), 1)));
+        sqlite3_bind_int64(statement, 7, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "min"), 2)));
     }
     else
     {
-        sqlite3_bind_int(statement, 5, 0);
-        sqlite3_bind_int(statement, 6, 0);
-        sqlite3_bind_int(statement, 7, 0);
+        sqlite3_bind_int64(statement, 5, 0);
+        sqlite3_bind_int64(statement, 6, 0);
+        sqlite3_bind_int64(statement, 7, 0);
     }
 
     if (cJSON_GetObjectItem(dependency, "max") != NULL)
@@ -87,15 +87,15 @@ bool index_dependency(KPM *kpm, uint32_t repository_version, char *dependency_id
             return false;
         }
 
-        sqlite3_bind_int(statement, 8, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "max"), 0)));
-        sqlite3_bind_int(statement, 9, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "max"), 1)));
-        sqlite3_bind_int(statement, 10, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "max"), 2)));
+        sqlite3_bind_int64(statement, 8, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "max"), 0)));
+        sqlite3_bind_int64(statement, 9, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "max"), 1)));
+        sqlite3_bind_int64(statement, 10, cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(dependency, "max"), 2)));
     }
     else
     {
-        sqlite3_bind_int(statement, 8, SEMVER_VERSION_MAX);
-        sqlite3_bind_int(statement, 9, SEMVER_VERSION_MAX);
-        sqlite3_bind_int(statement, 10, SEMVER_VERSION_MAX);
+        sqlite3_bind_int64(statement, 8, SEMVER_VERSION_MAX);
+        sqlite3_bind_int64(statement, 9, SEMVER_VERSION_MAX);
+        sqlite3_bind_int64(statement, 10, SEMVER_VERSION_MAX);
     }
 
     if (

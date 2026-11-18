@@ -7,13 +7,6 @@
 #include <string.h>
 #include <unistd.h>
 
-void add_repository(KPM *kpm, char *cur_path, char *path)
-{
-    char *repo_path = asprintf_hd("file://%s/%s", cur_path, path);
-    ASSERT_HD(KPM_AddRepository(kpm, repo_path, NULL, &kpmio), KPM_OK);
-    free(repo_path);
-}
-
 int main(int argc, char *argv[])
 {
     KPM *kpm = initialise_kpm();
@@ -135,7 +128,7 @@ int main(int argc, char *argv[])
     ASSERT_HD_STR(artifacts[0].repository, "testrepo");
     ASSERT_HD_STR(artifacts[0].id, "testpackage");
     ASSERT_HD_STR(artifacts[0].url, "packages/test/artifacts/test_0.2.0_kindlehf-kindlepw2_compat.kpkg");
-    SemVer target = { .major=0,.minor=2,.patch=0 };
+    SemVer target = { 0, 2, 0 };
     ASSERT_HD_SEMVER(artifacts[0].version, target);
     KPM_FreeArtifactList(artifact_count, artifacts);
     ASSERT_HD(KPM_RemoveRepository(kpm, "testrepo"), KPM_OK);
@@ -176,19 +169,19 @@ int main(int argc, char *argv[])
 
     ASSERT_HD(KPM_UpdateIndex(kpm, &kpmio), KPM_OK);
 
-    ASSERT_HD(KPM_ListRepositoryPackages(kpm, "testrepo1", &package_count, NULL), KPM_OK);
-    ASSERT_HD(KPM_ListRepositoryPackages(kpm, "testrepo1", &package_count, &packages), KPM_OK);
+    ASSERT_HD(KPM_ListRepositoryPackages(kpm, "testrepov1", &package_count, NULL), KPM_OK);
+    ASSERT_HD(KPM_ListRepositoryPackages(kpm, "testrepov1", &package_count, &packages), KPM_OK);
     ASSERT_HD(package_count, 1);
-    ASSERT_HD_STR(packages[0].repository, "testrepo1");
+    ASSERT_HD_STR(packages[0].repository, "testrepov1");
     ASSERT_HD_STR(packages[0].id, "testpackage");
     ASSERT_HD_STR(packages[0].name, "Test Package");
     ASSERT_HD_STR(packages[0].author, "Test Author");
     ASSERT_HD_STR(packages[0].description, "Test Package Description");
     ASSERT_HD(packages[0].icon, NULL);
-    ASSERT_HD(KPM_ListPackageArtifacts(kpm, "testrepo1", packages[0].id, &artifact_count, NULL), KPM_OK);
-    ASSERT_HD(KPM_ListPackageArtifacts(kpm, "testrepo1", packages[0].id, &artifact_count, &artifacts), KPM_OK);
+    ASSERT_HD(KPM_ListPackageArtifacts(kpm, "testrepov1", packages[0].id, &artifact_count, NULL), KPM_OK);
+    ASSERT_HD(KPM_ListPackageArtifacts(kpm, "testrepov1", packages[0].id, &artifact_count, &artifacts), KPM_OK);
     ASSERT_HD(artifact_count, 1);
-    ASSERT_HD_STR(artifacts[0].repository, "testrepo1");
+    ASSERT_HD_STR(artifacts[0].repository, "testrepov1");
     ASSERT_HD_STR(artifacts[0].id, "testpackage");
     ASSERT_HD_STR(artifacts[0].url, "packages/test/artifacts/test_0.2.0_kindlehf-kindlepw2_compat.kpkg");
     ASSERT_HD_SEMVER(artifacts[0].version, target);
@@ -197,19 +190,19 @@ int main(int argc, char *argv[])
     KPM_FreeArtifactList(artifact_count, artifacts);
     KPM_FreeIndexedPackageList(package_count, packages);
 
-    ASSERT_HD(KPM_ListRepositoryPackages(kpm, "testrepo2", &package_count, NULL), KPM_OK);
-    ASSERT_HD(KPM_ListRepositoryPackages(kpm, "testrepo2", &package_count, &packages), KPM_OK);
+    ASSERT_HD(KPM_ListRepositoryPackages(kpm, "testrepov2", &package_count, NULL), KPM_OK);
+    ASSERT_HD(KPM_ListRepositoryPackages(kpm, "testrepov2", &package_count, &packages), KPM_OK);
     ASSERT_HD(package_count, 1);
-    ASSERT_HD_STR(packages[0].repository, "testrepo2");
+    ASSERT_HD_STR(packages[0].repository, "testrepov2");
     ASSERT_HD_STR(packages[0].id, "testpackage");
     ASSERT_HD_STR(packages[0].name, "Test Package");
     ASSERT_HD_STR(packages[0].author, "Test Author");
     ASSERT_HD_STR(packages[0].description, "Test Package Description");
     ASSERT_HD(packages[0].icon, NULL);
-    ASSERT_HD(KPM_ListPackageArtifacts(kpm, "testrepo2", packages[0].id, &artifact_count, NULL), KPM_OK);
-    ASSERT_HD(KPM_ListPackageArtifacts(kpm, "testrepo2", packages[0].id, &artifact_count, &artifacts), KPM_OK);
+    ASSERT_HD(KPM_ListPackageArtifacts(kpm, "testrepov2", packages[0].id, &artifact_count, NULL), KPM_OK);
+    ASSERT_HD(KPM_ListPackageArtifacts(kpm, "testrepov2", packages[0].id, &artifact_count, &artifacts), KPM_OK);
     ASSERT_HD(artifact_count, 1);
-    ASSERT_HD_STR(artifacts[0].repository, "testrepo2");
+    ASSERT_HD_STR(artifacts[0].repository, "testrepov2");
     ASSERT_HD_STR(artifacts[0].id, "testpackage");
     ASSERT_HD_STR(artifacts[0].url, "packages/test/artifacts/test_0.2.0_kindlehf-kindlepw2_compat.kpkg");
     ASSERT_HD_SEMVER(artifacts[0].version, target);
@@ -218,19 +211,19 @@ int main(int argc, char *argv[])
     KPM_FreeArtifactList(artifact_count, artifacts);
     KPM_FreeIndexedPackageList(package_count, packages);
 
-    ASSERT_HD(KPM_ListRepositoryPackages(kpm, "testrepo3", &package_count, NULL), KPM_OK);
-    ASSERT_HD(KPM_ListRepositoryPackages(kpm, "testrepo3", &package_count, &packages), KPM_OK);
-    ASSERT_HD(package_count, 3);
-    ASSERT_HD_STR(packages[0].repository, "testrepo3");
+    ASSERT_HD(KPM_ListRepositoryPackages(kpm, "testrepov3", &package_count, NULL), KPM_OK);
+    ASSERT_HD(KPM_ListRepositoryPackages(kpm, "testrepov3", &package_count, &packages), KPM_OK);
+    ASSERT_HD(package_count, 4);
+    ASSERT_HD_STR(packages[0].repository, "testrepov3");
     ASSERT_HD_STR(packages[0].id, "testpackage");
     ASSERT_HD_STR(packages[0].name, "Test Package");
     ASSERT_HD_STR(packages[0].author, "Test Author");
     ASSERT_HD_STR(packages[0].description, "Test Package Description");
     ASSERT_HD_STR(packages[0].icon, "test.png");
-    ASSERT_HD(KPM_ListPackageArtifacts(kpm, "testrepo3", packages[0].id, &artifact_count, NULL), KPM_OK);
-    ASSERT_HD(KPM_ListPackageArtifacts(kpm, "testrepo3", packages[0].id, &artifact_count, &artifacts), KPM_OK);
+    ASSERT_HD(KPM_ListPackageArtifacts(kpm, "testrepov3", packages[0].id, &artifact_count, NULL), KPM_OK);
+    ASSERT_HD(KPM_ListPackageArtifacts(kpm, "testrepov3", packages[0].id, &artifact_count, &artifacts), KPM_OK);
     ASSERT_HD(artifact_count, 1);
-    ASSERT_HD_STR(artifacts[0].repository, "testrepo3");
+    ASSERT_HD_STR(artifacts[0].repository, "testrepov3");
     ASSERT_HD_STR(artifacts[0].id, "testpackage");
     ASSERT_HD_STR(artifacts[0].url, "packages/test/artifacts/test_0.2.0_kindlehf-kindlepw2_compat.kpkg");
     ASSERT_HD_SEMVER(artifacts[0].version, target);
@@ -238,10 +231,22 @@ int main(int argc, char *argv[])
     ASSERT_HD_STR(artifacts[0].digest, "2e7d221c96fa73a85172ac4440fdf2bbbada6b0b3400cbf5eac07741a4680e5a");
     KPM_FreeArtifactList(artifact_count, artifacts);
     KPM_FreeIndexedPackageList(package_count, packages);
+    SemVer version = { 0, 2, 0 };
+    KPM_Artifact artifact;
+    ASSERT_HD(KPM_GetArtifact(kpm, "testrepov3", "testpackage4", version, &artifact), KPM_OK);
+    size_t dependency_count;
+    KPM_Dependency *dependencies;
+    KPM_ListArtifactDependencies(kpm, artifact.repository, artifact.id, artifact.url, &dependency_count, NULL);
+    ASSERT_HD(dependency_count, 1);
+    KPM_ListArtifactDependencies(kpm, artifact.repository, artifact.id, artifact.url, &dependency_count, &dependencies);
+    ASSERT_HD(dependency_count, 1);
+    ASSERT_HD_STR(dependencies[0].id, "kpm");
+    ASSERT_HD_SEMVER(dependencies[0].min_version, SEMVER_MIN);
+    ASSERT_HD_SEMVER(dependencies[0].max_version, SEMVER_MAX);
 
-    ASSERT_HD(KPM_RemoveRepository(kpm, "testrepo1"), KPM_OK);
-    ASSERT_HD(KPM_RemoveRepository(kpm, "testrepo2"), KPM_OK);
-    ASSERT_HD(KPM_RemoveRepository(kpm, "testrepo3"), KPM_OK);
+    ASSERT_HD(KPM_RemoveRepository(kpm, "testrepov1"), KPM_OK);
+    ASSERT_HD(KPM_RemoveRepository(kpm, "testrepov2"), KPM_OK);
+    ASSERT_HD(KPM_RemoveRepository(kpm, "testrepov3"), KPM_OK);
 
     free(cur_path);
     KPM_Cleanup(kpm);

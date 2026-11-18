@@ -1,6 +1,6 @@
 {
     "manifest_version": 3,
-    "id": "testrepo3",
+    "id": "testrepov3",
     "name": "Test Repo 3",
     "description": "The test repo 3",
     "packages": {
@@ -82,6 +82,31 @@
                             "min": [1, 0, 0],
                             "max": [2, 0, 0]
                         }
+                    },
+                    "supported_platforms": [
+                        "kindlehf",
+                        "kindlepw2",
+                        "x86_64"
+                    ]
+                }
+            }
+        },
+        "testpackage4": {
+            "name": "Test Package",
+            "author": "Test Author",
+            "description": "Test Package Description",
+            "category": "miscellaneous",
+            "artifacts": {
+                "packages/test/artifacts/test3_0.2.0_kindlehf-kindlepw2_compat.kpkg": {
+                    "installed_size": 1024,
+                    "digest": "2e7d221c96fa73a85172ac4440fdf2bbbada6b0b3400cbf5eac07741a4680e5a",
+                    "version": [
+                        0,
+                        2,
+                        0
+                    ],
+                    "dependencies": {
+                        "kpm": {}
                     },
                     "supported_platforms": [
                         "kindlehf",

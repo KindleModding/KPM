@@ -1,6 +1,6 @@
 {
     "manifest_version": 1,
-    "id": "testrepo1",
+    "id": "testrepov1",
     "name": "Test Repo",
     "description": "The test repo",
     "packages": {
