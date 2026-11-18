@@ -5,3 +5,5 @@ subprojects/*
 !subprojects/*.wrap
 !subprojects/packagefiles
 build/
+tests/resources/test_repo
+tests/resources/test_repo_src

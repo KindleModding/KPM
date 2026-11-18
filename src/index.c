@@ -17,9 +17,18 @@ bool index_dependency(KPM *kpm, uint32_t repository_version, char *dependency_id
     if (actual_dependency_id == NULL)
         actual_dependency_id = cJSON_GetStringValue(cJSON_GetObjectItem(dependency, "id"));
     
-    if (actual_dependency_id == NULL || strlen(actual_dependency_id) == 0)
+    if (actual_dependency_id == NULL || strlen(actual_dependency_id) < KPM_MIN_ID_LEN)
+    {
+        kpmio->log(KPM_VERBOSITY_ERROR, "Dependency ID too short");
         return false;
+    }
     kpmio->log(KPM_VERBOSITY_DEBUG, "    - D: %s", actual_dependency_id);
+
+    if (!strcmp(actual_dependency_id, artifact_id))
+    {
+        kpmio->log(KPM_VERBOSITY_ERROR, "Dependency cannot have same ID as dependent package");
+        return false;
+    }
     
     const char *zSQL = "INSERT INTO artifact_dependencies (artifact_repository, artifact_id, artifact_url, id, min_version_major, min_version_minor, min_version_patch, max_version_major, max_version_minor, max_version_patch) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
     sqlite3_stmt *statement;
@@ -272,6 +281,13 @@ bool index_package(KPM *kpm, uint32_t repository_version, char *repository_id, c
     )
     {
         kpmio->log(KPM_VERBOSITY_ERROR, "Could not parse package %s", package->string);
+        sqlite3_exec(kpm->db, "ROLLBACK TRANSACTION TO SAVEPOINT package", NULL, NULL, NULL);
+        return false;
+    }
+
+    if (package->string == NULL || strlen(package->string) < KPM_MIN_ID_LEN)
+    {
+        kpmio->log(KPM_VERBOSITY_ERROR, "Package ID too short");
         sqlite3_exec(kpm->db, "ROLLBACK TRANSACTION TO SAVEPOINT package", NULL, NULL, NULL);
         return false;
     }

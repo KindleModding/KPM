@@ -55,6 +55,56 @@
                     ]
                 }
             ]
+        },
+        "testpackage2": {
+            "name": "Test Package 2",
+            "author": "Test Author",
+            "description": "Test Package Description",
+            "artifacts": [
+                {
+                    "url": "packages/test/artifacts/test2_0.2.0_kindlehf-kindlepw2_compat.kpkg",
+                    "version": [
+                        0,
+                        2,
+                        0
+                    ],
+                    "dependencies": [
+                        {
+                            "id": "testpackage2"
+                        }
+                    ],
+                    "supported_platforms": [
+                        "kindlehf",
+                        "kindlepw2",
+                        "x86_64"
+                    ]
+                }
+            ]
+        },
+        "testpackage3": {
+            "name": "Test Package 3",
+            "author": "Test Author",
+            "description": "Test Package Description",
+            "artifacts": [
+                {
+                    "url": "packages/test/artifacts/test3_0.2.0_kindlehf-kindlepw2_compat.kpkg",
+                    "version": [
+                        0,
+                        2,
+                        0
+                    ],
+                    "dependencies": [
+                        {
+                            "id": "a"
+                        }
+                    ],
+                    "supported_platforms": [
+                        "kindlehf",
+                        "kindlepw2",
+                        "x86_64"
+                    ]
+                }
+            ]
         }
     }
 }

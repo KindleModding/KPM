@@ -22,6 +22,8 @@
 #define KPM_VERSION_MINOR 3
 #define KPM_VERSION_PATCH 0
 
+#define KPM_MIN_ID_LEN 2
+
 /**
  * @brief Return value for many KPM functions
  * 

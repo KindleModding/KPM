@@ -98,11 +98,13 @@ int main(int argc, char *argv[])
     "resources/bad_repo_manifests/malformed_dependency_max.json",
     "resources/bad_repo_manifests/malformed_dependency_min.json",
     "resources/bad_repo_manifests/malformed_dependency_version.json",
+    "resources/bad_repo_manifests/malformed_package_id.json",
     "resources/bad_repo_manifests/missing_artifact_url.json",
     "resources/bad_repo_manifests/missing_artifact_version.json",
     "resources/bad_repo_manifests/missing_package_artifacts.json",
     "resources/bad_repo_manifests/missing_package_author.json",
     "resources/bad_repo_manifests/missing_package_description.json",
+    "resources/bad_repo_manifests/missing_package_id.json",
     "resources/bad_repo_manifests/missing_package_name.json"
     };
 
@@ -183,10 +185,10 @@ int main(int argc, char *argv[])
     ASSERT_HD_STR(packages[0].author, "Test Author");
     ASSERT_HD_STR(packages[0].description, "Test Package Description");
     ASSERT_HD(packages[0].icon, NULL);
-    ASSERT_HD(KPM_ListPackageArtifacts(kpm, "testrepo2", packages[0].id, &artifact_count, NULL), KPM_OK);
-    ASSERT_HD(KPM_ListPackageArtifacts(kpm, "testrepo2", packages[0].id, &artifact_count, &artifacts), KPM_OK);
+    ASSERT_HD(KPM_ListPackageArtifacts(kpm, "testrepo1", packages[0].id, &artifact_count, NULL), KPM_OK);
+    ASSERT_HD(KPM_ListPackageArtifacts(kpm, "testrepo1", packages[0].id, &artifact_count, &artifacts), KPM_OK);
     ASSERT_HD(artifact_count, 1);
-    ASSERT_HD_STR(artifacts[0].repository, "testrepo2");
+    ASSERT_HD_STR(artifacts[0].repository, "testrepo1");
     ASSERT_HD_STR(artifacts[0].id, "testpackage");
     ASSERT_HD_STR(artifacts[0].url, "packages/test/artifacts/test_0.2.0_kindlehf-kindlepw2_compat.kpkg");
     ASSERT_HD_SEMVER(artifacts[0].version, target);

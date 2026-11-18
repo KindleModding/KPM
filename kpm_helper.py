@@ -141,8 +141,8 @@ class Version:
 class Dependency:
     SIZE = Version.SIZE * 2
     """Class that represents a dependency"""
-    min_version: Version|None
-    max_version: Version|None
+    min_version: Version|None = None
+    max_version: Version|None = None
 
     def encode_obj(self):
         dep = {}
@@ -210,8 +210,8 @@ class Package:
     name: str
     author: str
     description: str
-    category: str|None
-    subcategory: str
+    category: str
+    subcategory: str|None
     version: Version
     dependencies: dict[str, Dependency]
     supported_platforms: list[str]
@@ -316,8 +316,11 @@ class Package:
         out_file.write(self.version.encode())
         support_bitfield = 0 # All platforms
         if not self.supported_platforms is None:
-            for i in [ SUPPORTED_PLATFORMS[plat] for plat in self.supported_platforms ]:
-                support_bitfield |= i
+            for plat in self.supported_platforms:
+                if not plat in SUPPORTED_PLATFORMS:
+                    raise ValidationException(f"Platform {plat} is not valid, must be one of {','.join(SUPPORTED_PLATFORMS)}")
+                support_bitfield |= SUPPORTED_PLATFORMS[plat]
+
         out_file.write(struct.pack("<HIIQ", support_bitfield, len(self.dependencies), len(walked_files), len(string_section)))
 
         for dep in dependencies:
@@ -480,25 +483,12 @@ class Package:
         return unpacked
 
 @dataclass
-class RepoDependency:
-    id: str
-    min: Version|None
-    max: Version|None
-
-    def encode_obj(self):
-        encoded = {}
-        if (self.min):
-            encoded["min"] = self.min.encode_obj()
-        if (self.max):
-            encoded["max"] = self.max.encode_obj()
-
-@dataclass
 class RepoArtifact:
     url: str
     installed_size: int
     digest: str
     version: Version
-    dependencies: list[RepoDependency]
+    dependencies: dict[str, Dependency]
     supported_platforms: list[str]
 
 @dataclass
@@ -626,13 +616,7 @@ class Repo:
             sum([ entry.installed_size for entry in file_entries ]),
             header_hash,
             package.version,
-            [
-                RepoDependency(
-                    dependency_id,
-                    package.dependencies[dependency_id].min_version,
-                    package.dependencies[dependency_id].max_version
-                ) for dependency_id in package.dependencies
-            ],
+            package.dependencies,
             package.supported_platforms
         )
 
@@ -703,13 +687,12 @@ class Repo:
                             data["packages"][package_id]["artifacts"][url]["installed_size"],
                             data["packages"][package_id]["artifacts"][url]["digest"],
                             Version.decode_obj(data["packages"][package_id]["artifacts"][url]["version"]),
-                            [
-                                RepoDependency(
-                                    dependency_id,
+                            {
+                                dependency_id: Dependency(
                                     Version.decode_obj(data["packages"][package_id]["artifacts"][url]["dependencies"]["min"]) if "min" in data["packages"][package_id]["artifacts"][url]["dependencies"] else None,
                                     Version.decode_obj(data["packages"][package_id]["artifacts"][url]["dependencies"]["max"]) if "max" in data["packages"][package_id]["artifacts"][url]["dependencies"] else None
                                 ) for dependency_id in data["packages"][package_id]["artifacts"][url]["dependencies"]
-                            ],
+                            },
                             data["packages"][package_id]["artifacts"][url]["supported_platforms"],
                         )
                         for url in data["packages"][package_id]["artifacts"]

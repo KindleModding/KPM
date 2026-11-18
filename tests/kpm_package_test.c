@@ -9,7 +9,7 @@ int main(int argc, char *argv[])
     sqlite3_exec(kpm->db, "DELETE FROM repositories WHERE id='kindlemodding';", NULL, NULL, NULL);
     char *cur_path = get_path(argc, argv);
 
-    char *repo_path = asprintf_hd("file://%s/resources/valid_repository/manifest.json", cur_path);
+    char *repo_path = asprintf_hd("file://%s/resources/test_repo/manifest.json", cur_path);
     ASSERT_HD(KPM_AddRepository(kpm, repo_path, NULL, &kpmio), KPM_OK);
     free(repo_path);
 
