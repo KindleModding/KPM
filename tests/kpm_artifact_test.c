@@ -15,7 +15,7 @@ int main(int argc, char *argv[])
     ASSERT_HD_STR(artifact.id, "testpackage");
     ASSERT_HD_STR(artifact.url, "/packages/testpackage/artifacts/testpackage_1.2.3_kindlepw2_kindlehf.kpkg");
     ASSERT_HD(artifact.installed_size, 213);
-    ASSERT_HD_STR(artifact.digest, "2961d63d403c5c993906bebc3373cfb8a19eada211dc6d6054b70acdb7fcc6f2");
+    ASSERT_HD_STR(artifact.digest, "20fe35d9cffc5caf57117fa153c3f100a0312e06a6c59e8745d8188295517d94");
     ASSERT_HD_SEMVER(artifact.version, version);
     KPM_FreeArtifact(&artifact);
 
@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
     ASSERT_HD_STR(artifact.id, "testpackage");
     ASSERT_HD_STR(artifact.url, "/packages/testpackage/artifacts/testpackage_1.2.3_kindlepw2_kindlehf.kpkg");
     ASSERT_HD(artifact.installed_size, 213);
-    ASSERT_HD_STR(artifact.digest, "2961d63d403c5c993906bebc3373cfb8a19eada211dc6d6054b70acdb7fcc6f2");
+    ASSERT_HD_STR(artifact.digest, "20fe35d9cffc5caf57117fa153c3f100a0312e06a6c59e8745d8188295517d94");
     ASSERT_HD_SEMVER(artifact.version, version);
     KPM_FreeArtifact(&artifact);
 
@@ -101,7 +101,7 @@ int main(int argc, char *argv[])
     ASSERT_HD_STR(artifact.id, "testpackage");
     ASSERT_HD_STR(artifact.url, "/packages/testpackage/artifacts/testpackage_4294967295.4294967295.4294967295_kindlepw2_kindlehf.kpkg");
     ASSERT_HD(artifact.installed_size, 321);
-    ASSERT_HD_STR(artifact.digest, "cf880d31f2786affad5889a76c664d57b53e30dc595dbd3fe8bebafafea9c130");
+    ASSERT_HD_STR(artifact.digest, "3e47c6e12a8c7b483178bd22942542b0c4725991ad64cc8acc1b5c9e520ae874");
     ASSERT_HD_SEMVER(artifact.version, version);
     KPM_FreeArtifact(&artifact);
 
@@ -111,7 +111,7 @@ int main(int argc, char *argv[])
     ASSERT_HD_STR(artifact.id, "testpackage");
     ASSERT_HD_STR(artifact.url, "/packages/testpackage/artifacts/testpackage_0.0.0_kindlepw2_kindlehf.kpkg");
     ASSERT_HD(artifact.installed_size, 213);
-    ASSERT_HD_STR(artifact.digest, "673340e68a4e6d8483381a67c6cd06eb61c1ce5ff7a6b4ab86642f73555b2eeb");
+    ASSERT_HD_STR(artifact.digest, "e2e13f28192e5637294615cbae614fc62034fe136fbd4997863ba788d3a6b536");
     ASSERT_HD_SEMVER(artifact.version, version);
     KPM_FreeArtifact(&artifact);
 

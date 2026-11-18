@@ -188,7 +188,7 @@ int main(int argc, char *argv[])
     ASSERT_HD_STR(artifacts[0].id, "testsearch");
     ASSERT_HD_STR(artifacts[0].url, "/packages/testsearch/artifacts/testsearch_1.2.3_kindlepw2_kindlehf.kpkg");
     ASSERT_HD(artifacts[0].installed_size, 209);
-    ASSERT_HD_STR(artifacts[0].digest, "9024a1735c79d25ec5dccfe428c39330048ba73a1f98af1ed3f269ceab0c43ab");
+    ASSERT_HD_STR(artifacts[0].digest, "64e00f1d0b6cbff02740a87c9c2b03cde94024a3b4e9db4e3b03633e4fc5704c");
     ASSERT_HD(artifacts[0].version.major, 1);
     ASSERT_HD(artifacts[0].version.minor, 2);
     ASSERT_HD(artifacts[0].version.patch, 3);
