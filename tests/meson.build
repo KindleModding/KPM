@@ -1,8 +1,17 @@
 python_exe = find_program('python3', 'python')
 run_command(
-  'bash', '-c', 'cp -ar $MESON_SOURCE_ROOT/tests/resources $MESON_BUILD_ROOT/tests/',
-  'bash', '-c', 'cp -ar $MESON_SOURCE_ROOT/kpm_helper.py $MESON_BUILD_ROOT/tests/resources/kpm_helper.py',
-  python_exe, '$MESON_BUILD_ROOT/tests/resources/gen_resources.py',
+    'bash', '-c', 'cp -ar $MESON_SOURCE_ROOT/tests/resources $MESON_BUILD_ROOT/tests/',
+    check: true
+)
+
+run_command(
+    'bash', '-c', 'cp -ar $MESON_SOURCE_ROOT/kpm_helper.py $MESON_BUILD_ROOT/tests/resources/kpm_helper.py',
+    check: true
+)
+
+run_command(
+    'bash', '-c', python_exe, '$MESON_BUILD_ROOT/tests/resources/gen_resources.py',
+    check: true
 )
 
 all_test_files = files(
