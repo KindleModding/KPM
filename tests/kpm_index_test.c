@@ -213,7 +213,7 @@ int main(int argc, char *argv[])
 
     ASSERT_HD(KPM_ListRepositoryPackages(kpm, "testrepov3", &package_count, NULL), KPM_OK);
     ASSERT_HD(KPM_ListRepositoryPackages(kpm, "testrepov3", &package_count, &packages), KPM_OK);
-    ASSERT_HD(package_count, 4);
+    ASSERT_HD(package_count, 7);
     ASSERT_HD_STR(packages[0].repository, "testrepov3");
     ASSERT_HD_STR(packages[0].id, "testpackage");
     ASSERT_HD_STR(packages[0].name, "Test Package");
@@ -231,6 +231,7 @@ int main(int argc, char *argv[])
     ASSERT_HD_STR(artifacts[0].digest, "2e7d221c96fa73a85172ac4440fdf2bbbada6b0b3400cbf5eac07741a4680e5a");
     KPM_FreeArtifactList(artifact_count, artifacts);
     KPM_FreeIndexedPackageList(package_count, packages);
+
     SemVer version = { 0, 2, 0 };
     KPM_Artifact artifact;
     ASSERT_HD(KPM_GetArtifact(kpm, "testrepov3", "testpackage4", version, &artifact), KPM_OK);
@@ -243,6 +244,44 @@ int main(int argc, char *argv[])
     ASSERT_HD_STR(dependencies[0].id, "kpm");
     ASSERT_HD_SEMVER(dependencies[0].min_version, SEMVER_MIN);
     ASSERT_HD_SEMVER(dependencies[0].max_version, SEMVER_MAX);
+    KPM_FreeDependencyList(dependency_count, dependencies);
+    KPM_FreeArtifact(&artifact);
+
+    ASSERT_HD(KPM_GetArtifact(kpm, "testrepov3", "testpackage5", version, &artifact), KPM_OK);
+    KPM_ListArtifactDependencies(kpm, artifact.repository, artifact.id, artifact.url, &dependency_count, NULL);
+    ASSERT_HD(dependency_count, 1);
+    KPM_ListArtifactDependencies(kpm, artifact.repository, artifact.id, artifact.url, &dependency_count, &dependencies);
+    ASSERT_HD(dependency_count, 1);
+    ASSERT_HD_STR(dependencies[0].id, "kpm");
+    ASSERT_HD_SEMVER(dependencies[0].min_version, SEMVER_MIN);
+    ASSERT_HD_SEMVER(dependencies[0].max_version, SEMVER_MAX);
+    KPM_FreeDependencyList(dependency_count, dependencies);
+    KPM_FreeArtifact(&artifact);
+
+    ASSERT_HD(KPM_GetArtifact(kpm, "testrepov3", "testpackage6", version, &artifact), KPM_OK);
+    KPM_ListArtifactDependencies(kpm, artifact.repository, artifact.id, artifact.url, &dependency_count, NULL);
+    ASSERT_HD(dependency_count, 1);
+    KPM_ListArtifactDependencies(kpm, artifact.repository, artifact.id, artifact.url, &dependency_count, &dependencies);
+    ASSERT_HD(dependency_count, 1);
+    ASSERT_HD_STR(dependencies[0].id, "kpm");
+    SemVer min_version = {4294967294,4294967294,4294967294};
+    ASSERT_HD_SEMVER(dependencies[0].min_version, min_version);
+    ASSERT_HD_SEMVER(dependencies[0].max_version, SEMVER_MAX);
+    KPM_FreeDependencyList(dependency_count, dependencies);
+    KPM_FreeArtifact(&artifact);
+
+    ASSERT_HD(KPM_GetArtifact(kpm, "testrepov3", "testpackage7", version, &artifact), KPM_OK);
+    KPM_ListArtifactDependencies(kpm, artifact.repository, artifact.id, artifact.url, &dependency_count, NULL);
+    ASSERT_HD(dependency_count, 1);
+    KPM_ListArtifactDependencies(kpm, artifact.repository, artifact.id, artifact.url, &dependency_count, &dependencies);
+    ASSERT_HD(dependency_count, 1);
+    ASSERT_HD_STR(dependencies[0].id, "kpm");
+    min_version = (SemVer){0,1,2};
+    SemVer max_version = {1,2,3};
+    ASSERT_HD_SEMVER(dependencies[0].min_version, min_version);
+    ASSERT_HD_SEMVER(dependencies[0].max_version, max_version);
+    KPM_FreeDependencyList(dependency_count, dependencies);
+    KPM_FreeArtifact(&artifact);
 
     ASSERT_HD(KPM_RemoveRepository(kpm, "testrepov1"), KPM_OK);
     ASSERT_HD(KPM_RemoveRepository(kpm, "testrepov2"), KPM_OK);

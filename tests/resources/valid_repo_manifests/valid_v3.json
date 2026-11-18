@@ -97,7 +97,7 @@
             "description": "Test Package Description",
             "category": "miscellaneous",
             "artifacts": {
-                "packages/test/artifacts/test3_0.2.0_kindlehf-kindlepw2_compat.kpkg": {
+                "packages/test/artifacts/test4_0.2.0_kindlehf-kindlepw2_compat.kpkg": {
                     "installed_size": 1024,
                     "digest": "2e7d221c96fa73a85172ac4440fdf2bbbada6b0b3400cbf5eac07741a4680e5a",
                     "version": [
@@ -107,6 +107,90 @@
                     ],
                     "dependencies": {
                         "kpm": {}
+                    },
+                    "supported_platforms": [
+                        "kindlehf",
+                        "kindlepw2",
+                        "x86_64"
+                    ]
+                }
+            }
+        },
+        "testpackage5": {
+            "name": "Test Package",
+            "author": "Test Author",
+            "description": "Test Package Description",
+            "category": "miscellaneous",
+            "artifacts": {
+                "packages/test/artifacts/test5_0.2.0_kindlehf-kindlepw2_compat.kpkg": {
+                    "installed_size": 1024,
+                    "digest": "2e7d221c96fa73a85172ac4440fdf2bbbada6b0b3400cbf5eac07741a4680e5a",
+                    "version": [
+                        0,
+                        2,
+                        0
+                    ],
+                    "dependencies": {
+                        "kpm": {
+                            "min": [ 0, 0, 0 ],
+                            "max": [ 4294967295, 4294967295, 4294967295 ]
+                        }
+                    },
+                    "supported_platforms": [
+                        "kindlehf",
+                        "kindlepw2",
+                        "x86_64"
+                    ]
+                }
+            }
+        },
+        "testpackage6": {
+            "name": "Test Package",
+            "author": "Test Author",
+            "description": "Test Package Description",
+            "category": "miscellaneous",
+            "artifacts": {
+                "packages/test/artifacts/test6_0.2.0_kindlehf-kindlepw2_compat.kpkg": {
+                    "installed_size": 1024,
+                    "digest": "2e7d221c96fa73a85172ac4440fdf2bbbada6b0b3400cbf5eac07741a4680e5a",
+                    "version": [
+                        0,
+                        2,
+                        0
+                    ],
+                    "dependencies": {
+                        "kpm": {
+                            "min": [ 4294967294, 4294967294, 4294967294 ],
+                            "max": [ 4294967295, 4294967295, 4294967295 ]
+                        }
+                    },
+                    "supported_platforms": [
+                        "kindlehf",
+                        "kindlepw2",
+                        "x86_64"
+                    ]
+                }
+            }
+        },
+        "testpackage7": {
+            "name": "Test Package",
+            "author": "Test Author",
+            "description": "Test Package Description",
+            "category": "miscellaneous",
+            "artifacts": {
+                "packages/test/artifacts/test7_0.2.0_kindlehf-kindlepw2_compat.kpkg": {
+                    "installed_size": 1024,
+                    "digest": "2e7d221c96fa73a85172ac4440fdf2bbbada6b0b3400cbf5eac07741a4680e5a",
+                    "version": [
+                        0,
+                        2,
+                        0
+                    ],
+                    "dependencies": {
+                        "kpm": {
+                            "min": [ 0, 1, 2 ],
+                            "max": [ 1, 2, 3 ]
+                        }
                     },
                     "supported_platforms": [
                         "kindlehf",
