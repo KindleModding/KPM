@@ -81,13 +81,13 @@ int main(int argc, char *argv[])
     ASSERT_HD(KPM_ListRepositories(kpm, &repository_count, NULL), KPM_OK);
     ASSERT_HD(KPM_ListRepositories(kpm, &repository_count, &repositories), KPM_OK);
     ASSERT_HD(repository_count, 2);
-    ASSERT_HD_STR(repositories[1].id, "testrepo1");
+    ASSERT_HD_STR(repositories[1].id, "testrepov1");
     ASSERT_HD_STR(repositories[1].url, repo_path);
     ASSERT_HD_STR(repositories[1].name, "Test Repo");
     ASSERT_HD_STR(repositories[1].description, "The test repo");
     free(repo_path);
 
-    ASSERT_HD(KPM_RemoveRepository(kpm, "testrepo1"), KPM_OK);
+    ASSERT_HD(KPM_RemoveRepository(kpm, "testrepov1"), KPM_OK);
 
 
     repo_path = asprintf_hd("file://%s/resources/valid_repo_manifests/valid_v2.json", cur_path);
@@ -96,13 +96,13 @@ int main(int argc, char *argv[])
     ASSERT_HD(KPM_ListRepositories(kpm, &repository_count, NULL), KPM_OK);
     ASSERT_HD(KPM_ListRepositories(kpm, &repository_count, &repositories), KPM_OK);
     ASSERT_HD(repository_count, 2);
-    ASSERT_HD_STR(repositories[1].id, "testrepo2");
+    ASSERT_HD_STR(repositories[1].id, "testrepov2");
     ASSERT_HD_STR(repositories[1].url, repo_path);
     ASSERT_HD_STR(repositories[1].name, "Test Repo 2");
     ASSERT_HD_STR(repositories[1].description, "The test repo 2");
     free(repo_path);
 
-    ASSERT_HD(KPM_RemoveRepository(kpm, "testrepo2"), KPM_OK);
+    ASSERT_HD(KPM_RemoveRepository(kpm, "testrepov2"), KPM_OK);
 
 
     repo_path = asprintf_hd("file://%s/resources/valid_repo_manifests/valid_v3.json", cur_path);
@@ -111,13 +111,13 @@ int main(int argc, char *argv[])
     ASSERT_HD(KPM_ListRepositories(kpm, &repository_count, NULL), KPM_OK);
     ASSERT_HD(KPM_ListRepositories(kpm, &repository_count, &repositories), KPM_OK);
     ASSERT_HD(repository_count, 2);
-    ASSERT_HD_STR(repositories[1].id, "testrepo3");
+    ASSERT_HD_STR(repositories[1].id, "testrepov3");
     ASSERT_HD_STR(repositories[1].url, repo_path);
     ASSERT_HD_STR(repositories[1].name, "Test Repo 3");
     ASSERT_HD_STR(repositories[1].description, "The test repo 3");
     free(repo_path);
 
-    ASSERT_HD(KPM_RemoveRepository(kpm, "testrepo3"), KPM_OK);
+    ASSERT_HD(KPM_RemoveRepository(kpm, "testrepov3"), KPM_OK);
 
     ASSERT_HD(KPM_RemoveRepository(kpm, ""), KPM_OK);
 

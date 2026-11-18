@@ -326,9 +326,6 @@ bool DownloadOperationFiles(KPM *kpm, OperationArray *operations, KPMIO *kpmio)
 
 KPM_Result KPM_InstallPackages(KPM *kpm, size_t target_count, KPM_InstallTarget *targets, KPMIO *kpmio)
 {
-    if (kpmio == NULL)
-        kpmio = &dummyKPMStub;
-
     kpmio->log(KPM_VERBOSITY_DEBUG, "Creating dependency graph");
     DependencyGraph *graph = DepGraph_Create(target_count * 2);
     NodeIdx root_idx = DepGraph_AddNode(graph, (DepGraph_Node) {
@@ -338,8 +335,8 @@ KPM_Result KPM_InstallPackages(KPM *kpm, size_t target_count, KPM_InstallTarget 
             .priority = GT_PRIORITY_EXPLICIT,
             .dependency = {
                 .id = NULL,
-                .min_version = { .major=0, .minor=0, .patch=0 },
-                .max_version = { .major=0, .minor=0, .patch=0 }
+                .min_version = { 0, 0, 0 },
+                .max_version = { 0, 0, 0 }
             }
         }
     });

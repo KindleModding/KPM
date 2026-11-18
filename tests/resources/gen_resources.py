@@ -29,27 +29,31 @@ generate_repo2.append(package_testsearch)
 
 generate_repo2.append(Generatable("test_subcat_icon", Version(1, 0, 0), subcategory="subcategory", icon=True))
 
-target_package = Generatable("testpackage", Version(1, 0, 0))
 cyclic_package = Generatable("cyclicpackage", Version(1, 0, 0))
 cyclic_dep = Generatable("deppackage1", Version(1, 0, 0))
 cyclic_dep2 = Generatable("deppackage2", Version(1, 0, 0))
 cyclic_dep3 = Generatable("deppackage3", Version(1, 0, 0))
-target_package.add_dependency(cyclic_package, Version(1, 0, 0))
 cyclic_package.add_dependency(cyclic_dep, Version(1, 0, 0), Version(1, 0, 1))
 cyclic_dep.add_dependency(cyclic_dep2, Version(1, 0, 0), Version(1, 0, 1))
 cyclic_dep2.add_dependency(cyclic_dep3, Version(1, 0, 0), Version(1, 0, 1))
 cyclic_dep3.add_dependency(cyclic_package, Version(1, 0, 0), Version(1, 0, 1))
-
-generate_repo1.append(target_package)
 generate_repo1.append(cyclic_package)
 generate_repo1.append(cyclic_dep)
 generate_repo1.append(cyclic_dep2)
 generate_repo1.append(cyclic_dep3)
 
-package_nodep = Generatable("testpackage", Version(1, 1, 0), { "nonexistent": Dependency() })
-
-generate_repo1.append(package_nodep)
-
+test_package_1_2_3 = Generatable("testpackage", Version(1, 2, 3))
+test_package_nonexistdep_4_5_6 = Generatable("testpackage", Version(4, 5, 6), { "nonexistent": Dependency() })
+test_package_manydep_7_8_9 = Generatable(
+    "testpackage",
+    Version(7, 8, 9),
+    {
+        "kpm": Dependency(Version(1, 0, 0)),
+        "juno": Dependency(Version(5, 16, 0)),
+        "fbink": Dependency(Version(2, 3, 0), Version(2, 3, 1)),
+        "testdep": Dependency(None, Version(4, 5, 6))
+    }
+)
 test_package_2_0_0 = Generatable("testpackage", Version(2, 0, 0))
 test_package_2_1_0 = Generatable("testpackage", Version(2, 1, 0))
 test_package_2_2_0 = Generatable("testpackage", Version(2, 2, 0))
@@ -58,13 +62,17 @@ test_package_3_0_0 = Generatable("testpackage", Version(3, 0, 0))
 test_dep_1_5_0 = Generatable("testdep", Version(1, 5, 0))
 test_package_2_2_0.add_dependency(test_dep_1_0_0)
 test_package_3_0_0.add_dependency(test_dep_1_5_0)
-
+generate_repo1.append(test_package_1_2_3)
+generate_repo1.append(test_package_nonexistdep_4_5_6)
+generate_repo1.append(test_package_manydep_7_8_9)
 generate_repo1.append(test_package_2_0_0)
 generate_repo1.append(test_package_2_1_0)
 generate_repo1.append(test_package_2_2_0)
 generate_repo1.append(test_dep_1_0_0)
 generate_repo1.append(test_package_3_0_0)
 generate_repo1.append(test_dep_1_5_0)
+generate_repo1.append(Generatable("testpackage", Version(4294967295, 4294967295, 4294967295)))
+generate_repo1.append(Generatable("testpackage", Version(0, 0, 0)))
 
 
 

@@ -64,3 +64,9 @@ test(
     executable('kpm_package_test', files('kpm_package_test.c') + all_test_files, dependencies: [kpm_dep], include_directories: all_test_includes),
     is_parallel: false
 )
+
+test(
+    'KPM Artifact Test',
+    executable('kpm_artifact_test', files('kpm_artifact_test.c') + all_test_files, dependencies: [kpm_dep], include_directories: all_test_includes),
+    is_parallel: false
+)

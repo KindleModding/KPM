@@ -375,11 +375,6 @@ bool index_package(KPM *kpm, uint32_t repository_version, char *repository_id, c
 
 KPM_Result KPM_UpdateIndex(KPM *kpm, KPMIO *kpmio)
 {
-    if (kpmio == NULL)
-    {
-        kpmio = &dummyKPMStub;
-    }
-
     kpmio->log(KPM_VERBOSITY_INFO, "Getting repositories...");
 
     size_t repository_count;

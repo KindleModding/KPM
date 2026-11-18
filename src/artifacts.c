@@ -36,18 +36,18 @@ KPM_Result KPM_GetArtifact(KPM *kpm, const char *repository_id, const char *pack
         sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
         sqlite3_bind_text(statement, 1, repository_id, -1, SQLITE_STATIC);
         sqlite3_bind_text(statement, 2, package_id, -1, SQLITE_STATIC);
-        sqlite3_bind_int(statement, 3, version.major);
-        sqlite3_bind_int(statement, 4, version.minor);
-        sqlite3_bind_int(statement, 5, version.patch);
+        sqlite3_bind_int64(statement, 3, version.major);
+        sqlite3_bind_int64(statement, 4, version.minor);
+        sqlite3_bind_int64(statement, 5, version.patch);
     }
     else
     {
         zSQL = "SELECT repository, id, url, installed_size, digest, version_major, version_minor, version_patch FROM artifacts WHERE id=? AND version_major=? AND version_minor=? AND version_patch=? LIMIT 1;";
         sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
         sqlite3_bind_text(statement, 1, package_id, -1, SQLITE_STATIC);
-        sqlite3_bind_int(statement, 2, version.major);
-        sqlite3_bind_int(statement, 3, version.minor);
-        sqlite3_bind_int(statement, 4, version.patch);
+        sqlite3_bind_int64(statement, 2, version.major);
+        sqlite3_bind_int64(statement, 3, version.minor);
+        sqlite3_bind_int64(statement, 4, version.patch);
     }
 
     if (sqlite3_step(statement) == SQLITE_ROW)
@@ -98,16 +98,12 @@ KPM_Result KPM_ListArtifactDependencies(KPM *kpm, const char *repository, const 
     for (int i=0; (status = sqlite3_step(statement)) == SQLITE_ROW; i++)
     {
         if (i == 0)
-        {
             *dependency_count = sqlite3_column_int64(statement, 0);
-        }
         
         if (dependencies != NULL && *dependency_count > 0)
         {
             if (!*dependencies)
-            {
                 *dependencies = malloc(*dependency_count * sizeof(KPM_Dependency));
-            }
             
             (*dependencies)[i].id = strdup((const char*) sqlite3_column_text(statement, 1));
             (*dependencies)[i].min_version.major = sqlite3_column_int(statement, 2);

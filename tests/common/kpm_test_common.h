@@ -7,6 +7,8 @@
 #include <stdio.h>
 
 KPM *initialise_kpm();
+KPM *initialise_kpm_with_repos(int argc, char *argv[]);
+void add_repository(KPM *kpm, char *cur_path, char *path);
 
 char *get_path(int argc, char *argv[]);
 
@@ -31,6 +33,11 @@ char *get_path(int argc, char *argv[]);
         exit(1);                                                                \
     }
 
+#define ASSERT_UNREACHABLE_HD()                                                         \
+        fflush(stderr);                                                         \
+        fprintf(stderr, "Unreachable expression reached at %s:%i.\n", __FILE__, __LINE__);    \
+        fprintf(stderr, "\n");                                                  \
+        exit(1);
 
 #define ASSERT_HD_STR(a, b)                                                     \
     if (strcmp(a, b)) {                                                         \
@@ -48,8 +55,8 @@ char *get_path(int argc, char *argv[]);
     if (SemVerCmp(a, b)) {                                                      \
         fflush(stderr);                                                         \
         fprintf(stderr, "Assertion failed at %s:%i.\n", __FILE__, __LINE__);    \
-        fprintf(stderr, "Expected: %u.%u.%u", a.major, a.minor, a.patch);    \
-        fprintf(stderr, ", got: %u.%u.%u", b.major, b.minor, b.patch);       \
+        fprintf(stderr, "Expected: %u.%u.%u", b.major, b.minor, b.patch);    \
+        fprintf(stderr, ", got: %u.%u.%u", a.major, a.minor, a.patch);       \
         fprintf(stderr, "\n");                                                  \
         exit(1);                                                                \
     }

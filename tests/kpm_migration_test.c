@@ -96,4 +96,5 @@ int main(int argc, char *argv[])
     sqlite3_exec(db, "INSERT INTO repositories VALUES ('testrepo', 'tbd', 'Test Repo', 'A Test Repo')", NULL, NULL, NULL);
 
     KPM_MigrateDB(db);
+    KPM_MigrateDB(db);
 }
