@@ -7,4 +7,7 @@ int main()
     KPM *kpm = KPM_Initialise();
     ASSERT_HD(kpm != NULL, 1);
     KPM_Cleanup(kpm);
+    kpm = initialise_kpm();
+    ASSERT_HD(kpm != NULL, 1);
+    KPM_Cleanup(kpm);
 }

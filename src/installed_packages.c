@@ -66,6 +66,7 @@ KPM_Result KPM_GetInstalledPackage(KPM *kpm, const char *package_id, KPM_Install
             package->installed_as_dependency = sqlite3_column_int(statement, 9);
         }
     } else {
+        sqlite3_finalize(statement);
         return KPM_SQLITE_ERROR;
     }
 

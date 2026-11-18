@@ -49,7 +49,7 @@ KPM_Result KPM_GetPackage(KPM *kpm, const char *repository, const char *id, KPM_
     sqlite3_stmt *statement;
     if (repository == NULL)
     {
-        const char *zSQL = "SELECT repository, id, name, author, description, category, subcategory, icon FROM packages WHERE AND id=? LIMIT 1;";
+        const char *zSQL = "SELECT repository, id, name, author, description, category, subcategory, icon FROM packages WHERE id=? LIMIT 1;";
         sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
         sqlite3_bind_text(statement, 1, id, -1, SQLITE_STATIC);
     }
@@ -70,9 +70,10 @@ KPM_Result KPM_GetPackage(KPM *kpm, const char *repository, const char *id, KPM_
         package->category = strdup((const char*) sqlite3_column_text(statement, 5));
         if (sqlite3_column_type(statement, 6) != SQLITE_NULL)
             package->subcategory = strdup((const char*) sqlite3_column_text(statement, 6));
-        if (sqlite3_column_type(statement, 5) != SQLITE_NULL)
+        if (sqlite3_column_type(statement, 7) != SQLITE_NULL)
             package->icon = strdup((const char*) sqlite3_column_text(statement, 7));
     } else {
+        sqlite3_finalize(statement);
         return KPM_SQLITE_ERROR;
     }
 

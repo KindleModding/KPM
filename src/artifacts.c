@@ -70,6 +70,7 @@ KPM_Result KPM_GetArtifact(KPM *kpm, const char *repository_id, const char *pack
         artifact->version.minor = sqlite3_column_int(statement, 6);
         artifact->version.patch = sqlite3_column_int(statement, 7);
     } else {
+        sqlite3_finalize(statement);
         return KPM_SQLITE_ERROR;
     }
 
