@@ -19,7 +19,19 @@
 
 bool KPKG3_ValidateFile(KPKG_File *file, size_t file_size, KPMIO *kpmio)
 {
-    if (file->kpkg3_payload.internal_file && file->kpkg3_payload.mapped_size != file_size) // Shouldn't be possible
+    if (file->kpkg_version != file->kpkg3_payload.header->version)
+    {
+        kpmio->log(KPM_VERBOSITY_ERROR, "KPKG version mismatch (%i:%i)", file->kpkg_version, file->kpkg3_payload.header->version);
+        return false;
+    }
+
+    if (file->kpkg3_payload.header->version < KPKG_VERSION_3 || file->kpkg3_payload.header->version > KPKG_VERSION)
+    {
+        kpmio->log(KPM_VERBOSITY_ERROR, "KPKG3 version unsupported (%i)", file->kpkg3_payload.header->version);
+        return false;
+    }
+
+    if (file->kpkg3_payload.mapped_size != -1 && file->kpkg3_payload.mapped_size != file_size) // Shouldn't be possible
     {
         kpmio->log(KPM_VERBOSITY_ERROR, "KPKG3 file mapped size does not match file size");
         return false;
@@ -392,7 +404,7 @@ size_t KPKG3_CurlWriteFunction(char *ptr, size_t size, size_t nmemb, void *userd
 
 KPKG_Result KPKG3_HandleRangeMap(KPKG_File *file, uint32_t range_count, KPKG3_DownloadRange *ranges, KPMIO *kpmio)
 {
-    if (file->kpkg3_payload.internal_file)
+    if (file->kpkg3_payload.mapped_size != -1)
     {
         kpmio->log(KPM_VERBOSITY_DEBUG, "Decompressing %s", file->kpkg3_payload.files->path);
         for (int i=0; i < range_count; i++)

@@ -6,6 +6,7 @@
 #include "internal_utils.h"
 #include "kpm/semver.h"
 #include <assert.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -105,7 +106,9 @@ KPKG_Result KPKG1_LoadFile(KPKG_File *kpkg_file, const char *location, FILE *in_
         cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(json, "version"), 0)) > SEMVER_VERSION_MAX ||
         cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(json, "version"), 1)) > SEMVER_VERSION_MAX ||
         cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(json, "version"), 2)) > SEMVER_VERSION_MAX ||
-        !cJSON_IsArray(cJSON_GetObjectItem(json, "dependencies"))
+        !cJSON_IsArray(cJSON_GetObjectItem(json, "dependencies")) ||
+        cJSON_GetArraySize(cJSON_GetObjectItem(json, "dependencies")) < 0 ||
+        cJSON_GetArraySize(cJSON_GetObjectItem(json, "dependencies")) > UINT32_MAX
     )
     {
         free(raw_manifest);

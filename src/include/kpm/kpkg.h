@@ -66,7 +66,7 @@ typedef struct
     char *description; /**< The package description */
     SemVer package_version; /**< The package version */
     uint8_t supported_platforms; /** Platforms this package supports */
-    size_t dependency_count; /**< Number of package dependencies */
+    uint32_t dependency_count; /**< Number of package dependencies */
     KPKG_DependencyEntry *dependencies; /**< A list of package dependencies */
 } KPKG1_Payload;
 
@@ -131,7 +131,9 @@ char *KPKG_GetDescription(KPKG_File *file);
 char *KPKG_GetCategory(KPKG_File *file);
 char *KPKG_GetSubcategory(KPKG_File *file); // Note: May return NULL
 SemVer KPKG_GetVersion(KPKG_File *file);
-size_t KPKG_GetDependencies(KPKG_File *file, KPKG_DependencyEntry **dependencies);
+uint32_t KPKG_GetDependencies(KPKG_File *file, KPKG_DependencyEntry **dependencies);
+void KPKG_FreeDependencyEntry(KPKG_DependencyEntry *dependency);
+void KPKG_FreeDependencyEntryList(uint32_t dependency_count, KPKG_DependencyEntry **dependencies);
 KPKG_Result KPKG_Unpack(KPKG_File *file, const char *out_path, const char *cmp_path, KPMIO *kpmio);
 void KPKG_CloseFile(KPKG_File *file);
 
