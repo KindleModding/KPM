@@ -4,7 +4,7 @@
 #include "kpm/kpkg.h"
 #include <stdio.h>
 
-bool KPKG3_ValidateFile(KPKG_File *file, int file_size, KPMIO *kpmio);
+bool KPKG3_ValidateFile(KPKG_File *file, size_t file_size, KPMIO *kpmio);
 KPKG_Result KPKG3_LoadFile(KPKG_File *kpkg_file, const char *location, FILE *in_file, KPMIO *kpmio);
 KPKG_Result KPKG3_Unpack(KPKG_File *file, const char *out_path, const char *cmp_path, KPMIO *kpmio);
 #endif

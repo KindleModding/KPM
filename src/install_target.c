@@ -38,6 +38,7 @@ void KPM_FreeInstallTarget(KPM_InstallTarget *target)
     if (target->type == INSTALL_FILE)
     {
         KPKG_CloseFile(target->file);
+        free(target->file);
         target->file = NULL;
     }
     else

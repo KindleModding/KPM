@@ -17,7 +17,7 @@
 #include "zstd.h"
 #include "kpkg3.h"
 
-bool KPKG3_ValidateFile(KPKG_File *file, int file_size, KPMIO *kpmio)
+bool KPKG3_ValidateFile(KPKG_File *file, size_t file_size, KPMIO *kpmio)
 {
     if (file->kpkg3_payload.internal_file && file->kpkg3_payload.mapped_size != file_size) // Shouldn't be possible
     {
@@ -25,14 +25,38 @@ bool KPKG3_ValidateFile(KPKG_File *file, int file_size, KPMIO *kpmio)
         return false;
     }
 
+    // Ensure that parsing this file does not cause any kind of overflow
     if (
-        sizeof(KPKG3_Header) +
-        sizeof(KPKG3_DependencyEntry) * file->kpkg3_payload.header->dependency_count +
-        sizeof(KPKG3_FileEntry) * file->kpkg3_payload.header->file_count +
-        file->kpkg3_payload.header->strings_size > file_size
+        //(uint64_t)file->kpkg3_payload.header->dependency_count >= (UINT64_MAX/sizeof(KPKG3_DependencyEntry)) || // @NOTE: These are ALWAYS false
+        //(uint64_t)file->kpkg3_payload.header->file_count >= (UINT64_MAX/sizeof(KPKG3_FileEntry)) || // @NOTE: These are ALWAYS false
+        UINT64_MAX - (file->kpkg3_payload.header->dependency_count * sizeof(KPKG3_DependencyEntry)) <= (file->kpkg3_payload.header->file_count*sizeof(KPKG3_FileEntry)) ||
+        UINT64_MAX - (file->kpkg3_payload.header->file_count*sizeof(KPKG3_FileEntry)) <= (file->kpkg3_payload.header->dependency_count * sizeof(KPKG3_DependencyEntry)) ||
+        UINT64_MAX - (sizeof(KPKG3_DependencyEntry) * file->kpkg3_payload.header->dependency_count +
+            file->kpkg3_payload.header->file_count*sizeof(KPKG3_FileEntry)) < sizeof(KPKG3_Header) ||
+        UINT64_MAX - (sizeof(KPKG3_DependencyEntry) * file->kpkg3_payload.header->dependency_count +
+            file->kpkg3_payload.header->file_count*sizeof(KPKG3_FileEntry) +
+            sizeof(KPKG3_Header)) < file->kpkg3_payload.header->strings_size
     )
     {
-        kpmio->log(KPM_VERBOSITY_ERROR, "KPKG3 header size (%i) exceeds file size (%i)", sizeof(KPKG3_Header) +
+        kpmio->log(KPM_VERBOSITY_ERROR, "KPKG3 header count overflow");
+        return false; // Sizes incorrect
+    }
+
+    if (
+        file->kpkg3_payload.header->strings_size > file_size ||
+        file->kpkg3_payload.header->dependency_count > file_size ||
+        file->kpkg3_payload.header->file_count > file_size ||
+        sizeof(KPKG3_DependencyEntry) * file->kpkg3_payload.header->dependency_count > file_size ||
+        sizeof(KPKG3_FileEntry) * file->kpkg3_payload.header->file_count > file_size ||
+        sizeof(KPKG3_DependencyEntry) * file->kpkg3_payload.header->dependency_count +
+        sizeof(KPKG3_FileEntry) * file->kpkg3_payload.header->file_count > file_size ||
+        sizeof(KPKG3_Header) +
+            sizeof(KPKG3_DependencyEntry) * file->kpkg3_payload.header->dependency_count +
+            sizeof(KPKG3_FileEntry) * file->kpkg3_payload.header->file_count +
+            file->kpkg3_payload.header->strings_size > file_size
+    )
+    {
+        kpmio->log(KPM_VERBOSITY_ERROR, "KPKG3 header size (%llu) exceeds file size (%i)", sizeof(KPKG3_Header) +
         sizeof(KPKG3_DependencyEntry) * file->kpkg3_payload.header->dependency_count +
         sizeof(KPKG3_FileEntry) * file->kpkg3_payload.header->file_count +
         file->kpkg3_payload.header->strings_size, file_size);
@@ -58,6 +82,11 @@ bool KPKG3_ValidateFile(KPKG_File *file, int file_size, KPMIO *kpmio)
             kpmio->log(KPM_VERBOSITY_ERROR, "KPKG3 Dependency ID OOB");
             return false; // Dependency id OOB
         }
+        if (strlen(file->kpkg3_payload.strings + file->kpkg3_payload.dependencies[i].id) < 2)
+        {
+            kpmio->log(KPM_VERBOSITY_ERROR, "KPKG3 Invalid Dependency ID Length");
+            return false;
+        }
     }
 
     for (int i=0; i < file->kpkg3_payload.header->file_count; i++)
@@ -70,10 +99,25 @@ bool KPKG3_ValidateFile(KPKG_File *file, int file_size, KPMIO *kpmio)
     }
 
     size_t string_count = 0;
-    for (int i=0; i < file->kpkg3_payload.header->strings_size && string_count < 6; i += strlen(file->kpkg3_payload.strings + i) + 1, string_count++);
+    for (uint64_t off=0; off < file->kpkg3_payload.header->strings_size && string_count < 6; off += strlen(file->kpkg3_payload.strings + off) + 1, string_count++);
     if (string_count < 6)
     {
         kpmio->log(KPM_VERBOSITY_ERROR, "KPKG3 string section too small");
+        return false;
+    }
+
+    if (strlen(file->kpkg3_payload.strings) < 2)
+    {
+        kpmio->log(KPM_VERBOSITY_ERROR, "KPKG3 ID must be at least 2 characters long");
+        return false;
+    }
+
+    uint64_t cat_offset = 0;
+    for (uint8_t i = 0; i < 4; i++)
+        while (file->kpkg3_payload.strings[cat_offset++] != '\0') {}
+    if (strlen(file->kpkg3_payload.strings + cat_offset) < 2)
+    {
+        kpmio->log(KPM_VERBOSITY_ERROR, "KPKG3 Category must be at least 2 characters long");
         return false;
     }
 
@@ -85,13 +129,16 @@ bool KPKG3_ValidateFile(KPKG_File *file, int file_size, KPMIO *kpmio)
                             );
 
     uint64_t last_offset = 0;
-    for (int i=0; i < file->kpkg3_payload.header->file_count; last_offset = file->kpkg3_payload.files[i].offset, i++)
+    for (uint32_t i=0; i < file->kpkg3_payload.header->file_count; last_offset = file->kpkg3_payload.files[i].offset, i++)
     {
         kpmio->log(KPM_VERBOSITY_DEBUG, "Checking KPKG3 file entry FS:%u P:%u M: %u O: %u S: %u", sizeof(KPKG3_FileEntry), file->kpkg3_payload.files[i].path, file->kpkg3_payload.files[i].file_mode, file->kpkg3_payload.files[i].offset, file->kpkg3_payload.files[i].size);
         if (
-            file->kpkg3_payload.files[i].offset >= file_section_size ||
-            file->kpkg3_payload.files[i].offset + file->kpkg3_payload.files[i].size > file_section_size ||
-            ((i != 0 && file->kpkg3_payload.files[i].offset <= last_offset) || (i == 0 && file->kpkg3_payload.files[i].offset != 0))
+            file->kpkg3_payload.files[i].offset > file_section_size ||
+            file->kpkg3_payload.files[i].size > file_section_size ||
+            UINT64_MAX - file->kpkg3_payload.files[i].offset <= file->kpkg3_payload.files[i].size ||
+            UINT64_MAX - file->kpkg3_payload.files[i].size <= file->kpkg3_payload.files[i].offset ||
+            file->kpkg3_payload.files[i].size > file_section_size - file->kpkg3_payload.files[i].offset ||
+            ((i != 0 && file->kpkg3_payload.files[i].offset < last_offset) || (i == 0 && file->kpkg3_payload.files[i].offset != 0))
         )
         {
             kpmio->log(KPM_VERBOSITY_ERROR, "KPKG3 file entry %u with offset %u and size %u is invalid (LO:%u)", i, file->kpkg3_payload.files[i].offset, file->kpkg3_payload.files[i].size, last_offset);
@@ -132,6 +179,8 @@ KPKG_Result KPKG3_LoadFile(KPKG_File *kpkg_file, const char *location, FILE *in_
     kpkg_file->kpkg3_payload.strings = kpkg_file->kpkg3_payload.internal_file + sizeof(KPKG3_Header) +
                                     (sizeof(KPKG3_DependencyEntry) * kpkg_file->kpkg3_payload.header->dependency_count) +
                                     (sizeof(KPKG3_FileEntry) * kpkg_file->kpkg3_payload.header->file_count);
+
+    kpkg_file->kpkg_version = kpkg_file->kpkg3_payload.header->version;
 
     // Validate dependency, file and string sections do not OOB
     if (!KPKG3_ValidateFile(kpkg_file, stats.st_size, kpmio))

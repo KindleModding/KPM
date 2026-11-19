@@ -100,6 +100,7 @@ void KPKG_FreeCURLData(KPKG_CURLData **data)
 
     KPKG_CloseFile((*data)->file);
     free((*data)->file);
+    (*data)->file = NULL;
     free(*data);
     *data = NULL;
 }
@@ -210,6 +211,11 @@ KPKG_Result KPKG_LoadFile(KPKG_File **file, const char *location, const char *ou
         {
             *file = malloc(sizeof(KPKG_File));
             int res = KPKG1_LoadFile(*file, location, in_file);
+            if (res != KPKG_OK)
+            {
+                free(*file);
+                *file = NULL;
+            }
             fclose(in_file);
             return res;
         }
@@ -223,13 +229,19 @@ KPKG_Result KPKG_LoadFile(KPKG_File **file, const char *location, const char *ou
 
         *file = malloc(sizeof(KPKG_File));
         int res = KPKG3_LoadFile(*file, location, in_file, kpmio);
+        if (res != KPKG_OK)
+        {
+            free(*file);
+            *file = NULL;
+        }
         fclose(in_file);
         return res;
     }
 
     *file = malloc(sizeof(KPKG_File));
     **file = (KPKG_File) {
-        .kpkg_version = -1
+        .kpkg_version = -1,
+        .location = NULL
     };
     KPKG_CURLData *curl_data = KPKG_InitCURLData(*file, location, out_path);
 
@@ -252,6 +264,7 @@ KPKG_Result KPKG_LoadFile(KPKG_File **file, const char *location, const char *ou
     )
     {
         KPKG_FreeCURLData(&curl_data);
+        *file = NULL;
         return KPKG_CURL_ERROR; // Non-specific CURL related error
     }
 
@@ -262,8 +275,13 @@ KPKG_Result KPKG_LoadFile(KPKG_File **file, const char *location, const char *ou
             res = KPKG_EARLY_EOF; // Buffer must be none
 
         KPKG_FreeCURLData(&curl_data);
+        *file = NULL;
         return res;
     }
+
+    KPKG_CloseFile(*file);
+    free(*file);
+    *file = NULL;
 
     if (curl_data->type == KPKG_CURLType_KPKG1)
     {
@@ -276,6 +294,7 @@ KPKG_Result KPKG_LoadFile(KPKG_File **file, const char *location, const char *ou
     if (!KPKG3_ValidateFile(*file, curl_data->downloaded, kpmio))
     {
         KPKG_FreeCURLData(&curl_data); // Will also free the file
+        *file = NULL;
         return KPKG_VALIDATION_ERROR;
     }
     curl_data->file = NULL; // Ensure it doesn't get freed
@@ -299,7 +318,7 @@ char *KPKG_GetName(KPKG_File *file)
     int offset = 0;
     for (int i = 0; i < 1; i++)
         while (file->kpkg3_payload.strings[offset++] != '\0') {}
-    return file->kpkg3_payload.strings + offset + 1;
+    return file->kpkg3_payload.strings + offset;
 }
 
 char *KPKG_GetAuthor(KPKG_File *file)
@@ -310,7 +329,7 @@ char *KPKG_GetAuthor(KPKG_File *file)
     int offset = 0;
     for (int i = 0; i < 2; i++)
         while (file->kpkg3_payload.strings[offset++] != '\0') {}
-    return file->kpkg3_payload.strings + offset + 1;
+    return file->kpkg3_payload.strings + offset;
 }
 
 char *KPKG_GetDescription(KPKG_File *file)
@@ -321,7 +340,7 @@ char *KPKG_GetDescription(KPKG_File *file)
     int offset = 0;
     for (int i = 0; i < 3; i++)
         while (file->kpkg3_payload.strings[offset++] != '\0') {}
-    return file->kpkg3_payload.strings + offset + 1;
+    return file->kpkg3_payload.strings + offset;
 }
 
 char *KPKG_GetCategory(KPKG_File *file)
@@ -332,7 +351,7 @@ char *KPKG_GetCategory(KPKG_File *file)
     int offset = 0;
     for (int i = 0; i < 4; i++)
         while (file->kpkg3_payload.strings[offset++] != '\0') {}
-    return file->kpkg3_payload.strings + offset + 1;
+    return file->kpkg3_payload.strings + offset;
 }
 
 char *KPKG_GetSubcategory(KPKG_File *file)
@@ -343,9 +362,9 @@ char *KPKG_GetSubcategory(KPKG_File *file)
     int offset = 0;
     for (int i = 0; i < 5; i++)
         while (file->kpkg3_payload.strings[offset++] != '\0') {}
-    if (strlen(file->kpkg3_payload.strings + offset + 1) == 0)
+    if (strlen(file->kpkg3_payload.strings + offset) == 0)
         return NULL;
-    return file->kpkg3_payload.strings + offset + 1;
+    return file->kpkg3_payload.strings + offset;
 }
 
 SemVer KPKG_GetVersion(KPKG_File *file)
@@ -362,17 +381,22 @@ SemVer KPKG_GetVersion(KPKG_File *file)
 
 size_t KPKG_GetDependencies(KPKG_File *file, KPKG_DependencyEntry **dependencies)
 {
+    *dependencies = NULL;
     if (file->kpkg_version == KPKG_VERSION_1 || file->kpkg_version == KPKG_VERSION_2)
     {
+        if (file->kpkg1_payload.dependency_count == 0)
+            return file->kpkg1_payload.dependency_count;
         *dependencies = malloc(file->kpkg1_payload.dependency_count * sizeof(KPKG_DependencyEntry));
         memcpy(*dependencies, file->kpkg1_payload.dependencies, file->kpkg1_payload.dependency_count * sizeof(KPKG_DependencyEntry));
         return file->kpkg1_payload.dependency_count;
     }
     else
     {
+        if (file->kpkg3_payload.header->dependency_count == 0)
+            return file->kpkg3_payload.header->dependency_count;
         *dependencies = malloc(file->kpkg3_payload.header->dependency_count * sizeof(KPKG_DependencyEntry));
         memcpy(*dependencies, file->kpkg3_payload.dependencies, file->kpkg3_payload.header->dependency_count * sizeof(KPKG_DependencyEntry));
-        return file->kpkg1_payload.dependency_count;
+        return file->kpkg3_payload.header->dependency_count;
     }
 }
 
@@ -422,5 +446,4 @@ void KPKG_CloseFile(KPKG_File *file)
         file->kpkg1_payload.dependencies = NULL;
     }
     free(file->location);
-    free(file);
 }
