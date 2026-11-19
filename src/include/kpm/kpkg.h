@@ -76,7 +76,7 @@ typedef struct __attribute__ ((packed))
     char magic[KPKG_MAGIC_LENGTH]; /**< "KPKG" */
     uint8_t version; /**< Format version */
     SemVer package_version; /**< Version of the package */
-    uint8_t supported_platforms; /**< Bitfield of KPKG_SupportedPlatforms */
+    uint16_t supported_platforms; /**< Bitfield of KPKG_SupportedPlatforms */
     uint32_t dependency_count; /**< Number of dependencies in package */
     uint32_t file_count; /**< Number of files in package */
     uint64_t strings_size; /**< Size of the string section */

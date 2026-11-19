@@ -17,10 +17,13 @@
 #include "zstd.h"
 #include "kpkg3.h"
 
-bool KPKG3_ValidateFile(KPKG_File *file, int file_size)
+bool KPKG3_ValidateFile(KPKG_File *file, int file_size, KPMIO *kpmio)
 {
     if (file->kpkg3_payload.internal_file && file->kpkg3_payload.mapped_size != file_size) // Shouldn't be possible
+    {
+        kpmio->log(KPM_VERBOSITY_ERROR, "KPKG3 file mapped size does not match file size");
         return false;
+    }
 
     if (
         sizeof(KPKG3_Header) +
@@ -28,24 +31,51 @@ bool KPKG3_ValidateFile(KPKG_File *file, int file_size)
         sizeof(KPKG3_FileEntry) * file->kpkg3_payload.header->file_count +
         file->kpkg3_payload.header->strings_size > file_size
     )
+    {
+        kpmio->log(KPM_VERBOSITY_ERROR, "KPKG3 header size (%i) exceeds file size (%i)", sizeof(KPKG3_Header) +
+        sizeof(KPKG3_DependencyEntry) * file->kpkg3_payload.header->dependency_count +
+        sizeof(KPKG3_FileEntry) * file->kpkg3_payload.header->file_count +
+        file->kpkg3_payload.header->strings_size, file_size);
         return false; // Sizes incorrect
+    }
 
     if (file->kpkg3_payload.header->file_count == 0)
+    {
+        kpmio->log(KPM_VERBOSITY_ERROR, "KPKG3 file has no file entries");
         return false; // Must have at least 1 file
-
-    if (file->kpkg3_payload.files[file->kpkg3_payload.header->file_count-1].offset > file_size)
-        return false; // File offset too big
+    }
 
     if (file->kpkg3_payload.strings[file->kpkg3_payload.header->strings_size - 1] != 0)
+    {
+        kpmio->log(KPM_VERBOSITY_ERROR, "KPKG3 string section is not null-terminated");
         return false; // String section not null-terminated
+    }
 
     for (int i=0; i < file->kpkg3_payload.header->dependency_count; i++)
+    {
         if (file->kpkg3_payload.dependencies[i].id >= file->kpkg3_payload.header->strings_size)
+        {
+            kpmio->log(KPM_VERBOSITY_ERROR, "KPKG3 Dependency ID OOB");
             return false; // Dependency id OOB
+        }
+    }
 
     for (int i=0; i < file->kpkg3_payload.header->file_count; i++)
+    {
         if (file->kpkg3_payload.files[i].path >= file->kpkg3_payload.header->strings_size)
+        {
+            kpmio->log(KPM_VERBOSITY_ERROR, "KPKG3 file entry path OOB");
             return false; // File path OOB
+        }
+    }
+
+    size_t string_count = 0;
+    for (int i=0; i < file->kpkg3_payload.header->strings_size && string_count < 6; i += strlen(file->kpkg3_payload.strings + i) + 1, string_count++);
+    if (string_count < 6)
+    {
+        kpmio->log(KPM_VERBOSITY_ERROR, "KPKG3 string section too small");
+        return false;
+    }
 
     __off_t file_section_size = file_size - (
                                 sizeof(KPKG3_Header) +
@@ -56,8 +86,18 @@ bool KPKG3_ValidateFile(KPKG_File *file, int file_size)
 
     uint64_t last_offset = 0;
     for (int i=0; i < file->kpkg3_payload.header->file_count; last_offset = file->kpkg3_payload.files[i].offset, i++)
-        if (file->kpkg3_payload.files[i].offset >= file_section_size || file->kpkg3_payload.files[i].offset + file->kpkg3_payload.files[i].size >= file_section_size || file->kpkg3_payload.files[i].offset <= last_offset)
+    {
+        kpmio->log(KPM_VERBOSITY_DEBUG, "Checking KPKG3 file entry FS:%u P:%u M: %u O: %u S: %u", sizeof(KPKG3_FileEntry), file->kpkg3_payload.files[i].path, file->kpkg3_payload.files[i].file_mode, file->kpkg3_payload.files[i].offset, file->kpkg3_payload.files[i].size);
+        if (
+            file->kpkg3_payload.files[i].offset >= file_section_size ||
+            file->kpkg3_payload.files[i].offset + file->kpkg3_payload.files[i].size > file_section_size ||
+            ((i != 0 && file->kpkg3_payload.files[i].offset <= last_offset) || (i == 0 && file->kpkg3_payload.files[i].offset != 0))
+        )
+        {
+            kpmio->log(KPM_VERBOSITY_ERROR, "KPKG3 file entry %u with offset %u and size %u is invalid (LO:%u)", i, file->kpkg3_payload.files[i].offset, file->kpkg3_payload.files[i].size, last_offset);
             return false; // File content OOB, or offsets invalid
+        }
+    }
 
     return true;
 }
@@ -79,7 +119,6 @@ KPKG_Result KPKG3_LoadFile(KPKG_File *kpkg_file, const char *location, FILE *in_
         }
     };
     
-    fclose(in_file);
     if (!kpkg_file->kpkg3_payload.internal_file)
     {
         KPKG_CloseFile(kpkg_file);
@@ -95,8 +134,9 @@ KPKG_Result KPKG3_LoadFile(KPKG_File *kpkg_file, const char *location, FILE *in_
                                     (sizeof(KPKG3_FileEntry) * kpkg_file->kpkg3_payload.header->file_count);
 
     // Validate dependency, file and string sections do not OOB
-    if (!KPKG3_ValidateFile(kpkg_file, stats.st_size))
+    if (!KPKG3_ValidateFile(kpkg_file, stats.st_size, kpmio))
     {
+        kpmio->log(KPM_VERBOSITY_DEBUG, "Could not validate file of size %iB", stats.st_size);
         KPKG_CloseFile(kpkg_file);
         return KPKG_VALIDATION_ERROR;
     }

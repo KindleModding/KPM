@@ -194,7 +194,7 @@ KPKG_Result KPKG_LoadFile(KPKG_File **file, const char *location, const char *ou
     *file = NULL;
     if (is_file(location))
     {
-        FILE *in_file = fopen(location, O_RDONLY);
+        FILE *in_file = fopen(location, "r");
         if (!in_file)
             return KPKG_IO_ERROR;
 
@@ -273,7 +273,7 @@ KPKG_Result KPKG_LoadFile(KPKG_File **file, const char *location, const char *ou
     }
 
     // Valid KPKG3+
-    if (!KPKG3_ValidateFile(*file, curl_data->downloaded))
+    if (!KPKG3_ValidateFile(*file, curl_data->downloaded, kpmio))
     {
         KPKG_FreeCURLData(&curl_data); // Will also free the file
         return KPKG_VALIDATION_ERROR;
