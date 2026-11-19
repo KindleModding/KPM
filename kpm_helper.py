@@ -62,7 +62,7 @@ def validate_id(id: str):
     if (id in BLOCKED_IDS):
         raise ValidationException(f"ID must not be f{id} (reserved)")
     if (len(id) < 2):
-        raise ValidationException("ID must contain at least 2 characters")
+        raise ValidationException("ID must be at least 2 characters long")
     if (not any( [ c.isalpha() for c in id ] )):
         raise ValidationException("ID must contain at least one letter")
     if (not all( [ c.isalnum() or c == '-' or c == '_' for c in id ] )):
@@ -77,6 +77,8 @@ def validate_category(category: str, allow_empty: bool = False):
         return
     if len(category) == 0:
         raise ValidationException("Category must not be empty")
+    if len(category) < 2:
+        raise ValidationException("Category must be at least 2 characters long")
     if not category.isalpha():
         raise ValidationException("Category must only contain letters")
     if not category.islower():
