@@ -33,6 +33,7 @@ struct KPKG_FileEntry
     u32 file_mode;
     u64 file_offset;
     u64 size;
+    u8 file_data[size] @ file_offset + addressof(parent.strings_size) + parent.strings_size + sizeof(parent.strings_size) + KPKG_DependencyEntrySize*parent.dependency_count + KPKG_FileEntrySize*parent.file_count;
 };
 
 struct KPKG_Header
