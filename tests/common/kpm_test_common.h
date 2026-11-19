@@ -12,13 +12,14 @@ void add_repository(KPM *kpm, char *cur_path, char *path);
 
 char *get_path(int argc, char *argv[]);
 
-#define GET_FORMAT(a) _Generic(a,     \
-    int : "%i",     \
-    char* : "%s",   \
-    char : "%c",    \
-    size_t: "%zu",  \
-    long: "%li",    \
-    default : "%i"  \
+#define GET_FORMAT(a) _Generic(a,       \
+    uint64_t : "%ull",                  \
+    int : "%i",                         \
+    unsigned int : "%u",               \
+    char* : "%s",                       \
+    char : "%c",                        \
+    long: "%li",                        \
+    default : "%p"                      \
 )
 
 #define ASSERT_HD(a, b)                                                         \
