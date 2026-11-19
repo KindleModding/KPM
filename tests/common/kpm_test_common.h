@@ -13,9 +13,10 @@ void add_repository(KPM *kpm, char *cur_path, char *path);
 char *get_path(int argc, char *argv[]);
 
 #define GET_FORMAT(a) _Generic(a,       \
-    uint64_t : "%ull",                  \
+    uint64_t : "%llu",                  \
     int : "%i",                         \
-    unsigned int : "%u",               \
+    uint8_t : "%i",                     \
+    unsigned int : "%u",                \
     char* : "%s",                       \
     char : "%c",                        \
     long: "%li",                        \
