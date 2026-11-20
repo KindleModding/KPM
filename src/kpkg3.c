@@ -39,15 +39,21 @@ bool KPKG3_ValidateFile(KPKG_File *file, size_t file_size, KPMIO *kpmio)
 
     // Ensure that parsing this file does not cause any kind of overflow
     if (
-        //(uint64_t)file->kpkg3_payload.header->dependency_count >= (UINT64_MAX/sizeof(KPKG3_DependencyEntry)) || // @NOTE: These are ALWAYS false
-        //(uint64_t)file->kpkg3_payload.header->file_count >= (UINT64_MAX/sizeof(KPKG3_FileEntry)) || // @NOTE: These are ALWAYS false
-        UINT64_MAX - (file->kpkg3_payload.header->dependency_count * sizeof(KPKG3_DependencyEntry)) <= (file->kpkg3_payload.header->file_count*sizeof(KPKG3_FileEntry)) ||
-        UINT64_MAX - (file->kpkg3_payload.header->file_count*sizeof(KPKG3_FileEntry)) <= (file->kpkg3_payload.header->dependency_count * sizeof(KPKG3_DependencyEntry)) ||
-        UINT64_MAX - (sizeof(KPKG3_DependencyEntry) * file->kpkg3_payload.header->dependency_count +
-            file->kpkg3_payload.header->file_count*sizeof(KPKG3_FileEntry)) < sizeof(KPKG3_Header) ||
-        UINT64_MAX - (sizeof(KPKG3_DependencyEntry) * file->kpkg3_payload.header->dependency_count +
-            file->kpkg3_payload.header->file_count*sizeof(KPKG3_FileEntry) +
-            sizeof(KPKG3_Header)) < file->kpkg3_payload.header->strings_size
+        will_overflow64(
+            sizeof(KPKG3_Header),
+            file->kpkg3_payload.header->dependency_count * sizeof(KPKG3_DependencyEntry)
+        ) ||
+        will_overflow64(
+            sizeof(KPKG3_Header) +
+                file->kpkg3_payload.header->dependency_count * sizeof(KPKG3_DependencyEntry),
+            file->kpkg3_payload.header->file_count * sizeof(KPKG3_FileEntry)
+        ) ||
+        will_overflow64(
+            sizeof(KPKG3_Header) +
+                file->kpkg3_payload.header->dependency_count * sizeof(KPKG3_DependencyEntry) +
+                file->kpkg3_payload.header->file_count * sizeof(KPKG3_FileEntry),
+            file->kpkg3_payload.header->strings_size
+        )
     )
     {
         kpmio->log(KPM_VERBOSITY_ERROR, "KPKG3 header count overflow");
@@ -147,8 +153,7 @@ bool KPKG3_ValidateFile(KPKG_File *file, size_t file_size, KPMIO *kpmio)
         if (
             file->kpkg3_payload.files[i].offset > file_section_size ||
             file->kpkg3_payload.files[i].size > file_section_size ||
-            UINT64_MAX - file->kpkg3_payload.files[i].offset <= file->kpkg3_payload.files[i].size ||
-            UINT64_MAX - file->kpkg3_payload.files[i].size <= file->kpkg3_payload.files[i].offset ||
+            will_overflow64(file->kpkg3_payload.files[i].offset, file->kpkg3_payload.files[i].size) ||
             file->kpkg3_payload.files[i].size > file_section_size - file->kpkg3_payload.files[i].offset ||
             ((i != 0 && file->kpkg3_payload.files[i].offset < last_offset) || (i == 0 && file->kpkg3_payload.files[i].offset != 0))
         )

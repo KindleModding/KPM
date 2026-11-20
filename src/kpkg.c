@@ -189,17 +189,29 @@ size_t KPKG_CURLCallback(char *ptr, size_t size, size_t nmemb, void *userdata)
     {
         data->kpmio->log(KPM_VERBOSITY_DEBUG, "Got enough to read KPKG3 header (%i)", data->downloaded);
         KPKG3_Header *header = (KPKG3_Header*) data->buf;
-        size_t target_size = sizeof(KPKG3_Header) + header->dependency_count * sizeof(KPKG3_DependencyEntry) + header->file_count * sizeof(KPKG3_FileEntry) + header->strings_size;
         if (
-            UINT64_MAX - header->strings_size < sizeof(KPKG3_Header) ||
-            UINT64_MAX - header->strings_size - sizeof(KPKG3_Header) < header->dependency_count * sizeof(KPKG3_DependencyEntry) ||
-            UINT64_MAX - header->strings_size - sizeof(KPKG3_Header) - header->dependency_count * sizeof(KPKG3_DependencyEntry) < header->file_count * sizeof(KPKG3_FileEntry)
+            will_overflow64(
+                sizeof(KPKG3_Header),
+                header->dependency_count * sizeof(KPKG3_DependencyEntry)
+            ) ||
+            will_overflow64(
+                sizeof(KPKG3_Header) +
+                    header->dependency_count * sizeof(KPKG3_DependencyEntry),
+                header->file_count * sizeof(KPKG3_FileEntry)
+            ) ||
+            will_overflow64(
+                sizeof(KPKG3_Header) +
+                    header->dependency_count * sizeof(KPKG3_DependencyEntry) +
+                    header->file_count * sizeof(KPKG3_FileEntry),
+                header->strings_size
+            )
         )
         {
             data->error = KPKG_VALIDATION_ERROR;
             return CURL_WRITEFUNC_ERROR;
         }
 
+        size_t target_size = sizeof(KPKG3_Header) + header->dependency_count * sizeof(KPKG3_DependencyEntry) + header->file_count * sizeof(KPKG3_FileEntry) + header->strings_size;
         if (data->downloaded < target_size)
             return realsize; // Haven't read full header yet
         data->kpmio->log(KPM_VERBOSITY_DEBUG, "Enough for target size");

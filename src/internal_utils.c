@@ -1,5 +1,6 @@
 #include <stdarg.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -101,4 +102,20 @@ bool is_file(const char *location)
         return false;
 
     return (buf.st_mode & S_IFREG) == S_IFREG;
+}
+
+bool will_overflow32(uint32_t a, uint32_t b)
+{
+    return (
+        UINT32_MAX - a < b ||
+        UINT32_MAX - b < a
+    );
+}
+
+bool will_overflow64(uint64_t a, uint64_t b)
+{
+    return (
+        UINT64_MAX - a < b ||
+        UINT64_MAX - b < a
+    );
 }

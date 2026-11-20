@@ -20,6 +20,7 @@ char *get_path(int argc, char *argv[]);
     char* : "%s",                       \
     char : "%c",                        \
     long: "%li",                        \
+    bool: "%i",                         \
     default : "%p"                      \
 )
 

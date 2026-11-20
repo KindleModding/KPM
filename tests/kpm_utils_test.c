@@ -1,6 +1,7 @@
 #include "internal_utils.h"
 #include "kpm_test_common.h"
 #include <fcntl.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <unistd.h>
 
@@ -50,6 +51,26 @@ int main(int argc, char *argv[])
     test_path = asprintf_hd("%s/%s", cur_path, "resources/misc/*");
     ASSERT_HD(is_file(test_path), 0);
     free(test_path);
+
+    ASSERT_HD(will_overflow32(UINT32_MAX, UINT32_MAX), 1);
+    ASSERT_HD(will_overflow32(UINT32_MAX-1, UINT32_MAX), 1);
+    ASSERT_HD(will_overflow32(UINT32_MAX, UINT32_MAX-1), 1);
+    ASSERT_HD(will_overflow32(1, UINT32_MAX), 1);
+    ASSERT_HD(will_overflow32(UINT32_MAX, 1), 1);
+    ASSERT_HD(will_overflow32(UINT32_MAX-1, 1), 0);
+    ASSERT_HD(will_overflow32(1, UINT32_MAX-1), 0);
+    ASSERT_HD(will_overflow32(0, 0), 0);
+    ASSERT_HD(will_overflow32(1, 1), 0);
+
+    ASSERT_HD(will_overflow64(UINT64_MAX, UINT64_MAX), 1);
+    ASSERT_HD(will_overflow64(UINT64_MAX-1, UINT64_MAX), 1);
+    ASSERT_HD(will_overflow64(UINT64_MAX, UINT64_MAX-1), 1);
+    ASSERT_HD(will_overflow64(1, UINT64_MAX), 1);
+    ASSERT_HD(will_overflow64(UINT64_MAX, 1), 1);
+    ASSERT_HD(will_overflow64(UINT64_MAX-1, 1), 0);
+    ASSERT_HD(will_overflow64(1, UINT64_MAX-1), 0);
+    ASSERT_HD(will_overflow64(0, 0), 0);
+    ASSERT_HD(will_overflow64(1, 1), 0);
     
     free(cur_path);
 }
