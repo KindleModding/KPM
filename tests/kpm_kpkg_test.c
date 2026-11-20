@@ -19,7 +19,10 @@ struct KPKGTest {
     char *category;
     char *subcategory;
     SemVer version;
-    bool test_deps;
+    bool test_dep;
+    char *dep_id;
+    SemVer dep_min;
+    SemVer dep_max;
 };
 
 int main(int argc, char *argv[])
@@ -39,6 +42,258 @@ int main(int argc, char *argv[])
     ASSERT_HD(file, NULL);
 
     struct KPKGTest tests[] = {
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_bad_version_3.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_bad_version.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_dep_malformed_id.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_dep_malformed_id_type.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_dep_malformed_object.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_dep_malformed_version_2.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_dep_malformed_version.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_dep_max_version.kpkg",
+            .load_result = KPKG_OK,
+            .curl_result = KPKG_OK,
+            .kpkg_version = 1,
+            .id = "kpkg1_test",
+            .name = "kpkg1_test Name",
+            .author = "kpkg1_test Author",
+            .description = "kpkg1_test Description",
+            .category = "miscellaneous",
+            .subcategory = NULL,
+            .version = { 1, 2, 3 },
+            .test_dep = true,
+            .dep_id = "nonexistent",
+            .dep_min = SEMVER_MIN,
+            .dep_max = { 1, 2, 3 }
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_dep_minmax_version.kpkg",
+            .load_result = KPKG_OK,
+            .curl_result = KPKG_OK,
+            .kpkg_version = 1,
+            .id = "kpkg1_test",
+            .name = "kpkg1_test Name",
+            .author = "kpkg1_test Author",
+            .description = "kpkg1_test Description",
+            .category = "miscellaneous",
+            .subcategory = NULL,
+            .version = { 1, 2, 3 },
+            .test_dep = true,
+            .dep_id = "nonexistent",
+            .dep_min = { 1, 2, 3 },
+            .dep_max = { 4, 5, 6 }
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_dep_min_version.kpkg",
+            .load_result = KPKG_OK,
+            .curl_result = KPKG_OK,
+            .kpkg_version = 1,
+            .id = "kpkg1_test",
+            .name = "kpkg1_test Name",
+            .author = "kpkg1_test Author",
+            .description = "kpkg1_test Description",
+            .category = "miscellaneous",
+            .subcategory = NULL,
+            .version = { 1, 2, 3 },
+            .test_dep = true,
+            .dep_id = "nonexistent",
+            .dep_min = { 1, 2, 3 },
+            .dep_max = SEMVER_MAX
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_dep_noversion.kpkg",
+            .load_result = KPKG_OK,
+            .curl_result = KPKG_OK,
+            .kpkg_version = 1,
+            .id = "kpkg1_test",
+            .name = "kpkg1_test Name",
+            .author = "kpkg1_test Author",
+            .description = "kpkg1_test Description",
+            .category = "miscellaneous",
+            .subcategory = NULL,
+            .version = { 1, 2, 3 },
+            .test_dep = true,
+            .dep_id = "nonexistent",
+            .dep_min = SEMVER_MIN,
+            .dep_max = SEMVER_MAX
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_empty_deps.kpkg",
+            .load_result = KPKG_OK,
+            .curl_result = KPKG_OK,
+            .kpkg_version = 1,
+            .id = "kpkg1_test",
+            .name = "kpkg1_test Name",
+            .author = "kpkg1_test Author",
+            .description = "kpkg1_test Description",
+            .category = "miscellaneous",
+            .subcategory = NULL,
+            .version = { 1, 2, 3 },
+            .test_dep = false
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_empty_supported.kpkg",
+            .load_result = KPKG_OK,
+            .curl_result = KPKG_OK,
+            .kpkg_version = 1,
+            .id = "kpkg1_test",
+            .name = "kpkg1_test Name",
+            .author = "kpkg1_test Author",
+            .description = "kpkg1_test Description",
+            .category = "miscellaneous",
+            .subcategory = NULL,
+            .version = { 1, 2, 3 },
+            .test_dep = false
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_empty_version.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_good.kpkg",
+            .load_result = KPKG_OK,
+            .curl_result = KPKG_OK,
+            .kpkg_version = 1,
+            .id = "kpkg1_test",
+            .name = "kpkg1_test Name",
+            .author = "kpkg1_test Author",
+            .description = "kpkg1_test Description",
+            .category = "miscellaneous",
+            .subcategory = NULL,
+            .version = { 1, 2, 3 },
+            .test_dep = true,
+            .dep_id = "test_dep",
+            .dep_min = { 1, 2, 3 },
+            .dep_max = { 4, 5, 6 }
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_malformed_author.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_malformed_description.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_malformed_id.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_malformed_name.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_malformed_version_1.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_malformed_version_2.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_malformed_version_3.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_malformed_version_4.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_negative_version_1.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_negative_version_2.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_negative_version_3.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_no_author.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_no_deps.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_no_description.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_no_id.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_no_name.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_no_supported.kpkg",
+            .load_result = KPKG_OK,
+            .curl_result = KPKG_OK,
+            .kpkg_version = 1,
+            .id = "kpkg1_test",
+            .name = "kpkg1_test Name",
+            .author = "kpkg1_test Author",
+            .description = "kpkg1_test Description",
+            .category = "miscellaneous",
+            .subcategory = NULL,
+            .version = { 1, 2, 3 },
+            .test_dep = false
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_str_version.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
         (struct KPKGTest) {
             .path = "resources/test_repo_src/nonexistent.kpkg",
             .load_result = KPKG_GENERIC_ERROR,
@@ -61,7 +316,7 @@ int main(int argc, char *argv[])
             .category = "book",
             .subcategory = NULL,
             .version = { 1, 2, 3 },
-            .test_deps = false
+            .test_dep = false
         },
         (struct KPKGTest) {
             .path = "resources/test_repo_src/testpackage_4294967295.4294967295.4294967295.kpkg",
@@ -75,7 +330,7 @@ int main(int argc, char *argv[])
             .category = "book",
             .subcategory = NULL,
             .version = { 4294967295, 4294967295, 4294967295 },
-            .test_deps = false
+            .test_dep = false
         },
         (struct KPKGTest) {
             .path = "resources/test_kpkg/kpkg3_00_file_data.kpkg",
@@ -89,21 +344,7 @@ int main(int argc, char *argv[])
             .category = "book",
             .subcategory = NULL,
             .version = { 1, 2, 3 },
-            .test_deps = false
-        },
-        (struct KPKGTest) {
-            .path = "resources/test_kpkg/kpkg3_ff_file_data.kpkg",
-            .load_result = KPKG_OK, // We do not validate file data checksum until unpack
-            .curl_result = KPKG_OK,
-            .kpkg_version = 3,
-            .id = "testpackage",
-            .name = "testpackage Name",
-            .author = "testpackage Author",
-            .description = "testpackage Description",
-            .category = "book",
-            .subcategory = NULL,
-            .version = { 1, 2, 3 },
-            .test_deps = false
+            .test_dep = false
         },
         (struct KPKGTest) {
             .path = "resources/test_kpkg/kpkg3_00_strings.kpkg",
@@ -127,7 +368,24 @@ int main(int argc, char *argv[])
             .category = "book",
             .subcategory = NULL,
             .version = { 4, 5, 6 },
-            .test_deps = true
+            .test_dep = true,
+            .dep_id = "nonexistent",
+            .dep_min = SEMVER_MIN,
+            .dep_max = SEMVER_MAX
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg3_ff_file_data.kpkg",
+            .load_result = KPKG_OK, // We do not validate file data checksum until unpack
+            .curl_result = KPKG_OK,
+            .kpkg_version = 3,
+            .id = "testpackage",
+            .name = "testpackage Name",
+            .author = "testpackage Author",
+            .description = "testpackage Description",
+            .category = "book",
+            .subcategory = NULL,
+            .version = { 1, 2, 3 },
+            .test_dep = false
         },
         (struct KPKGTest) {
             .path = "resources/test_kpkg/kpkg3_ff_strings.kpkg",
@@ -171,6 +429,21 @@ int main(int argc, char *argv[])
         },
         (struct KPKGTest) {
             .path = "resources/test_kpkg/kpkg3_invalid_dependency_id_short.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR,
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg3_invalid_dependency_version_flipped.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR,
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg3_invalid_dependency_version_same.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR,
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg3_invalid_dependency_version_same2.kpkg",
             .load_result = KPKG_VALIDATION_ERROR,
             .curl_result = KPKG_VALIDATION_ERROR,
         },
@@ -256,7 +529,7 @@ int main(int argc, char *argv[])
             .category = "book",
             .subcategory = "subcategory",
             .version = { 1, 0, 0 },
-            .test_deps = false
+            .test_dep = false
         },
         (struct KPKGTest) {
             .path = "resources/test_kpkg/kpkg3_tiny.kpkg",
@@ -310,12 +583,12 @@ int main(int argc, char *argv[])
                 ASSERT_HD_SEMVER(KPKG_GetVersion(file), test.version);
                 KPKG_DependencyEntry *dependencies;
                 size_t dependency_count = KPKG_GetDependencies(file, &dependencies);
-                if (test.test_deps)
+                if (test.test_dep)
                 {
                     ASSERT_HD(dependency_count, 1);
-                    ASSERT_HD_STR(dependencies[0].id, "nonexistent");
-                    ASSERT_HD_SEMVER(dependencies[0].min_version, SEMVER_MIN);
-                    ASSERT_HD_SEMVER(dependencies[0].max_version, SEMVER_MAX);
+                    ASSERT_HD_STR(dependencies[0].id, test.dep_id);
+                    ASSERT_HD_SEMVER(dependencies[0].min_version, test.dep_min);
+                    ASSERT_HD_SEMVER(dependencies[0].max_version, test.dep_max);
                 }
                 else
                 {
