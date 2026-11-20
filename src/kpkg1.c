@@ -34,7 +34,11 @@ char *KPKG1_GetManifest(FILE *file)
         if (r == ARCHIVE_EOF || r < ARCHIVE_WARN)
             break;
         if (r < ARCHIVE_OK)
+        {
+            archive_read_close(a);
+            archive_read_free(a);
             return NULL;
+        }
 
         if (strcmp(archive_entry_pathname(entry), "manifest.json") && strcmp(archive_entry_pathname(entry), "/manifest.json") && strcmp(archive_entry_pathname(entry), "./manifest.json"))
             continue;
@@ -56,9 +60,13 @@ char *KPKG1_GetManifest(FILE *file)
         if (r < ARCHIVE_OK)
         {
             free(out);
+            archive_read_close(a);
+            archive_read_free(a);
             return NULL; // Triggers error case
         }
 
+        archive_read_close(a);
+        archive_read_free(a);
         return out;
     }
 
@@ -72,11 +80,15 @@ KPKG_Result KPKG1_LoadFile(KPKG_File *kpkg_file, const char *location, FILE *in_
 {
     char *raw_manifest = KPKG1_GetManifest(in_file);
     if (!raw_manifest)
+    {
+        KPKG_CloseFile(kpkg_file);
         return KPKG_UNKNOWN_FORMAT;
+    }
     cJSON *json = cJSON_Parse(raw_manifest);
     if (!json)
     {
         free(raw_manifest);
+        KPKG_CloseFile(kpkg_file);
         return KPKG_UNKNOWN_FORMAT;
     }
 
@@ -85,6 +97,7 @@ KPKG_Result KPKG1_LoadFile(KPKG_File *kpkg_file, const char *location, FILE *in_
         kpmio->log(KPM_VERBOSITY_DEBUG, "KPKG1 Invalid manifest version");
         free(raw_manifest);
         cJSON_Delete(json);
+        KPKG_CloseFile(kpkg_file);
         return KPKG_VALIDATION_ERROR;
     }
 
@@ -117,6 +130,7 @@ KPKG_Result KPKG1_LoadFile(KPKG_File *kpkg_file, const char *location, FILE *in_
     {
         free(raw_manifest);
         cJSON_Delete(json);
+        KPKG_CloseFile(kpkg_file);
         return KPKG_VALIDATION_ERROR;
     }
 
@@ -288,6 +302,8 @@ KPKG_Result KPKG1_LoadFile(KPKG_File *kpkg_file, const char *location, FILE *in_
         (*kpkg_file).kpkg1_payload.dependencies[i].id = strdup(cJSON_GetStringValue(cJSON_GetObjectItem(el, "id")));
     }
 
+    free(raw_manifest);
+    cJSON_Delete(json);
     return KPKG_OK;
 }
 

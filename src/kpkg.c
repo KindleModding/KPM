@@ -224,6 +224,14 @@ size_t KPKG_CURLCallback(char *ptr, size_t size, size_t nmemb, void *userdata)
     return realsize;
 }
 
+KPKG_File *KPKG_AllocFile()
+{
+    KPKG_File *file = malloc(sizeof(KPKG_File));
+    file->kpkg_version = -1;
+    file->location = NULL;
+    return file;
+}
+
 KPKG_Result KPKG_LoadFile(KPKG_File **file, const char *location, const char *out_path, KPMIO *kpmio)
 {
     *file = NULL;
@@ -243,7 +251,7 @@ KPKG_Result KPKG_LoadFile(KPKG_File **file, const char *location, const char *ou
         fseek(in_file, 0, SEEK_SET);
         if (memcmp(miniheader, "KPKG", 4)) // This is most likely a legacy file!
         {
-            *file = malloc(sizeof(KPKG_File));
+            *file = KPKG_AllocFile();
             int res = KPKG1_LoadFile(*file, location, in_file, kpmio);
             if (res != KPKG_OK)
                 *file = NULL;
@@ -258,7 +266,7 @@ KPKG_Result KPKG_LoadFile(KPKG_File **file, const char *location, const char *ou
             return KPKG_VERSION_OUT_OF_RANGE;
         }
 
-        *file = malloc(sizeof(KPKG_File));
+        *file = KPKG_AllocFile();
         int res = KPKG3_LoadFile(*file, location, in_file, kpmio);
         if (res != KPKG_OK)
             *file = NULL;
@@ -266,11 +274,7 @@ KPKG_Result KPKG_LoadFile(KPKG_File **file, const char *location, const char *ou
         return res;
     }
 
-    *file = malloc(sizeof(KPKG_File));
-    **file = (KPKG_File) {
-        .kpkg_version = -1,
-        .location = NULL
-    };
+    *file = KPKG_AllocFile();
     KPKG_CURLData *curl_data = KPKG_InitCURLData(*file, location, out_path, kpmio);
 
     CURL *curl = curl_easy_init();
