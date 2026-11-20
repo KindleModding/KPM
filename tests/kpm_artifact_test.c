@@ -94,6 +94,7 @@ int main(int argc, char *argv[])
             ASSERT_UNREACHABLE_HD();
         }
     }
+    KPM_FreeDependencyList(dependency_count, dependencies);
 
     version = (SemVer) { 4294967295, 4294967295, 4294967295 };
     ASSERT_HD(KPM_GetArtifact(kpm, "testrepo", "testpackage", version, &artifact), KPM_OK);

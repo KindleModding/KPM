@@ -97,4 +97,6 @@ int main(int argc, char *argv[])
 
     KPM_MigrateDB(db);
     KPM_MigrateDB(db);
+
+    sqlite3_close(db);
 }

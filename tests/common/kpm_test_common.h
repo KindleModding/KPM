@@ -2,6 +2,7 @@
 #define KPM_TEST_COMMON_H
 
 #include "kpm.h"
+#include "openssl/evp.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -24,6 +25,14 @@ char *get_path(int argc, char *argv[]);
     default : "%p"                      \
 )
 
+#define ASSERT_HD_KPKG(a, b)                                                                \
+    if (a != b) {                                                                           \
+        fflush(stderr);                                                                     \
+        fprintf(stderr, "Assertion failed at %s:%i.\n", __FILE__, __LINE__);                \
+        fprintf(stderr, "Expected: %s, got: %s\n", KPKG_ResultStr(b), KPKG_ResultStr(a));   \
+        exit(1);                                                                            \
+    }
+
 #define ASSERT_HD(a, b)                                                         \
     if (a != b) {                                                               \
         fflush(stderr);                                                         \
@@ -38,7 +47,7 @@ char *get_path(int argc, char *argv[]);
 
 #define ASSERT_UNREACHABLE_HD()                                                         \
         fflush(stderr);                                                         \
-        fprintf(stderr, "Unreachable expression reached at %s:%i.\n", __FILE__, __LINE__);    \
+        fprintf(stderr, "Assertion failed: Unreachable expression reached at %s:%i.\n", __FILE__, __LINE__);    \
         fprintf(stderr, "\n");                                                  \
         exit(1);
 
@@ -64,4 +73,13 @@ char *get_path(int argc, char *argv[]);
         exit(1);                                                                \
     }
 
+#define ASSERT_HD_FILE_HASH(path, expected_hash)    \
+    {                                               \
+        char *hash = sha256_file(path);             \
+        ASSERT_HD_STR(hash, expected_hash);         \
+        free(hash);                                 \
+    }                                               \
+
+char *sha256_file(const char *path);
+ 
 #endif

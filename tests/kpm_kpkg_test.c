@@ -35,10 +35,10 @@ int main(int argc, char *argv[])
 
     KPKG_File *file;
     char *kpkg_location = asprintf_hd("file://%s/%s", cur_path, "resources/test_kpkg/kpkg3_missing_magic.kpkg");
-    ASSERT_HD(KPKG_LoadFile(&file, kpkg_location, "/INACCESSIBLE/PATH/", &kpmio), KPKG_FILESYSTEM_ERROR);
+    ASSERT_HD_KPKG(KPKG_LoadFile(&file, kpkg_location, "/INACCESSIBLE/PATH/", &kpmio), KPKG_FILESYSTEM_ERROR);
     free(kpkg_location);
     ASSERT_HD(file, NULL);
-    ASSERT_HD(KPKG_LoadFile(&file, "fakeprotocolhd://notareallocationhd", "./tmp.bin", &kpmio), KPKG_GENERIC_ERROR);
+    ASSERT_HD_KPKG(KPKG_LoadFile(&file, "fakeprotocolhd://notareallocationhd", "./tmp.bin", &kpmio), KPKG_GENERIC_ERROR);
     ASSERT_HD(file, NULL);
 
     struct KPKGTest tests[] = {
@@ -810,7 +810,7 @@ int main(int argc, char *argv[])
             }
 
             kpmio.log(KPM_VERBOSITY_DEBUG, "Testing (%i) %s", i, kpkg_location);
-            ASSERT_HD(KPKG_LoadFile(&file, kpkg_location, "./tmp.bin", &kpmio), expected);
+            ASSERT_HD_KPKG(KPKG_LoadFile(&file, kpkg_location, "./tmp.bin", &kpmio), expected);
             free(kpkg_location);
             if (expected != KPKG_OK)
             {

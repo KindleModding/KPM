@@ -21,7 +21,6 @@ int main(int argc, char *argv[])
     ASSERT_HD_STR(repositories[0].url, "https://repo.kindlemodding.org/manifest.v3.json");
     ASSERT_HD_STR(repositories[0].name, "Official KMC Repo");
     ASSERT_HD_STR(repositories[0].description, "The official KMC repo");
-
     KPM_FreeRepositoryList(repository_count, repositories);
 
     KPM_Repository repository;
@@ -77,6 +76,11 @@ int main(int argc, char *argv[])
 
     repo_path = asprintf_hd("file://%s/resources/valid_repo_manifests/valid_v1.json", cur_path);
     ASSERT_HD(KPM_AddRepository(kpm, repo_path, &repository, &kpmio), KPM_OK);
+    ASSERT_HD_STR(repository.id, "testrepov1");
+    ASSERT_HD_STR(repository.url, repo_path);
+    ASSERT_HD_STR(repository.name, "Test Repo");
+    ASSERT_HD_STR(repository.description, "The test repo");
+    KPM_FreeRepository(&repository);
 
     ASSERT_HD(KPM_ListRepositories(kpm, &repository_count, NULL), KPM_OK);
     ASSERT_HD(KPM_ListRepositories(kpm, &repository_count, &repositories), KPM_OK);
@@ -85,6 +89,7 @@ int main(int argc, char *argv[])
     ASSERT_HD_STR(repositories[1].url, repo_path);
     ASSERT_HD_STR(repositories[1].name, "Test Repo");
     ASSERT_HD_STR(repositories[1].description, "The test repo");
+    KPM_FreeRepositoryList(repository_count, repositories);
     free(repo_path);
 
     ASSERT_HD(KPM_RemoveRepository(kpm, "testrepov1"), KPM_OK);
@@ -92,6 +97,11 @@ int main(int argc, char *argv[])
 
     repo_path = asprintf_hd("file://%s/resources/valid_repo_manifests/valid_v2.json", cur_path);
     ASSERT_HD(KPM_AddRepository(kpm, repo_path, &repository, &kpmio), KPM_OK);
+    ASSERT_HD_STR(repository.id, "testrepov2");
+    ASSERT_HD_STR(repository.url, repo_path);
+    ASSERT_HD_STR(repository.name, "Test Repo 2");
+    ASSERT_HD_STR(repository.description, "The test repo 2");
+    KPM_FreeRepository(&repository);
 
     ASSERT_HD(KPM_ListRepositories(kpm, &repository_count, NULL), KPM_OK);
     ASSERT_HD(KPM_ListRepositories(kpm, &repository_count, &repositories), KPM_OK);
@@ -100,6 +110,7 @@ int main(int argc, char *argv[])
     ASSERT_HD_STR(repositories[1].url, repo_path);
     ASSERT_HD_STR(repositories[1].name, "Test Repo 2");
     ASSERT_HD_STR(repositories[1].description, "The test repo 2");
+    KPM_FreeRepositoryList(repository_count, repositories);
     free(repo_path);
 
     ASSERT_HD(KPM_RemoveRepository(kpm, "testrepov2"), KPM_OK);
@@ -107,6 +118,11 @@ int main(int argc, char *argv[])
 
     repo_path = asprintf_hd("file://%s/resources/valid_repo_manifests/valid_v3.json", cur_path);
     ASSERT_HD(KPM_AddRepository(kpm, repo_path, &repository, &kpmio), KPM_OK);
+    ASSERT_HD_STR(repository.id, "testrepov3");
+    ASSERT_HD_STR(repository.url, repo_path);
+    ASSERT_HD_STR(repository.name, "Test Repo 3");
+    ASSERT_HD_STR(repository.description, "The test repo 3");
+    KPM_FreeRepository(&repository);
 
     ASSERT_HD(KPM_ListRepositories(kpm, &repository_count, NULL), KPM_OK);
     ASSERT_HD(KPM_ListRepositories(kpm, &repository_count, &repositories), KPM_OK);
@@ -115,12 +131,14 @@ int main(int argc, char *argv[])
     ASSERT_HD_STR(repositories[1].url, repo_path);
     ASSERT_HD_STR(repositories[1].name, "Test Repo 3");
     ASSERT_HD_STR(repositories[1].description, "The test repo 3");
+    KPM_FreeRepositoryList(repository_count, repositories);
     free(repo_path);
 
     ASSERT_HD(KPM_RemoveRepository(kpm, "testrepov3"), KPM_OK);
 
     ASSERT_HD(KPM_RemoveRepository(kpm, ""), KPM_OK);
 
+    KPM_Cleanup(kpm);
     free(cur_path);
     return 0;
 }
