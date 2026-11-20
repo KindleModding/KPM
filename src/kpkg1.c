@@ -181,6 +181,7 @@ KPKG_Result KPKG1_LoadFile(KPKG_File *kpkg_file, const char *location, FILE *in_
     }
 
     (*kpkg_file).kpkg1_payload.dependencies = malloc(sizeof(KPKG3_DependencyEntry) * cJSON_GetArraySize(cJSON_GetObjectItem(json, "dependencies")));
+    memset((*kpkg_file).kpkg1_payload.dependencies, 0, sizeof(KPKG3_DependencyEntry) * cJSON_GetArraySize(cJSON_GetObjectItem(json, "dependencies")));
 
     cJSON *el;
     cJSON_ArrayForEach(el, cJSON_GetObjectItem(json, "dependencies"))

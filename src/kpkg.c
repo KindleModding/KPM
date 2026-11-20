@@ -46,9 +46,15 @@ char *KPKG_ResultStr(KPKG_Result result)
             return "KPKG_LIBARCHIVE_ERROR";
         case KPKG_FILESYSTEM_ERROR:
             return "KPKG_FILESYSTEM_ERROR";
-        default:
+        case KPKG_GENERIC_ERROR:
             return "KPKG_GENERIC_ERROR";
-    }
+        case KPKG_NOTIMPL_ERROR:
+            return "KPKG_NOTIMPL_ERROR";
+        case KPKG_HASH_ERROR:
+            return "KPKG_HASH_ERROR";
+        case KPKG_OPENSSL_ERROR:
+            return "KPKG_OPENSSL_ERROR";
+        }
 }
 
 enum KPKG_CURLBufType
@@ -431,7 +437,14 @@ uint32_t KPKG_GetDependencies(KPKG_File *file, KPKG_DependencyEntry **dependenci
         if (file->kpkg1_payload.dependency_count == 0)
             return file->kpkg1_payload.dependency_count;
         *dependencies = malloc(file->kpkg1_payload.dependency_count * sizeof(KPKG_DependencyEntry));
-        memcpy(*dependencies, file->kpkg1_payload.dependencies, file->kpkg1_payload.dependency_count * sizeof(KPKG_DependencyEntry));
+        for (uint32_t i=0; i < file->kpkg1_payload.dependency_count; i++)
+        {
+            (*dependencies)[i] = (KPKG_DependencyEntry) {
+                .id = strdup(file->kpkg1_payload.dependencies[i].id),
+                .min_version = file->kpkg1_payload.dependencies[i].min_version,
+                .max_version = file->kpkg1_payload.dependencies[i].max_version
+            };
+        }
         return file->kpkg1_payload.dependency_count;
     }
     else
@@ -497,12 +510,15 @@ void KPKG_CloseFile(KPKG_File *file)
         free(file->kpkg1_payload.name);
         free(file->kpkg1_payload.author);
         free(file->kpkg1_payload.description);
+        for (uint32_t i = 0; file->kpkg1_payload.dependencies != NULL && i < file->kpkg1_payload.dependency_count; i++)
+            free(file->kpkg1_payload.dependencies[i].id);
         free(file->kpkg1_payload.dependencies);
         file->kpkg1_payload.id = NULL;
         file->kpkg1_payload.name = NULL;
         file->kpkg1_payload.author = NULL;
         file->kpkg1_payload.description = NULL;
         file->kpkg1_payload.dependencies = NULL;
+        file->kpkg1_payload.dependency_count = 0;
     }
     free(file->location);
     free(file);

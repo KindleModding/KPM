@@ -157,6 +157,8 @@ KPM_Result KPM_AddRepository(KPM *kpm, const char *url, KPM_Repository *reposito
     if (strlen(repo_id) == 0 || repo_id[0] == ' ' || repo_id[strlen(repo_id)-1] == ' ')
     {
         kpmio->log(KPM_VERBOSITY_ERROR, "Repository must have a valid id");
+        cJSON_Delete(json);
+        SimpleGET_Cleanup(request);
         return KPM_INVALID_RESPONSE_CONTENT;
     }
 

@@ -6,6 +6,7 @@
 #include "kpm/kpmio.h"
 #include <assert.h>
 #include <fcntl.h>
+#include <libgen.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,7 +14,7 @@
 #include <sys/mman.h>
 #include <sys/sendfile.h>
 #include <unistd.h>
-#include "openssl/evp.h"
+#include <openssl/evp.h>
 #include "zstd.h"
 #include "kpkg3.h"
 
@@ -232,6 +233,13 @@ typedef struct KPKG3_DownloadRange {
     char *out_path;
 } KPKG3_DownloadRange;
 
+void KPKG3_FreeDownloadRanges(uint32_t range_count, KPKG3_DownloadRange *ranges)
+{
+    for (uint32_t i=0; i < range_count; i++)
+        free(ranges[i].out_path);
+    free(ranges);
+}
+
 
 typedef enum {
     DOWNLOAD_FULL,          // Download the entire file at once
@@ -252,6 +260,7 @@ typedef struct {
     size_t total_size;                  /**< The total size of the file */
     FILE *cur_file;                     /**< The current file being written to */
     ZSTD_DStream *cur_zstream;          /**< The current zstream being decompressed */
+    KPMIO *kpmio;                       /**< For logging */
 } KPKG3_DownloadState;
 
 size_t KPKG3_CurlWriteFunction(char *ptr, size_t size, size_t nmemb, void *userdata)
@@ -266,17 +275,29 @@ size_t KPKG3_CurlWriteFunction(char *ptr, size_t size, size_t nmemb, void *userd
     {
     case DOWNLOAD_SINGLERANGE:
         if (!state->cur_file)
-        { 
+        {
             state->cur_file = fopen(current_range.out_path, "w");
+            if (!state->cur_file)
+            {
+                state->kpmio->log(KPM_VERBOSITY_ERROR, "Could not open %s for writing", current_range.out_path);
+                state->result = KPKG_FILESYSTEM_ERROR;
+                return CURL_WRITEFUNC_ERROR;
+            }
             state->cur_zstream = ZSTD_createDStream();
             state->cur_evp_ctx = EVP_MD_CTX_new();
             if (!EVP_DigestInit_ex2(state->cur_evp_ctx, EVP_sha256(), NULL))
             {
-                state->result = KPKG_HASH_ERROR;
+                state->result = KPKG_OPENSSL_ERROR;
                 return CURL_WRITEFUNC_ERROR;
             }
         }
-        ZSTD_inBuffer in = (ZSTD_inBuffer) { ptr, realsize, 0 };
+
+        size_t process_size = realsize;
+        if (state->total_downloaded + process_size > current_range.end - current_range.start)
+            process_size = (current_range.end - current_range.start) - state->total_downloaded;
+
+        ZSTD_inBuffer in = (ZSTD_inBuffer) { ptr, process_size, 0 };
+
         while (in.pos < in.size)
             if (ZSTD_isError(
                 ZSTD_decompressStream(
@@ -292,10 +313,10 @@ size_t KPKG3_CurlWriteFunction(char *ptr, size_t size, size_t nmemb, void *userd
 
         if (!EVP_DigestUpdate(state->cur_evp_ctx, in.src, in.size))
         {
-            state->result = KPKG_HASH_ERROR;
+            state->result = KPKG_OPENSSL_ERROR;
             return CURL_WRITEFUNC_ERROR;
         }
-        state->total_downloaded += in.pos;
+        state->total_downloaded += realsize;
 
         if (fwrite(state->out_buf, 1, out.pos, state->cur_file) != out.pos)
         {
@@ -309,12 +330,14 @@ size_t KPKG3_CurlWriteFunction(char *ptr, size_t size, size_t nmemb, void *userd
             unsigned int checksum_len;
             if (!EVP_DigestFinal_ex(state->cur_evp_ctx, checksum, &checksum_len) || checksum_len != KPKG_CHECKSUM_SIZE)
             {
-                state->result = KPKG_HASH_ERROR;
+                state->result = KPKG_OPENSSL_ERROR;
                 return CURL_WRITEFUNC_ERROR;
             }
 
             if (memcmp(current_range.file_entry.checksum, checksum, KPKG_CHECKSUM_SIZE))
             {
+                
+                state->kpmio->log(KPM_VERBOSITY_ERROR, "Hash mismatch error: Expected %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x, got %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x", current_range.file_entry.checksum[0], current_range.file_entry.checksum[1], current_range.file_entry.checksum[2], current_range.file_entry.checksum[3], current_range.file_entry.checksum[4], current_range.file_entry.checksum[5], current_range.file_entry.checksum[6], current_range.file_entry.checksum[7], current_range.file_entry.checksum[8], current_range.file_entry.checksum[9], current_range.file_entry.checksum[10], current_range.file_entry.checksum[11], current_range.file_entry.checksum[12], current_range.file_entry.checksum[13], current_range.file_entry.checksum[14], current_range.file_entry.checksum[15], current_range.file_entry.checksum[16], current_range.file_entry.checksum[17], current_range.file_entry.checksum[18], current_range.file_entry.checksum[19], current_range.file_entry.checksum[20], current_range.file_entry.checksum[21], current_range.file_entry.checksum[22], current_range.file_entry.checksum[23], current_range.file_entry.checksum[24], current_range.file_entry.checksum[25], current_range.file_entry.checksum[26], current_range.file_entry.checksum[27], current_range.file_entry.checksum[28], current_range.file_entry.checksum[29], current_range.file_entry.checksum[30], current_range.file_entry.checksum[31], checksum[0], checksum[1], checksum[2], checksum[3], checksum[4], checksum[5], checksum[6], checksum[7], checksum[8], checksum[9], checksum[10], checksum[11], checksum[12], checksum[13], checksum[14], checksum[15], checksum[16], checksum[17], checksum[18], checksum[19], checksum[20], checksum[21], checksum[22], checksum[23], checksum[24], checksum[25], checksum[26], checksum[27], checksum[28], checksum[29], checksum[30], checksum[31]);
                 state->result = KPKG_HASH_ERROR;
                 return CURL_WRITEFUNC_ERROR;
             }
@@ -347,7 +370,7 @@ size_t KPKG3_CurlWriteFunction(char *ptr, size_t size, size_t nmemb, void *userd
                 state->cur_evp_ctx = EVP_MD_CTX_new();
                 if (!EVP_DigestInit_ex2(state->cur_evp_ctx, EVP_sha256(), NULL))
                 {
-                    state->result = KPKG_HASH_ERROR;
+                    state->result = KPKG_OPENSSL_ERROR;
                     return CURL_WRITEFUNC_ERROR;
                 }
             }
@@ -360,7 +383,7 @@ size_t KPKG3_CurlWriteFunction(char *ptr, size_t size, size_t nmemb, void *userd
 
             if (!EVP_DigestUpdate(state->cur_evp_ctx, in.src, in.size))
             {
-                state->result = KPKG_HASH_ERROR;
+                state->result = KPKG_OPENSSL_ERROR;
                 return CURL_WRITEFUNC_ERROR;
             }
             
@@ -392,7 +415,7 @@ size_t KPKG3_CurlWriteFunction(char *ptr, size_t size, size_t nmemb, void *userd
             unsigned int checksum_len;
             if (!EVP_DigestFinal_ex(state->cur_evp_ctx, checksum, &checksum_len) || checksum_len != KPKG_CHECKSUM_SIZE)
             {
-                state->result = KPKG_HASH_ERROR;
+                state->result = KPKG_OPENSSL_ERROR;
                 return CURL_WRITEFUNC_ERROR;
             }
 
@@ -459,10 +482,10 @@ KPKG_Result KPKG3_HandleRangeMap(KPKG_File *file, uint32_t range_count, KPKG3_Do
 
     for (int i=0; i < range_count; i++)
     {
-        kpmio->log(KPM_VERBOSITY_DEBUG, "Downloading %s", file->kpkg3_payload.files->path);
+        kpmio->log(KPM_VERBOSITY_DEBUG, "Downloading %s", KPKG3_GetString(&file->kpkg3_payload, file->kpkg3_payload.files[i].path));
         KPKG3_DownloadRange range = ranges[i];
         char *ranges_str;
-        ranges_str = asprintf_hd("%lu-%lu", range.start, range.end + 1);
+        ranges_str = asprintf_hd("%lu-%lu", range.start, range.end - 1);
 
         KPKG3_DownloadState state = {
             .type = DOWNLOAD_SINGLERANGE,
@@ -476,7 +499,8 @@ KPKG_Result KPKG3_HandleRangeMap(KPKG_File *file, uint32_t range_count, KPKG3_Do
             .total_downloaded = 0,
             .total_size = 0,
             .cur_file = NULL,
-            .cur_zstream = NULL
+            .cur_zstream = NULL,
+            .kpmio = kpmio
         };
 
         CURL *curl = curl_easy_init();
@@ -486,13 +510,17 @@ KPKG_Result KPKG3_HandleRangeMap(KPKG_File *file, uint32_t range_count, KPKG3_Do
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, KPKG3_CurlWriteFunction);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&state);
         CURLcode result = curl_easy_perform(curl);
+        free(ranges_str);
         free(state.out_buf);
-        fclose(state.cur_file);
+        if (state.cur_file)
+            fclose(state.cur_file);
         ZSTD_freeDStream(state.cur_zstream);
         EVP_MD_CTX_free(state.cur_evp_ctx);
-        if (result != CURLE_OK)
+        curl_easy_cleanup(curl);
+        if (result != CURLE_OK && state.result == KPKG_OK)
             return KPKG_GENERIC_ERROR;
-        return state.result;
+        if (state.result != KPKG_OK)
+            return state.result;
     }
 
     return KPKG_OK;
@@ -512,7 +540,7 @@ KPKG_Result KPKG3_Unpack(KPKG_File *file, const char *out_path, const char *cmp_
     for (uint32_t i=0; i < file->kpkg3_payload.header->file_count; i++)
     {
         KPKG3_FileEntry file_entry = file->kpkg3_payload.files[i];
-        char *entry_cmp_path = asprintf_hd(cmp_path, file_entry.path);
+        char *entry_cmp_path = asprintf_hd("%s/%s", cmp_path, KPKG3_GetString(&file->kpkg3_payload, file_entry.path));
         FILE *cmp_file = fopen(entry_cmp_path, "r");
         free(entry_cmp_path);
 
@@ -520,13 +548,14 @@ KPKG_Result KPKG3_Unpack(KPKG_File *file, const char *out_path, const char *cmp_
         unsigned int checksum_len = 0;
         if (cmp_file)
         {
-            kpmio->log(KPM_VERBOSITY_DEBUG, "Calculating hash for %s", file_entry.path);
+            kpmio->log(KPM_VERBOSITY_DEBUG, "Calculating hash for %s", KPKG3_GetString(&file->kpkg3_payload, file_entry.path));
             EVP_MD_CTX *ctx = EVP_MD_CTX_new();
             if (!EVP_DigestInit_ex2(ctx, EVP_sha256(), NULL))
             {
                 EVP_MD_CTX_free(ctx);
                 fclose(cmp_file);
-                return KPKG_HASH_ERROR;
+                KPKG3_FreeDownloadRanges(range_count, ranges);
+                return KPKG_OPENSSL_ERROR;
             }
 
             char buf[8192];
@@ -537,7 +566,8 @@ KPKG_Result KPKG3_Unpack(KPKG_File *file, const char *out_path, const char *cmp_
                 {
                     EVP_MD_CTX_free(ctx);
                     fclose(cmp_file);
-                    return KPKG_HASH_ERROR;
+                    KPKG3_FreeDownloadRanges(range_count, ranges);
+                    return KPKG_OPENSSL_ERROR;
                 }
             }
 
@@ -545,6 +575,7 @@ KPKG_Result KPKG3_Unpack(KPKG_File *file, const char *out_path, const char *cmp_
             {
                 EVP_MD_CTX_free(ctx);
                 fclose(cmp_file);
+                KPKG3_FreeDownloadRanges(range_count, ranges);
                 return KPKG_FILESYSTEM_ERROR;
             }
 
@@ -552,7 +583,8 @@ KPKG_Result KPKG3_Unpack(KPKG_File *file, const char *out_path, const char *cmp_
             {
                 EVP_MD_CTX_free(ctx);
                 fclose(cmp_file);
-                return KPKG_HASH_ERROR;
+                KPKG3_FreeDownloadRanges(range_count, ranges);
+                return KPKG_OPENSSL_ERROR;
             }
             EVP_MD_CTX_free(ctx);
             fclose(cmp_file);
@@ -561,32 +593,41 @@ KPKG_Result KPKG3_Unpack(KPKG_File *file, const char *out_path, const char *cmp_
         if (checksum_len == 0 || memcmp(file_entry.installed_checksum, installed_checksum, KPKG_CHECKSUM_SIZE))
         {
             if (checksum_len != 0)
-                kpmio->log(KPM_VERBOSITY_DEBUG, "Hash mismatch, expected %s got %s", file_entry.installed_checksum, installed_checksum);
+                kpmio->log(KPM_VERBOSITY_DEBUG, "Hash mismatch for %s, expected %s got %s, marking for upgrade", KPKG3_GetString(&file->kpkg3_payload, file_entry.path), file_entry.installed_checksum, installed_checksum);
             else
-                kpmio->log(KPM_VERBOSITY_DEBUG, "File not found, marking for download");
+                kpmio->log(KPM_VERBOSITY_DEBUG, "File %s not found, marking for upgrade", KPKG3_GetString(&file->kpkg3_payload, file_entry.path));
 
-            ranges[range_count] = (KPKG3_DownloadRange) {
+            char *file_path = asprintf_hd("%s/%s", out_path, KPKG3_GetString(&file->kpkg3_payload, file_entry.path));
+            char *dir_path = dirname(file_path);
+            if (access(dir_path, R_OK))
+                mkdir_r(dir_path, 0755);
+            free(file_path);
+
+            ranges[range_count++] = (KPKG3_DownloadRange) {
                 .file_entry = file_entry,
                 .start = file_entry.offset + file_section_off,
                 .end = file_entry.offset + file_section_off + file_entry.size,
                 .out_path = asprintf_hd("%s/%s", out_path, KPKG3_GetString(&file->kpkg3_payload, file_entry.path))
             };
-            range_count++;
             continue;
         }
 
         // Copy unchanged file
-        char *og_path = asprintf_hd(cmp_path, file_entry.path);
+        char *og_path = asprintf_hd("%s/%s", cmp_path, KPKG3_GetString(&file->kpkg3_payload, file_entry.path));
         FILE *og_file = fopen(og_path, "r");
         free(og_path);
         if (!og_file)
+        {
+            KPKG3_FreeDownloadRanges(range_count, ranges);
             return KPKG_FILESYSTEM_ERROR;
-        char *out_file_path = asprintf_hd(out_path, file_entry.path);
+        }
+        char *out_file_path = asprintf_hd("%s/%s", out_path, KPKG3_GetString(&file->kpkg3_payload, file_entry.path));
         FILE *out_file = fopen(out_file_path, "w");
         free(out_file_path);
         if (!out_file)
         {
             fclose(og_file);
+            KPKG3_FreeDownloadRanges(range_count, ranges);
             return KPKG_FILESYSTEM_ERROR;
         }
         struct stat stats;
@@ -595,9 +636,12 @@ KPKG_Result KPKG3_Unpack(KPKG_File *file, const char *out_path, const char *cmp_
         {
             fclose(og_file);
             fclose(out_file);
+            KPKG3_FreeDownloadRanges(range_count, ranges);
             return KPKG_FILESYSTEM_ERROR;
         }
     }
 
-    return KPKG3_HandleRangeMap(file, range_count, ranges, kpmio);
+    KPKG_Result ret = KPKG3_HandleRangeMap(file, range_count, ranges, kpmio);
+    KPKG3_FreeDownloadRanges(range_count, ranges);
+    return ret;
 }
