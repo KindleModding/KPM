@@ -148,7 +148,8 @@ size_t KPKG_CURLCallback(char *ptr, size_t size, size_t nmemb, void *userdata)
             data->error = KPKG_OK;
             // For KPKG1/2 we want to download to the FS to unpack later (@TODO: Progress reporting from here)
             data->type = KPKG_CURLType_KPKG1;
-            FILE *out_file = fopen(data->out_path, "w");
+            data->kpmio->log(KPM_VERBOSITY_DEBUG, "Writing to %s", data->out_path);
+            FILE *out_file = fopen(data->out_path, "w+");
             if (!out_file)
             {
                 free(data->buf);
@@ -243,12 +244,9 @@ KPKG_Result KPKG_LoadFile(KPKG_File **file, const char *location, const char *ou
         if (memcmp(miniheader, "KPKG", 4)) // This is most likely a legacy file!
         {
             *file = malloc(sizeof(KPKG_File));
-            int res = KPKG1_LoadFile(*file, location, in_file);
+            int res = KPKG1_LoadFile(*file, location, in_file, kpmio);
             if (res != KPKG_OK)
-            {
-                free(*file);
                 *file = NULL;
-            }
             fclose(in_file);
             return res;
         }
@@ -309,7 +307,12 @@ KPKG_Result KPKG_LoadFile(KPKG_File **file, const char *location, const char *ou
 
     if (curl_data->type == KPKG_CURLType_KPKG1)
     {
-        int res = KPKG1_LoadFile(*file, curl_data->out_path, curl_data->out_file);
+        kpmio->log(KPM_VERBOSITY_DEBUG, "Reading downloaded KPKG1 file");
+        fflush(curl_data->out_file);
+        fseek(curl_data->out_file, 0, SEEK_SET);
+        int res = KPKG1_LoadFile(*file, curl_data->out_path, curl_data->out_file, kpmio);
+        if (res != KPKG_OK)
+            *file = NULL;
         curl_data->file = NULL; // Ensure it doesn't get freed
         KPKG_FreeCURLData(&curl_data);
         return res;

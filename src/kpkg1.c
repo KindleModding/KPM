@@ -4,6 +4,8 @@
 #include "archive_entry.h"
 #include "cjson/cJSON.h"
 #include "internal_utils.h"
+#include "kpm/kpkg.h"
+#include "kpm/kpmio.h"
 #include "kpm/semver.h"
 #include <assert.h>
 #include <stdint.h>
@@ -66,7 +68,7 @@ char *KPKG1_GetManifest(FILE *file)
     return NULL;
 }
 
-KPKG_Result KPKG1_LoadFile(KPKG_File *kpkg_file, const char *location, FILE *in_file)
+KPKG_Result KPKG1_LoadFile(KPKG_File *kpkg_file, const char *location, FILE *in_file, KPMIO *kpmio)
 {
     char *raw_manifest = KPKG1_GetManifest(in_file);
     if (!raw_manifest)
@@ -80,17 +82,20 @@ KPKG_Result KPKG1_LoadFile(KPKG_File *kpkg_file, const char *location, FILE *in_
 
     if (cJSON_GetObjectItem(json, "manifest_version") == NULL || !cJSON_IsNumber(cJSON_GetObjectItem(json, "manifest_version")))
     {
+        kpmio->log(KPM_VERBOSITY_DEBUG, "KPKG1 Invalid manifest version");
         free(raw_manifest);
         cJSON_Delete(json);
         return KPKG_VALIDATION_ERROR;
     }
 
     int manifest_version = cJSON_GetNumberValue(cJSON_GetObjectItem(json, "manifest_version"));
+    kpmio->log(KPM_VERBOSITY_DEBUG, "KPKG1 manifest version %i", manifest_version);
 
     if (
         manifest_version < 1 ||
         manifest_version > 2 ||
         !cJSON_IsString(cJSON_GetObjectItem(json, "id")) ||
+        strlen(cJSON_GetStringValue(cJSON_GetObjectItem(json, "id"))) < 2 ||
         !cJSON_IsString(cJSON_GetObjectItem(json, "name")) ||
         !cJSON_IsString(cJSON_GetObjectItem(json, "author")) ||
         !cJSON_IsString(cJSON_GetObjectItem(json, "description")) ||
@@ -107,7 +112,6 @@ KPKG_Result KPKG1_LoadFile(KPKG_File *kpkg_file, const char *location, FILE *in_
         cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(json, "version"), 1)) > SEMVER_VERSION_MAX ||
         cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(json, "version"), 2)) > SEMVER_VERSION_MAX ||
         !cJSON_IsArray(cJSON_GetObjectItem(json, "dependencies")) ||
-        cJSON_GetArraySize(cJSON_GetObjectItem(json, "dependencies")) < 0 ||
         cJSON_GetArraySize(cJSON_GetObjectItem(json, "dependencies")) > UINT32_MAX
     )
     {
@@ -129,17 +133,18 @@ KPKG_Result KPKG1_LoadFile(KPKG_File *kpkg_file, const char *location, FILE *in_
                 .minor = cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(json, "version"), 1)),
                 .patch = cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(json, "version"), 2))
             },
-            .dependency_count = cJSON_GetArraySize(cJSON_GetObjectItem(json, "dependencies")),
+            .dependency_count = 0,
             .dependencies = NULL,
             .supported_platforms = 0
         }
     };
 
     cJSON *platform;
-    cJSON_ArrayForEach(platform, json)
+    cJSON_ArrayForEach(platform, cJSON_GetObjectItem(json, "supported_platforms"))
     {
         if (!cJSON_IsString(platform))
         {
+            kpmio->log(KPM_VERBOSITY_DEBUG, "Could not read platform as string");
             free(raw_manifest);
             cJSON_Delete(json);
             KPKG_CloseFile(kpkg_file);
@@ -157,94 +162,130 @@ KPKG_Result KPKG1_LoadFile(KPKG_File *kpkg_file, const char *location, FILE *in_
             (*kpkg_file).kpkg1_payload.supported_platforms |= PLATFORM_KINDLEHF;
         else
         {
-            free(raw_manifest);
-            cJSON_Delete(json);
-            KPKG_CloseFile(kpkg_file);
-            return KPKG_VALIDATION_ERROR;
+            kpmio->log(KPM_VERBOSITY_WARN, "KPKG1 Unknown platform: %s", platform_str);
         }
     }
 
-    (*kpkg_file).kpkg1_payload.dependencies = malloc(sizeof(KPKG3_DependencyEntry) * (*kpkg_file).kpkg1_payload.dependency_count);
+    (*kpkg_file).kpkg1_payload.dependencies = malloc(sizeof(KPKG3_DependencyEntry) * cJSON_GetArraySize(cJSON_GetObjectItem(json, "dependencies")));
 
-    for (int i=0; i < (*kpkg_file).kpkg1_payload.dependency_count; i++)
+    cJSON *el;
+    cJSON_ArrayForEach(el, cJSON_GetObjectItem(json, "dependencies"))
     {
-        cJSON *el = cJSON_GetArrayItem(cJSON_GetObjectItem(json, "dependencies"), i);
         cJSON *min = cJSON_GetObjectItem(el, "min");
         cJSON *max = cJSON_GetObjectItem(el, "max");
+        bool valid = true;
+        if (!cJSON_IsString(cJSON_GetObjectItem(el, "id")))
+        {
+            kpmio->log(KPM_VERBOSITY_ERROR, "KPKG1 Dependency ID must be a string");
+            valid = false;
+        }
+
+        if (valid && strlen(cJSON_GetStringValue(cJSON_GetObjectItem(el, "id"))) < 2)
+        {
+            kpmio->log(KPM_VERBOSITY_ERROR, "KPKG1 Dependency ID must be at least 2 characters long");
+            valid = false;
+        }
+
         if (
-            !cJSON_IsString(cJSON_GetObjectItem(el, "id")) ||
+            valid &&
+            min && 
             (
-                min && 
-                (
-                    !cJSON_IsArray(min) ||
-                    cJSON_GetArraySize(min) != 3 ||
-                    !cJSON_IsNumber(cJSON_GetArrayItem(min, 0)) ||
-                    !cJSON_IsNumber(cJSON_GetArrayItem(min, 1)) ||
-                    !cJSON_IsNumber(cJSON_GetArrayItem(min, 2)) ||
-                    cJSON_GetNumberValue(cJSON_GetArrayItem(min, 0)) < 0 ||
-                    cJSON_GetNumberValue(cJSON_GetArrayItem(min, 1)) < 0 ||
-                    cJSON_GetNumberValue(cJSON_GetArrayItem(min, 2)) < 0 ||
-                    cJSON_GetNumberValue(cJSON_GetArrayItem(min, 0)) > SEMVER_VERSION_MAX ||
-                    cJSON_GetNumberValue(cJSON_GetArrayItem(min, 1)) > SEMVER_VERSION_MAX ||
-                    cJSON_GetNumberValue(cJSON_GetArrayItem(min, 2)) > SEMVER_VERSION_MAX
-                )
-            ) ||
-            (
-                max &&
-                (
-                    !cJSON_IsArray(max) ||
-                    cJSON_GetArraySize(max) != 3 ||
-                    !cJSON_IsNumber(cJSON_GetArrayItem(max, 0)) ||
-                    !cJSON_IsNumber(cJSON_GetArrayItem(max, 1)) ||
-                    !cJSON_IsNumber(cJSON_GetArrayItem(max, 2)) ||
-                    cJSON_GetNumberValue(cJSON_GetArrayItem(max, 0)) < 0 ||
-                    cJSON_GetNumberValue(cJSON_GetArrayItem(max, 1)) < 0 ||
-                    cJSON_GetNumberValue(cJSON_GetArrayItem(max, 2)) < 0 ||
-                    cJSON_GetNumberValue(cJSON_GetArrayItem(max, 0)) > SEMVER_VERSION_MAX ||
-                    cJSON_GetNumberValue(cJSON_GetArrayItem(max, 1)) > SEMVER_VERSION_MAX ||
-                    cJSON_GetNumberValue(cJSON_GetArrayItem(max, 2)) > SEMVER_VERSION_MAX
-                )
+                !cJSON_IsArray(min) ||
+                cJSON_GetArraySize(min) != 3 ||
+                !cJSON_IsNumber(cJSON_GetArrayItem(min, 0)) ||
+                !cJSON_IsNumber(cJSON_GetArrayItem(min, 1)) ||
+                !cJSON_IsNumber(cJSON_GetArrayItem(min, 2)) ||
+                cJSON_GetNumberValue(cJSON_GetArrayItem(min, 0)) < 0 ||
+                cJSON_GetNumberValue(cJSON_GetArrayItem(min, 1)) < 0 ||
+                cJSON_GetNumberValue(cJSON_GetArrayItem(min, 2)) < 0 ||
+                cJSON_GetNumberValue(cJSON_GetArrayItem(min, 0)) > SEMVER_VERSION_MAX ||
+                cJSON_GetNumberValue(cJSON_GetArrayItem(min, 1)) > SEMVER_VERSION_MAX ||
+                cJSON_GetNumberValue(cJSON_GetArrayItem(min, 2)) > SEMVER_VERSION_MAX
             )
         )
+        {
+            kpmio->log(KPM_VERBOSITY_ERROR, "KPKG1 Invalid dependency minimum");
+            valid = false;
+        }
+
+        if (
+            valid &&
+            max &&
+            (
+                !cJSON_IsArray(max) ||
+                cJSON_GetArraySize(max) != 3 ||
+                !cJSON_IsNumber(cJSON_GetArrayItem(max, 0)) ||
+                !cJSON_IsNumber(cJSON_GetArrayItem(max, 1)) ||
+                !cJSON_IsNumber(cJSON_GetArrayItem(max, 2)) ||
+                cJSON_GetNumberValue(cJSON_GetArrayItem(max, 0)) < 0 ||
+                cJSON_GetNumberValue(cJSON_GetArrayItem(max, 1)) < 0 ||
+                cJSON_GetNumberValue(cJSON_GetArrayItem(max, 2)) < 0 ||
+                cJSON_GetNumberValue(cJSON_GetArrayItem(max, 0)) > SEMVER_VERSION_MAX ||
+                cJSON_GetNumberValue(cJSON_GetArrayItem(max, 1)) > SEMVER_VERSION_MAX ||
+                cJSON_GetNumberValue(cJSON_GetArrayItem(max, 2)) > SEMVER_VERSION_MAX
+            )
+        )
+        {
+            kpmio->log(KPM_VERBOSITY_ERROR, "KPKG1 Invalid dependency minimum");
+            valid = false;
+        }
+
+        if (valid)
+        {
+            if (!min)
+                (*kpkg_file).kpkg1_payload.dependencies[(*kpkg_file).kpkg1_payload.dependency_count].min_version = (SemVer) {
+                    .major = 0,
+                    .minor = 0,
+                    .patch = 0
+                };
+            else
+                (*kpkg_file).kpkg1_payload.dependencies[(*kpkg_file).kpkg1_payload.dependency_count].min_version = (SemVer) {
+                    .major = cJSON_GetNumberValue(cJSON_GetArrayItem(min, 0)),
+                    .minor = cJSON_GetNumberValue(cJSON_GetArrayItem(min, 1)),
+                    .patch = cJSON_GetNumberValue(cJSON_GetArrayItem(min, 2))
+                };
+        
+            if (!max)
+                (*kpkg_file).kpkg1_payload.dependencies[(*kpkg_file).kpkg1_payload.dependency_count].max_version = (SemVer) {
+                    .major = UINT32_MAX,
+                    .minor = UINT32_MAX,
+                    .patch = UINT32_MAX
+                };
+            else
+                (*kpkg_file).kpkg1_payload.dependencies[(*kpkg_file).kpkg1_payload.dependency_count].max_version = (SemVer) {
+                    .major = cJSON_GetNumberValue(cJSON_GetArrayItem(max, 0)),
+                    .minor = cJSON_GetNumberValue(cJSON_GetArrayItem(max, 1)),
+                    .patch = cJSON_GetNumberValue(cJSON_GetArrayItem(max, 2))
+                };
+        }
+
+        if (
+            valid &&
+            SemVerCmp(
+                (*kpkg_file).kpkg1_payload.dependencies[(*kpkg_file).kpkg1_payload.dependency_count].min_version,
+                (*kpkg_file).kpkg1_payload.dependencies[(*kpkg_file).kpkg1_payload.dependency_count].max_version
+            ) >= 0
+        )
+        {
+            kpmio->log(KPM_VERBOSITY_ERROR, "KPKG1 Invalid dependency version pair");
+            valid = false;
+        }
+
+        if (!valid)
         {
             free(raw_manifest);
             cJSON_Delete(json);
             KPKG_CloseFile(kpkg_file);
             return KPKG_VALIDATION_ERROR;
         }
+
+        (*kpkg_file).kpkg1_payload.dependency_count++;
     }
 
     for (int i=0; i < (*kpkg_file).kpkg1_payload.dependency_count; i++)
     {
         cJSON *el = cJSON_GetArrayItem(cJSON_GetObjectItem(json, "dependencies"), i);
-        cJSON *min = cJSON_GetObjectItem(el, "min");
-        cJSON *max = cJSON_GetObjectItem(el, "max");
         (*kpkg_file).kpkg1_payload.dependencies[i].id = strdup(cJSON_GetStringValue(cJSON_GetObjectItem(el, "id")));
-        if (!min)
-            (*kpkg_file).kpkg1_payload.dependencies[i].min_version = (SemVer) {
-                .major = 0,
-                .minor = 0,
-                .patch = 0
-            };
-        else
-            (*kpkg_file).kpkg1_payload.dependencies[i].min_version = (SemVer) {
-                .major = cJSON_GetNumberValue(cJSON_GetArrayItem(min, 0)),
-                .minor = cJSON_GetNumberValue(cJSON_GetArrayItem(min, 1)),
-                .patch = cJSON_GetNumberValue(cJSON_GetArrayItem(min, 2))
-            };
-        
-        if (!max)
-            (*kpkg_file).kpkg1_payload.dependencies[i].max_version = (SemVer) {
-                .major = UINT32_MAX,
-                .minor = UINT32_MAX,
-                .patch = UINT32_MAX
-            };
-        else
-            (*kpkg_file).kpkg1_payload.dependencies[i].max_version = (SemVer) {
-                .major = cJSON_GetNumberValue(cJSON_GetArrayItem(max, 0)),
-                .minor = cJSON_GetNumberValue(cJSON_GetArrayItem(max, 1)),
-                .patch = cJSON_GetNumberValue(cJSON_GetArrayItem(max, 2))
-            };
     }
 
     return KPKG_OK;

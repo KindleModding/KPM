@@ -158,6 +158,16 @@ bool KPKG3_ValidateFile(KPKG_File *file, size_t file_size, KPMIO *kpmio)
         }
     }
 
+    for (uint32_t i=0; i < file->kpkg3_payload.header->dependency_count; i++)
+    {
+        kpmio->log(KPM_VERBOSITY_DEBUG, "Checking KPKG3 dependency", file->kpkg3_payload.dependencies[i].id);
+        if (SemVerCmp(file->kpkg3_payload.dependencies[i].min_version, file->kpkg3_payload.dependencies[i].max_version) >= 0)
+        {
+            kpmio->log(KPM_VERBOSITY_ERROR, "KPKG3 ");
+            return false;
+        }
+    }
+
     return true;
 }
 
