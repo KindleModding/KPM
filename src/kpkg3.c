@@ -345,13 +345,17 @@ size_t KPKG3_CurlWriteFunction(char *ptr, size_t size, size_t nmemb, void *userd
         }
         return realsize;
     case DOWNLOAD_FULL:
+        state->kpmio->log(KPM_VERBOSITY_DEBUG, "Writing full");
         while (state->cur_range_idx < state->range_count)
         {
+            state->kpmio->log(KPM_VERBOSITY_DEBUG, "Checking range %i", state->cur_range_idx);
             current_range = state->ranges[state->cur_range_idx];
             read_remaining = realsize - offset;
+            out.pos = 0;
 
             if (state->total_downloaded + read_remaining < current_range.start)
             {
+                state->kpmio->log(KPM_VERBOSITY_DEBUG, "Not enough downloaded (%i/%i)");
                 state->total_downloaded += read_remaining;
                 return realsize;
             }
@@ -365,7 +369,8 @@ size_t KPKG3_CurlWriteFunction(char *ptr, size_t size, size_t nmemb, void *userd
             }
 
             if (state->cur_file == -1)
-            { 
+            {
+                state->kpmio->log(KPM_VERBOSITY_DEBUG, "Writing to %s", current_range.out_path);
                 state->cur_file = open(current_range.out_path, O_WRONLY|O_CREAT, current_range.file_entry.file_mode);
                 if (state->cur_file == -1)
                 {
@@ -415,8 +420,9 @@ size_t KPKG3_CurlWriteFunction(char *ptr, size_t size, size_t nmemb, void *userd
                 return CURL_WRITEFUNC_ERROR;
             }
 
+            state->kpmio->log(KPM_VERBOSITY_DEBUG, "Dowloaded %i/%i", state->total_downloaded, current_range.end);
             if (state->total_downloaded < current_range.end)
-                continue;
+                return realsize;
 
             unsigned char checksum[EVP_MAX_MD_SIZE];
             unsigned int checksum_len;
@@ -428,6 +434,7 @@ size_t KPKG3_CurlWriteFunction(char *ptr, size_t size, size_t nmemb, void *userd
 
             if (memcmp(current_range.file_entry.checksum, checksum, KPKG_CHECKSUM_SIZE))
             {
+                state->kpmio->log(KPM_VERBOSITY_ERROR, "Hash mismatch error: Expected %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x, got %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x", current_range.file_entry.checksum[0], current_range.file_entry.checksum[1], current_range.file_entry.checksum[2], current_range.file_entry.checksum[3], current_range.file_entry.checksum[4], current_range.file_entry.checksum[5], current_range.file_entry.checksum[6], current_range.file_entry.checksum[7], current_range.file_entry.checksum[8], current_range.file_entry.checksum[9], current_range.file_entry.checksum[10], current_range.file_entry.checksum[11], current_range.file_entry.checksum[12], current_range.file_entry.checksum[13], current_range.file_entry.checksum[14], current_range.file_entry.checksum[15], current_range.file_entry.checksum[16], current_range.file_entry.checksum[17], current_range.file_entry.checksum[18], current_range.file_entry.checksum[19], current_range.file_entry.checksum[20], current_range.file_entry.checksum[21], current_range.file_entry.checksum[22], current_range.file_entry.checksum[23], current_range.file_entry.checksum[24], current_range.file_entry.checksum[25], current_range.file_entry.checksum[26], current_range.file_entry.checksum[27], current_range.file_entry.checksum[28], current_range.file_entry.checksum[29], current_range.file_entry.checksum[30], current_range.file_entry.checksum[31], checksum[0], checksum[1], checksum[2], checksum[3], checksum[4], checksum[5], checksum[6], checksum[7], checksum[8], checksum[9], checksum[10], checksum[11], checksum[12], checksum[13], checksum[14], checksum[15], checksum[16], checksum[17], checksum[18], checksum[19], checksum[20], checksum[21], checksum[22], checksum[23], checksum[24], checksum[25], checksum[26], checksum[27], checksum[28], checksum[29], checksum[30], checksum[31]);
                 state->result = KPKG_HASH_ERROR;
                 return CURL_WRITEFUNC_ERROR;
             }
@@ -488,9 +495,7 @@ KPKG_Result KPKG3_HandleRangeMap(KPKG_File *file, uint32_t range_count, KPKG3_Do
     {
         kpmio->log(KPM_VERBOSITY_DEBUG, "Downloading %s", KPKG3_GetString(&file->kpkg3_payload, file->kpkg3_payload.files[i].path));
         KPKG3_DownloadRange range = ranges[i];
-        char *ranges_str;
-        ranges_str = asprintf_hd("%lu-%lu", range.start, range.end - 1);
-
+        
         KPKG3_DownloadState state = {
             .type = DOWNLOAD_SINGLERANGE,
             .result = KPKG_OK,
@@ -506,6 +511,20 @@ KPKG_Result KPKG3_HandleRangeMap(KPKG_File *file, uint32_t range_count, KPKG3_Do
             .cur_zstream = NULL,
             .kpmio = kpmio
         };
+
+        char *ranges_str;
+        if (range_count == file->kpkg3_payload.header->file_count)
+        {
+            state.type = DOWNLOAD_FULL;
+            state.range_count = range_count;
+            state.ranges = ranges;
+            ranges_str = asprintf_hd("%lu-%lu", 0L, ranges[range_count-1].end);
+        }
+        else
+        {
+            ranges_str = asprintf_hd("%lu-%lu", range.start, range.end - 1);
+        }
+            
 
         CURL *curl = curl_easy_init();
         KPM_SET_CURL_OPTIONS(curl);
@@ -524,6 +543,9 @@ KPKG_Result KPKG3_HandleRangeMap(KPKG_File *file, uint32_t range_count, KPKG3_Do
         if (result != CURLE_OK && state.result == KPKG_OK)
             return KPKG_GENERIC_ERROR;
         if (state.result != KPKG_OK)
+            return state.result;
+
+        if (range_count == file->kpkg3_payload.header->file_count)
             return state.result;
     }
 
