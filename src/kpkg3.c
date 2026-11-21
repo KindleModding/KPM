@@ -337,7 +337,6 @@ size_t KPKG3_CurlWriteFunction(char *ptr, size_t size, size_t nmemb, void *userd
 
             if (memcmp(current_range.file_entry.checksum, checksum, KPKG_CHECKSUM_SIZE))
             {
-                
                 state->kpmio->log(KPM_VERBOSITY_ERROR, "Hash mismatch error: Expected %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x, got %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x", current_range.file_entry.checksum[0], current_range.file_entry.checksum[1], current_range.file_entry.checksum[2], current_range.file_entry.checksum[3], current_range.file_entry.checksum[4], current_range.file_entry.checksum[5], current_range.file_entry.checksum[6], current_range.file_entry.checksum[7], current_range.file_entry.checksum[8], current_range.file_entry.checksum[9], current_range.file_entry.checksum[10], current_range.file_entry.checksum[11], current_range.file_entry.checksum[12], current_range.file_entry.checksum[13], current_range.file_entry.checksum[14], current_range.file_entry.checksum[15], current_range.file_entry.checksum[16], current_range.file_entry.checksum[17], current_range.file_entry.checksum[18], current_range.file_entry.checksum[19], current_range.file_entry.checksum[20], current_range.file_entry.checksum[21], current_range.file_entry.checksum[22], current_range.file_entry.checksum[23], current_range.file_entry.checksum[24], current_range.file_entry.checksum[25], current_range.file_entry.checksum[26], current_range.file_entry.checksum[27], current_range.file_entry.checksum[28], current_range.file_entry.checksum[29], current_range.file_entry.checksum[30], current_range.file_entry.checksum[31], checksum[0], checksum[1], checksum[2], checksum[3], checksum[4], checksum[5], checksum[6], checksum[7], checksum[8], checksum[9], checksum[10], checksum[11], checksum[12], checksum[13], checksum[14], checksum[15], checksum[16], checksum[17], checksum[18], checksum[19], checksum[20], checksum[21], checksum[22], checksum[23], checksum[24], checksum[25], checksum[26], checksum[27], checksum[28], checksum[29], checksum[30], checksum[31]);
                 state->result = KPKG_HASH_ERROR;
                 return CURL_WRITEFUNC_ERROR;
@@ -462,6 +461,11 @@ KPKG_Result KPKG3_HandleRangeMap(KPKG_File *file, uint32_t range_count, KPKG3_Do
         {
             KPKG3_DownloadRange range = ranges[i];
             kpmio->log(KPM_VERBOSITY_DEBUG, "Decompressing %s to %s", KPKG3_GetString(&file->kpkg3_payload, range.file_entry.path), range.out_path);
+
+            EVP_MD_CTX *evp_ctx = EVP_MD_CTX_new();
+            if (!EVP_DigestInit_ex2(evp_ctx, EVP_sha256(), NULL))
+                return KPKG_OPENSSL_ERROR;
+
             int fd = open(range.out_path, O_RDWR|O_CREAT, range.file_entry.file_mode);
             if (fd == -1)
                 return KPKG_FILESYSTEM_ERROR;
@@ -475,6 +479,28 @@ KPKG_Result KPKG3_HandleRangeMap(KPKG_File *file, uint32_t range_count, KPKG3_Do
                 kpmio->log(KPM_VERBOSITY_ERROR, "Could not map file (%s)", strerror(errno));
                 return KPKG_MMAP_ERROR;
             }
+
+            if (!EVP_DigestUpdate(evp_ctx, file->kpkg3_payload.internal_file + range.start, range.end - range.start))
+            {
+                munmap(mapped_file, range.file_entry.installed_size);
+                return KPKG_OPENSSL_ERROR;
+            }
+
+            unsigned char checksum[EVP_MAX_MD_SIZE];
+            unsigned int checksum_len;
+            if (!EVP_DigestFinal_ex(evp_ctx, checksum, &checksum_len) || checksum_len != KPKG_CHECKSUM_SIZE)
+            {
+                munmap(mapped_file, range.file_entry.installed_size);
+                return KPKG_OPENSSL_ERROR;
+            }
+
+            if (memcmp(range.file_entry.checksum, checksum, KPKG_CHECKSUM_SIZE))
+            {
+                kpmio->log(KPM_VERBOSITY_ERROR, "Hash mismatch error: Expected %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x, got %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x", range.file_entry.checksum[0], range.file_entry.checksum[1], range.file_entry.checksum[2], range.file_entry.checksum[3], range.file_entry.checksum[4], range.file_entry.checksum[5], range.file_entry.checksum[6], range.file_entry.checksum[7], range.file_entry.checksum[8], range.file_entry.checksum[9], range.file_entry.checksum[10], range.file_entry.checksum[11], range.file_entry.checksum[12], range.file_entry.checksum[13], range.file_entry.checksum[14], range.file_entry.checksum[15], range.file_entry.checksum[16], range.file_entry.checksum[17], range.file_entry.checksum[18], range.file_entry.checksum[19], range.file_entry.checksum[20], range.file_entry.checksum[21], range.file_entry.checksum[22], range.file_entry.checksum[23], range.file_entry.checksum[24], range.file_entry.checksum[25], range.file_entry.checksum[26], range.file_entry.checksum[27], range.file_entry.checksum[28], range.file_entry.checksum[29], range.file_entry.checksum[30], range.file_entry.checksum[31], checksum[0], checksum[1], checksum[2], checksum[3], checksum[4], checksum[5], checksum[6], checksum[7], checksum[8], checksum[9], checksum[10], checksum[11], checksum[12], checksum[13], checksum[14], checksum[15], checksum[16], checksum[17], checksum[18], checksum[19], checksum[20], checksum[21], checksum[22], checksum[23], checksum[24], checksum[25], checksum[26], checksum[27], checksum[28], checksum[29], checksum[30], checksum[31]);
+                munmap(mapped_file, range.file_entry.installed_size);
+                return KPKG_HASH_ERROR;
+            }
+
             unsigned int zstd_error = ZSTD_isError(
                 ZSTD_decompress(
                     mapped_file, 
@@ -547,10 +573,7 @@ KPKG_Result KPKG3_HandleRangeMap(KPKG_File *file, uint32_t range_count, KPKG3_Do
         curl_easy_cleanup(curl);
         if (result != CURLE_OK && state.result == KPKG_OK)
             return KPKG_GENERIC_ERROR;
-        if (state.result != KPKG_OK)
-            return state.result;
-
-        if (range_count == file->kpkg3_payload.header->file_count)
+        if (state.type == DOWNLOAD_FULL || state.result != KPKG_OK)
             return state.result;
     }
 
@@ -631,7 +654,7 @@ KPKG_Result KPKG3_Unpack(KPKG_File *file, const char *out_path, const char *cmp_
         if (checksum_len == 0 || memcmp(file_entry.installed_checksum, installed_checksum, KPKG_CHECKSUM_SIZE))
         {
             if (checksum_len != 0)
-                kpmio->log(KPM_VERBOSITY_DEBUG, "Hash mismatch for %s, expected %s got %s, marking for upgrade", KPKG3_GetString(&file->kpkg3_payload, file_entry.path), file_entry.installed_checksum, installed_checksum);
+                kpmio->log(KPM_VERBOSITY_DEBUG, "Hash mismatch for %s, marking for upgrade", KPKG3_GetString(&file->kpkg3_payload, file_entry.path));
             else
                 kpmio->log(KPM_VERBOSITY_DEBUG, "File %s not found, marking for upgrade", KPKG3_GetString(&file->kpkg3_payload, file_entry.path));
 
@@ -645,6 +668,9 @@ KPKG_Result KPKG3_Unpack(KPKG_File *file, const char *out_path, const char *cmp_
         }
 
         // Copy unchanged file
+        if (!strcmp(out_path, cmp_path))
+            continue; // Same path, skip
+        
         kpmio->log(KPM_VERBOSITY_DEBUG, "File matches, copying");
         char *og_path = asprintf_hd("%s/%s", cmp_path, KPKG3_GetString(&file->kpkg3_payload, file_entry.path));
         FILE *og_file = fopen(og_path, "r");
