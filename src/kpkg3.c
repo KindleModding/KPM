@@ -464,25 +464,36 @@ KPKG_Result KPKG3_HandleRangeMap(KPKG_File *file, uint32_t range_count, KPKG3_Do
 
             EVP_MD_CTX *evp_ctx = EVP_MD_CTX_new();
             if (!EVP_DigestInit_ex2(evp_ctx, EVP_sha256(), NULL))
+            {
+                EVP_MD_CTX_free(evp_ctx);
                 return KPKG_OPENSSL_ERROR;
+            }
 
             int fd = open(range.out_path, O_RDWR|O_CREAT, range.file_entry.file_mode);
             if (fd == -1)
+            {
+                EVP_MD_CTX_free(evp_ctx);
                 return KPKG_FILESYSTEM_ERROR;
+            }
             if (ftruncate(fd, range.file_entry.installed_size) == -1)
+            {
+                EVP_MD_CTX_free(evp_ctx);
                 return KPKG_FILESYSTEM_ERROR;
+            }
             
             void *mapped_file = mmap(NULL, range.file_entry.installed_size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
             close(fd);
             if (mapped_file == MAP_FAILED)
             {
                 kpmio->log(KPM_VERBOSITY_ERROR, "Could not map file (%s)", strerror(errno));
+                EVP_MD_CTX_free(evp_ctx);
                 return KPKG_MMAP_ERROR;
             }
 
             if (!EVP_DigestUpdate(evp_ctx, file->kpkg3_payload.internal_file + range.start, range.end - range.start))
             {
                 munmap(mapped_file, range.file_entry.installed_size);
+                EVP_MD_CTX_free(evp_ctx);
                 return KPKG_OPENSSL_ERROR;
             }
 
@@ -490,9 +501,11 @@ KPKG_Result KPKG3_HandleRangeMap(KPKG_File *file, uint32_t range_count, KPKG3_Do
             unsigned int checksum_len;
             if (!EVP_DigestFinal_ex(evp_ctx, checksum, &checksum_len) || checksum_len != KPKG_CHECKSUM_SIZE)
             {
+                EVP_MD_CTX_free(evp_ctx);
                 munmap(mapped_file, range.file_entry.installed_size);
                 return KPKG_OPENSSL_ERROR;
             }
+            EVP_MD_CTX_free(evp_ctx);
 
             if (memcmp(range.file_entry.checksum, checksum, KPKG_CHECKSUM_SIZE))
             {
@@ -669,7 +682,10 @@ KPKG_Result KPKG3_Unpack(KPKG_File *file, const char *out_path, const char *cmp_
 
         // Copy unchanged file
         if (!strcmp(out_path, cmp_path))
+        {
+            free(out_file_path);
             continue; // Same path, skip
+        }
         
         kpmio->log(KPM_VERBOSITY_DEBUG, "File matches, copying");
         char *og_path = asprintf_hd("%s/%s", cmp_path, KPKG3_GetString(&file->kpkg3_payload, file_entry.path));
@@ -678,6 +694,7 @@ KPKG_Result KPKG3_Unpack(KPKG_File *file, const char *out_path, const char *cmp_
         if (!og_file)
         {
             KPKG3_FreeDownloadRanges(range_count, ranges);
+            free(out_file_path);
             return KPKG_FILESYSTEM_ERROR;
         }
         FILE *out_file = fopen(out_file_path, "w");
@@ -697,6 +714,8 @@ KPKG_Result KPKG3_Unpack(KPKG_File *file, const char *out_path, const char *cmp_
             KPKG3_FreeDownloadRanges(range_count, ranges);
             return KPKG_FILESYSTEM_ERROR;
         }
+        fclose(og_file);
+        fclose(out_file);
     }
 
     KPKG_Result ret = KPKG3_HandleRangeMap(file, range_count, ranges, kpmio);
