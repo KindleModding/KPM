@@ -352,6 +352,14 @@ KPKG_Result KPKG_LoadFile(KPKG_File **file, const char *location, const char *ou
     return KPKG_OK;
 }
 
+uint16_t KPKG_GetSupportedPlatforms(KPKG_File *file)
+{
+    if (file->kpkg_version == KPKG_VERSION_1 || file->kpkg_version == KPKG_VERSION_2)
+        return file->kpkg1_payload.supported_platforms;
+    else
+        return file->kpkg3_payload.header->supported_platforms;
+}
+
 char *KPKG_GetId(KPKG_File *file)
 {
     if (file->kpkg_version == KPKG_VERSION_1 || file->kpkg_version == KPKG_VERSION_2)

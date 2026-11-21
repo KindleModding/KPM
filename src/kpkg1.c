@@ -125,7 +125,8 @@ KPKG_Result KPKG1_LoadFile(KPKG_File *kpkg_file, const char *location, FILE *in_
         cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(json, "version"), 1)) > SEMVER_VERSION_MAX ||
         cJSON_GetNumberValue(cJSON_GetArrayItem(cJSON_GetObjectItem(json, "version"), 2)) > SEMVER_VERSION_MAX ||
         !cJSON_IsArray(cJSON_GetObjectItem(json, "dependencies")) ||
-        cJSON_GetArraySize(cJSON_GetObjectItem(json, "dependencies")) > UINT32_MAX
+        cJSON_GetArraySize(cJSON_GetObjectItem(json, "dependencies")) > UINT32_MAX ||
+        ( cJSON_GetObjectItem(json, "supported_platforms") != NULL && !cJSON_IsArray(cJSON_GetObjectItem(json, "supported_platforms")) )
     )
     {
         free(raw_manifest);
@@ -241,7 +242,7 @@ KPKG_Result KPKG1_LoadFile(KPKG_File *kpkg_file, const char *location, FILE *in_
             )
         )
         {
-            kpmio->log(KPM_VERBOSITY_ERROR, "KPKG1 Invalid dependency minimum");
+            kpmio->log(KPM_VERBOSITY_ERROR, "KPKG1 Invalid dependency maximum");
             valid = false;
         }
 
