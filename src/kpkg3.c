@@ -5,6 +5,7 @@
 #include "kpm/kpkg.h"
 #include "kpm/kpmio.h"
 #include <assert.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <libgen.h>
 #include <stdint.h>
@@ -194,7 +195,7 @@ KPKG_Result KPKG3_LoadFile(KPKG_File *kpkg_file, const char *location, FILE *in_
         }
     };
     
-    if (!kpkg_file->kpkg3_payload.internal_file)
+    if (kpkg_file->kpkg3_payload.internal_file == MAP_FAILED)
     {
         KPKG_CloseFile(kpkg_file);
         return KPKG_IO_ERROR;
@@ -258,7 +259,7 @@ typedef struct {
     EVP_MD_CTX *cur_evp_ctx;            /**< The current hash context */
     uint64_t total_downloaded;          /**< The total amount of data downloaded */
     size_t total_size;                  /**< The total size of the file */
-    FILE *cur_file;                     /**< The current file being written to */
+    int cur_file;                     /**< The current file being written to */
     ZSTD_DStream *cur_zstream;          /**< The current zstream being decompressed */
     KPMIO *kpmio;                       /**< For logging */
 } KPKG3_DownloadState;
@@ -274,10 +275,10 @@ size_t KPKG3_CurlWriteFunction(char *ptr, size_t size, size_t nmemb, void *userd
     switch (state->type)
     {
     case DOWNLOAD_SINGLERANGE:
-        if (!state->cur_file)
+        if (state->cur_file == -1)
         {
-            state->cur_file = fopen(current_range.out_path, "w");
-            if (!state->cur_file)
+            state->cur_file = open(current_range.out_path, O_WRONLY|O_CREAT, current_range.file_entry.file_mode);
+            if (state->cur_file == -1)
             {
                 state->kpmio->log(KPM_VERBOSITY_ERROR, "Could not open %s for writing", current_range.out_path);
                 state->result = KPKG_FILESYSTEM_ERROR;
@@ -318,7 +319,7 @@ size_t KPKG3_CurlWriteFunction(char *ptr, size_t size, size_t nmemb, void *userd
         }
         state->total_downloaded += realsize;
 
-        if (fwrite(state->out_buf, 1, out.pos, state->cur_file) != out.pos)
+        if (write(state->cur_file, state->out_buf, out.pos) != out.pos)
         {
             state->result = KPKG_FILESYSTEM_ERROR;
             return CURL_WRITEFUNC_ERROR;
@@ -363,9 +364,15 @@ size_t KPKG3_CurlWriteFunction(char *ptr, size_t size, size_t nmemb, void *userd
                 read_remaining -= delta;
             }
 
-            if (!state->cur_file)
+            if (state->cur_file == -1)
             { 
-                state->cur_file = fopen(current_range.out_path, "w");
+                state->cur_file = open(current_range.out_path, O_WRONLY|O_CREAT, current_range.file_entry.file_mode);
+                if (state->cur_file == -1)
+                {
+                    state->kpmio->log(KPM_VERBOSITY_ERROR, "Could not open %s for writing", current_range.out_path);
+                    state->result = KPKG_FILESYSTEM_ERROR;
+                    return CURL_WRITEFUNC_ERROR;
+                }
                 state->cur_zstream = ZSTD_createDStream();
                 state->cur_evp_ctx = EVP_MD_CTX_new();
                 if (!EVP_DigestInit_ex2(state->cur_evp_ctx, EVP_sha256(), NULL))
@@ -402,7 +409,7 @@ size_t KPKG3_CurlWriteFunction(char *ptr, size_t size, size_t nmemb, void *userd
                 
             state->total_downloaded += in.pos;
             offset += in.pos;
-            if (fwrite(state->out_buf, 1, out.pos, state->cur_file) != out.pos)
+            if (write(state->cur_file, state->out_buf, out.pos) != out.pos)
             {
                 state->result = KPKG_FILESYSTEM_ERROR;
                 return CURL_WRITEFUNC_ERROR;
@@ -425,10 +432,10 @@ size_t KPKG3_CurlWriteFunction(char *ptr, size_t size, size_t nmemb, void *userd
                 return CURL_WRITEFUNC_ERROR;
             }
             
-            fclose(state->cur_file);
+            close(state->cur_file);
             ZSTD_freeDStream(state->cur_zstream);
             EVP_MD_CTX_free(state->cur_evp_ctx);
-            state->cur_file = NULL;
+            state->cur_file = -1;
             state->cur_zstream = NULL;
             state->cur_evp_ctx = NULL;
             state->cur_range_idx++;
@@ -444,38 +451,35 @@ KPKG_Result KPKG3_HandleRangeMap(KPKG_File *file, uint32_t range_count, KPKG3_Do
 {
     if (file->kpkg3_payload.mapped_size != -1)
     {
-        kpmio->log(KPM_VERBOSITY_DEBUG, "Decompressing %s", file->kpkg3_payload.files->path);
         for (int i=0; i < range_count; i++)
         {
             KPKG3_DownloadRange range = ranges[i];
-            int fd = open(range.out_path, O_WRONLY);
+            kpmio->log(KPM_VERBOSITY_DEBUG, "Decompressing %s to %s", KPKG3_GetString(&file->kpkg3_payload, range.file_entry.path), range.out_path);
+            int fd = open(range.out_path, O_RDWR|O_CREAT, range.file_entry.file_mode);
             if (fd == -1)
                 return KPKG_FILESYSTEM_ERROR;
             if (ftruncate(fd, range.file_entry.installed_size) == -1)
                 return KPKG_FILESYSTEM_ERROR;
             
-            void *mapped_file = mmap(NULL, range.file_entry.installed_size, PROT_WRITE, MAP_PRIVATE, fd, 0);
-            if (!mapped_file)
+            void *mapped_file = mmap(NULL, range.file_entry.installed_size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+            close(fd);
+            if (mapped_file == MAP_FAILED)
             {
-                close(fd);
+                kpmio->log(KPM_VERBOSITY_ERROR, "Could not map file (%s)", strerror(errno));
                 return KPKG_MMAP_ERROR;
             }
-            if (ZSTD_isError(
+            unsigned int zstd_error = ZSTD_isError(
                 ZSTD_decompress(
                     mapped_file, 
                     range.file_entry.installed_size, 
-                    file->kpkg3_payload.internal_file,
+                    file->kpkg3_payload.internal_file + range.start,
                     range.end - range.start
                 )
-            ))
-            {
-                munmap(file, range.file_entry.installed_size);
-                close(fd);
-                return KPKG_ZSTD_ERROR;
-            }
+            );
+            munmap(mapped_file, range.file_entry.installed_size);
 
-            munmap(file, range.file_entry.installed_size);
-            close(fd);
+            if (zstd_error)
+                return KPKG_ZSTD_ERROR;
         }
         return KPKG_OK;
     }
@@ -498,7 +502,7 @@ KPKG_Result KPKG3_HandleRangeMap(KPKG_File *file, uint32_t range_count, KPKG3_Do
             .cur_evp_ctx = NULL,
             .total_downloaded = 0,
             .total_size = 0,
-            .cur_file = NULL,
+            .cur_file = -1,
             .cur_zstream = NULL,
             .kpmio = kpmio
         };
@@ -512,8 +516,8 @@ KPKG_Result KPKG3_HandleRangeMap(KPKG_File *file, uint32_t range_count, KPKG3_Do
         CURLcode result = curl_easy_perform(curl);
         free(ranges_str);
         free(state.out_buf);
-        if (state.cur_file)
-            fclose(state.cur_file);
+        if (state.cur_file != -1)
+            close(state.cur_file);
         ZSTD_freeDStream(state.cur_zstream);
         EVP_MD_CTX_free(state.cur_evp_ctx);
         curl_easy_cleanup(curl);
@@ -560,7 +564,7 @@ KPKG_Result KPKG3_Unpack(KPKG_File *file, const char *out_path, const char *cmp_
 
             char buf[8192];
             size_t buf_size = 0;
-            while ((buf_size = fread(buf, 1, 8192, cmp_file)))
+            while ((buf_size = fread(buf, 1, 8192, cmp_file)) > 0)
             {
                 if (!EVP_DigestUpdate(ctx, buf, buf_size))
                 {
@@ -590,6 +594,13 @@ KPKG_Result KPKG3_Unpack(KPKG_File *file, const char *out_path, const char *cmp_
             fclose(cmp_file);
         }
 
+        char *out_file_path = asprintf_hd("%s/%s", out_path, KPKG3_GetString(&file->kpkg3_payload, file_entry.path));
+        char *dir_src_path = strdup(out_file_path);
+        char *dir_path = dirname(dir_src_path);
+        if (access(dir_path, R_OK))
+            mkdir_r(dir_path, 0755);
+        free(dir_src_path);
+
         if (checksum_len == 0 || memcmp(file_entry.installed_checksum, installed_checksum, KPKG_CHECKSUM_SIZE))
         {
             if (checksum_len != 0)
@@ -597,22 +608,17 @@ KPKG_Result KPKG3_Unpack(KPKG_File *file, const char *out_path, const char *cmp_
             else
                 kpmio->log(KPM_VERBOSITY_DEBUG, "File %s not found, marking for upgrade", KPKG3_GetString(&file->kpkg3_payload, file_entry.path));
 
-            char *file_path = asprintf_hd("%s/%s", out_path, KPKG3_GetString(&file->kpkg3_payload, file_entry.path));
-            char *dir_path = dirname(file_path);
-            if (access(dir_path, R_OK))
-                mkdir_r(dir_path, 0755);
-            free(file_path);
-
             ranges[range_count++] = (KPKG3_DownloadRange) {
                 .file_entry = file_entry,
                 .start = file_entry.offset + file_section_off,
                 .end = file_entry.offset + file_section_off + file_entry.size,
-                .out_path = asprintf_hd("%s/%s", out_path, KPKG3_GetString(&file->kpkg3_payload, file_entry.path))
+                .out_path = out_file_path
             };
             continue;
         }
 
         // Copy unchanged file
+        kpmio->log(KPM_VERBOSITY_DEBUG, "File matches, copying");
         char *og_path = asprintf_hd("%s/%s", cmp_path, KPKG3_GetString(&file->kpkg3_payload, file_entry.path));
         FILE *og_file = fopen(og_path, "r");
         free(og_path);
@@ -621,7 +627,6 @@ KPKG_Result KPKG3_Unpack(KPKG_File *file, const char *out_path, const char *cmp_
             KPKG3_FreeDownloadRanges(range_count, ranges);
             return KPKG_FILESYSTEM_ERROR;
         }
-        char *out_file_path = asprintf_hd("%s/%s", out_path, KPKG3_GetString(&file->kpkg3_payload, file_entry.path));
         FILE *out_file = fopen(out_file_path, "w");
         free(out_file_path);
         if (!out_file)

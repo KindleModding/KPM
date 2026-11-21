@@ -342,9 +342,7 @@ KPKG_Result KPKG1_Unpack(KPKG_File *file, const char *out_path, KPMIO *kpmio)
     assert(file->kpkg_version == 1 || file->kpkg_version == 2);
     // location is ALWAYS guaranteed to be a path for KPKG1 (see KPKG_CURLCallback)
     if (access(file->location, R_OK) != 0)
-    {
         return KPKG_FILESYSTEM_ERROR;
-    }
 
     // Read the file
     struct archive_entry *entry;
@@ -381,9 +379,6 @@ KPKG_Result KPKG1_Unpack(KPKG_File *file, const char *out_path, KPMIO *kpmio)
         if (r < ARCHIVE_OK)
         {
             kpmio->log(KPM_VERBOSITY_ERROR, "Libarchive error: %s", archive_error_string(a));
-        }
-        if (r < ARCHIVE_WARN)
-        {
             goto libarchive_error;
         }
 
@@ -394,7 +389,8 @@ KPKG_Result KPKG1_Unpack(KPKG_File *file, const char *out_path, KPMIO *kpmio)
 
         if (r < ARCHIVE_OK)
         {
-            kpmio->log(KPM_VERBOSITY_ERROR, "Libarchive error: %s", archive_error_string(a));
+            kpmio->log(KPM_VERBOSITY_ERROR, "Libarchive error: %s", archive_error_string(ext));
+            goto libarchive_error;
         }
         else if (archive_entry_size(entry) > 0)
         {
@@ -402,9 +398,6 @@ KPKG_Result KPKG1_Unpack(KPKG_File *file, const char *out_path, KPMIO *kpmio)
             if (r < ARCHIVE_OK)
             {
                 kpmio->log(KPM_VERBOSITY_ERROR, "Libarchive error: %s", archive_error_string(a));
-            }
-            if (r < ARCHIVE_WARN)
-            {
                 goto libarchive_error;
             }
         }
