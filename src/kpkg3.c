@@ -516,9 +516,14 @@ KPKG_Result KPKG3_HandleRangeMap(KPKG_File *file, uint32_t range_count, KPKG3_Do
         if (range_count == file->kpkg3_payload.header->file_count)
         {
             state.type = DOWNLOAD_FULL;
+            ranges_str = asprintf_hd("%lu-%lu", ranges[0].start, ranges[range_count-1].end);
+            for (int j = range_count-1; j >= 0; j--)
+            {
+                ranges[j].end -= ranges[0].start;
+                ranges[j].start -= ranges[0].start;
+            }
             state.range_count = range_count;
             state.ranges = ranges;
-            ranges_str = asprintf_hd("%lu-%lu", 0L, ranges[range_count-1].end);
         }
         else
         {
