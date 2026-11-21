@@ -23,6 +23,7 @@ struct KPKGTest {
     char *dep_id;
     SemVer dep_min;
     SemVer dep_max;
+    uint16_t supported_platforms;
 };
 
 int main(int argc, char *argv[])
@@ -43,6 +44,86 @@ int main(int argc, char *argv[])
 
     struct KPKGTest tests[] = {
         (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_all_supported_platforms.kpkg",
+            .load_result = KPKG_OK,
+            .curl_result = KPKG_OK,
+            .kpkg_version = 1,
+            .id = "kpkg1_test",
+            .name = "kpkg1_test Name",
+            .author = "kpkg1_test Author",
+            .description = "kpkg1_test Description",
+            .category = "miscellaneous",
+            .subcategory = NULL,
+            .version = { 1, 2, 3 },
+            .test_dep = false,
+            .supported_platforms = PLATFORM_KINDLE|PLATFORM_KINDLE5|PLATFORM_KINDLEPW2|PLATFORM_KINDLEHF
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_bad_dependency_id.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_bad_dependency_maximum_negative_1.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_bad_dependency_maximum_negative_2.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_bad_dependency_maximum_negative_3.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_bad_dependency_maximum_toobig_1.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_bad_dependency_maximum_toobig_2.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_bad_dependency_maximum_toobig_3.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_bad_dependency_minimium_negative_1.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_bad_dependency_minimium_negative_2.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_bad_dependency_minimium_negative_3.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_bad_dependency_minimium_toobig_1.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_bad_dependency_minimium_toobig_2.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_bad_dependency_minimium_toobig_3.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
             .path = "resources/test_kpkg/kpkg1_bad_version_3.kpkg",
             .load_result = KPKG_VALIDATION_ERROR,
             .curl_result = KPKG_VALIDATION_ERROR
@@ -53,12 +134,12 @@ int main(int argc, char *argv[])
             .curl_result = KPKG_VALIDATION_ERROR
         },
         (struct KPKGTest) {
-            .path = "resources/test_kpkg/kpkg1_dep_malformed_id.kpkg",
+            .path = "resources/test_kpkg/kpkg1_dep_malformed_id_type.kpkg",
             .load_result = KPKG_VALIDATION_ERROR,
             .curl_result = KPKG_VALIDATION_ERROR
         },
         (struct KPKGTest) {
-            .path = "resources/test_kpkg/kpkg1_dep_malformed_id_type.kpkg",
+            .path = "resources/test_kpkg/kpkg1_dep_malformed_id.kpkg",
             .load_result = KPKG_VALIDATION_ERROR,
             .curl_result = KPKG_VALIDATION_ERROR
         },
@@ -92,24 +173,8 @@ int main(int argc, char *argv[])
             .test_dep = true,
             .dep_id = "nonexistent",
             .dep_min = SEMVER_MIN,
-            .dep_max = { 1, 2, 3 }
-        },
-        (struct KPKGTest) {
-            .path = "resources/test_kpkg/kpkg1_dep_minmax_version.kpkg",
-            .load_result = KPKG_OK,
-            .curl_result = KPKG_OK,
-            .kpkg_version = 1,
-            .id = "kpkg1_test",
-            .name = "kpkg1_test Name",
-            .author = "kpkg1_test Author",
-            .description = "kpkg1_test Description",
-            .category = "miscellaneous",
-            .subcategory = NULL,
-            .version = { 1, 2, 3 },
-            .test_dep = true,
-            .dep_id = "nonexistent",
-            .dep_min = { 1, 2, 3 },
-            .dep_max = { 4, 5, 6 }
+            .dep_max = { 1, 2, 3 },
+            .supported_platforms = PLATFORM_KINDLEHF|PLATFORM_KINDLEPW2
         },
         (struct KPKGTest) {
             .path = "resources/test_kpkg/kpkg1_dep_min_version.kpkg",
@@ -126,7 +191,26 @@ int main(int argc, char *argv[])
             .test_dep = true,
             .dep_id = "nonexistent",
             .dep_min = { 1, 2, 3 },
-            .dep_max = SEMVER_MAX
+            .dep_max = SEMVER_MAX,
+            .supported_platforms = PLATFORM_KINDLEHF|PLATFORM_KINDLEPW2
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_dep_minmax_version.kpkg",
+            .load_result = KPKG_OK,
+            .curl_result = KPKG_OK,
+            .kpkg_version = 1,
+            .id = "kpkg1_test",
+            .name = "kpkg1_test Name",
+            .author = "kpkg1_test Author",
+            .description = "kpkg1_test Description",
+            .category = "miscellaneous",
+            .subcategory = NULL,
+            .version = { 1, 2, 3 },
+            .test_dep = true,
+            .dep_id = "nonexistent",
+            .dep_min = { 1, 2, 3 },
+            .dep_max = { 4, 5, 6 },
+            .supported_platforms = PLATFORM_KINDLEHF|PLATFORM_KINDLEPW2
         },
         (struct KPKGTest) {
             .path = "resources/test_kpkg/kpkg1_dep_noversion.kpkg",
@@ -143,7 +227,8 @@ int main(int argc, char *argv[])
             .test_dep = true,
             .dep_id = "nonexistent",
             .dep_min = SEMVER_MIN,
-            .dep_max = SEMVER_MAX
+            .dep_max = SEMVER_MAX,
+            .supported_platforms = PLATFORM_KINDLEHF|PLATFORM_KINDLEPW2
         },
         (struct KPKGTest) {
             .path = "resources/test_kpkg/kpkg1_empty_deps.kpkg",
@@ -157,7 +242,8 @@ int main(int argc, char *argv[])
             .category = "miscellaneous",
             .subcategory = NULL,
             .version = { 1, 2, 3 },
-            .test_dep = false
+            .test_dep = false,
+            .supported_platforms = PLATFORM_KINDLEHF|PLATFORM_KINDLEPW2
         },
         (struct KPKGTest) {
             .path = "resources/test_kpkg/kpkg1_empty_supported.kpkg",
@@ -171,12 +257,18 @@ int main(int argc, char *argv[])
             .category = "miscellaneous",
             .subcategory = NULL,
             .version = { 1, 2, 3 },
-            .test_dep = false
+            .test_dep = false,
+            .supported_platforms = PLATFORM_ALL
         },
         (struct KPKGTest) {
             .path = "resources/test_kpkg/kpkg1_empty_version.kpkg",
             .load_result = KPKG_VALIDATION_ERROR,
             .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_empty.kpkg",
+            .load_result = KPKG_UNKNOWN_FORMAT,
+            .curl_result = KPKG_UNKNOWN_FORMAT
         },
         (struct KPKGTest) {
             .path = "resources/test_kpkg/kpkg1_good.kpkg",
@@ -193,10 +285,61 @@ int main(int argc, char *argv[])
             .test_dep = true,
             .dep_id = "test_dep",
             .dep_min = { 1, 2, 3 },
-            .dep_max = { 4, 5, 6 }
+            .dep_max = { 4, 5, 6 },
+            .supported_platforms = PLATFORM_KINDLEHF|PLATFORM_KINDLEPW2
         },
         (struct KPKGTest) {
             .path = "resources/test_kpkg/kpkg1_malformed_author.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_malformed_dependency_maximum_1.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_malformed_dependency_maximum_2.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_malformed_dependency_maximum_type_1.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_malformed_dependency_maximum_type_2.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_malformed_dependency_maximum_type_3.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_malformed_dependency_minimum_1.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_malformed_dependency_minimum_2.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_malformed_dependency_minimum_type_1.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_malformed_dependency_minimum_type_2.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_malformed_dependency_minimum_type_3.kpkg",
             .load_result = KPKG_VALIDATION_ERROR,
             .curl_result = KPKG_VALIDATION_ERROR
         },
@@ -206,12 +349,37 @@ int main(int argc, char *argv[])
             .curl_result = KPKG_VALIDATION_ERROR
         },
         (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_malformed_id_short.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
             .path = "resources/test_kpkg/kpkg1_malformed_id.kpkg",
             .load_result = KPKG_VALIDATION_ERROR,
             .curl_result = KPKG_VALIDATION_ERROR
         },
         (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_malformed_manifest.kpkg",
+            .load_result = KPKG_UNKNOWN_FORMAT,
+            .curl_result = KPKG_UNKNOWN_FORMAT
+        },
+        (struct KPKGTest) {
             .path = "resources/test_kpkg/kpkg1_malformed_name.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_malformed_supported_platform.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_malformed_supported_platforms.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_malformed_version_1_toobig.kpkg",
             .load_result = KPKG_VALIDATION_ERROR,
             .curl_result = KPKG_VALIDATION_ERROR
         },
@@ -221,7 +389,17 @@ int main(int argc, char *argv[])
             .curl_result = KPKG_VALIDATION_ERROR
         },
         (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_malformed_version_2_toobig.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
             .path = "resources/test_kpkg/kpkg1_malformed_version_2.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_malformed_version_3_toobig.kpkg",
             .load_result = KPKG_VALIDATION_ERROR,
             .curl_result = KPKG_VALIDATION_ERROR
         },
@@ -271,6 +449,11 @@ int main(int argc, char *argv[])
             .curl_result = KPKG_VALIDATION_ERROR
         },
         (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_no_manifest_version.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
             .path = "resources/test_kpkg/kpkg1_no_name.kpkg",
             .load_result = KPKG_VALIDATION_ERROR,
             .curl_result = KPKG_VALIDATION_ERROR
@@ -287,7 +470,13 @@ int main(int argc, char *argv[])
             .category = "miscellaneous",
             .subcategory = NULL,
             .version = { 1, 2, 3 },
-            .test_dep = false
+            .test_dep = false,
+            .supported_platforms = PLATFORM_ALL
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg1_no_version.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
         },
         (struct KPKGTest) {
             .path = "resources/test_kpkg/kpkg1_str_version.kpkg",
@@ -295,6 +484,86 @@ int main(int argc, char *argv[])
             .curl_result = KPKG_VALIDATION_ERROR
         },
 
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg2_all_supported_platforms.kpkg",
+            .load_result = KPKG_OK,
+            .curl_result = KPKG_OK,
+            .kpkg_version = 2,
+            .id = "kpkg2_test",
+            .name = "kpkg2_test Name",
+            .author = "kpkg2_test Author",
+            .description = "kpkg2_test Description",
+            .category = "miscellaneous",
+            .subcategory = NULL,
+            .version = { 1, 2, 3 },
+            .test_dep = false,
+            .supported_platforms = PLATFORM_KINDLE|PLATFORM_KINDLE5|PLATFORM_KINDLEPW2|PLATFORM_KINDLEHF
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg2_bad_dependency_id.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg2_bad_dependency_maximum_negative_1.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg2_bad_dependency_maximum_negative_2.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg2_bad_dependency_maximum_negative_3.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg2_bad_dependency_maximum_toobig_1.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg2_bad_dependency_maximum_toobig_2.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg2_bad_dependency_maximum_toobig_3.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg2_bad_dependency_minimium_negative_1.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg2_bad_dependency_minimium_negative_2.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg2_bad_dependency_minimium_negative_3.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg2_bad_dependency_minimium_toobig_1.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg2_bad_dependency_minimium_toobig_2.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg2_bad_dependency_minimium_toobig_3.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
         (struct KPKGTest) {
             .path = "resources/test_kpkg/kpkg2_bad_version_3.kpkg",
             .load_result = KPKG_VALIDATION_ERROR,
@@ -306,12 +575,12 @@ int main(int argc, char *argv[])
             .curl_result = KPKG_VALIDATION_ERROR
         },
         (struct KPKGTest) {
-            .path = "resources/test_kpkg/kpkg2_dep_malformed_id.kpkg",
+            .path = "resources/test_kpkg/kpkg2_dep_malformed_id_type.kpkg",
             .load_result = KPKG_VALIDATION_ERROR,
             .curl_result = KPKG_VALIDATION_ERROR
         },
         (struct KPKGTest) {
-            .path = "resources/test_kpkg/kpkg2_dep_malformed_id_type.kpkg",
+            .path = "resources/test_kpkg/kpkg2_dep_malformed_id.kpkg",
             .load_result = KPKG_VALIDATION_ERROR,
             .curl_result = KPKG_VALIDATION_ERROR
         },
@@ -345,24 +614,8 @@ int main(int argc, char *argv[])
             .test_dep = true,
             .dep_id = "nonexistent",
             .dep_min = SEMVER_MIN,
-            .dep_max = { 1, 2, 3 }
-        },
-        (struct KPKGTest) {
-            .path = "resources/test_kpkg/kpkg2_dep_minmax_version.kpkg",
-            .load_result = KPKG_OK,
-            .curl_result = KPKG_OK,
-            .kpkg_version = 2,
-            .id = "kpkg2_test",
-            .name = "kpkg2_test Name",
-            .author = "kpkg2_test Author",
-            .description = "kpkg2_test Description",
-            .category = "miscellaneous",
-            .subcategory = NULL,
-            .version = { 1, 2, 3 },
-            .test_dep = true,
-            .dep_id = "nonexistent",
-            .dep_min = { 1, 2, 3 },
-            .dep_max = { 4, 5, 6 }
+            .dep_max = { 1, 2, 3 },
+            .supported_platforms = PLATFORM_KINDLEHF|PLATFORM_KINDLEPW2
         },
         (struct KPKGTest) {
             .path = "resources/test_kpkg/kpkg2_dep_min_version.kpkg",
@@ -379,7 +632,26 @@ int main(int argc, char *argv[])
             .test_dep = true,
             .dep_id = "nonexistent",
             .dep_min = { 1, 2, 3 },
-            .dep_max = SEMVER_MAX
+            .dep_max = SEMVER_MAX,
+            .supported_platforms = PLATFORM_KINDLEHF|PLATFORM_KINDLEPW2
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg2_dep_minmax_version.kpkg",
+            .load_result = KPKG_OK,
+            .curl_result = KPKG_OK,
+            .kpkg_version = 2,
+            .id = "kpkg2_test",
+            .name = "kpkg2_test Name",
+            .author = "kpkg2_test Author",
+            .description = "kpkg2_test Description",
+            .category = "miscellaneous",
+            .subcategory = NULL,
+            .version = { 1, 2, 3 },
+            .test_dep = true,
+            .dep_id = "nonexistent",
+            .dep_min = { 1, 2, 3 },
+            .dep_max = { 4, 5, 6 },
+            .supported_platforms = PLATFORM_KINDLEHF|PLATFORM_KINDLEPW2
         },
         (struct KPKGTest) {
             .path = "resources/test_kpkg/kpkg2_dep_noversion.kpkg",
@@ -396,7 +668,8 @@ int main(int argc, char *argv[])
             .test_dep = true,
             .dep_id = "nonexistent",
             .dep_min = SEMVER_MIN,
-            .dep_max = SEMVER_MAX
+            .dep_max = SEMVER_MAX,
+            .supported_platforms = PLATFORM_KINDLEHF|PLATFORM_KINDLEPW2
         },
         (struct KPKGTest) {
             .path = "resources/test_kpkg/kpkg2_empty_deps.kpkg",
@@ -410,7 +683,8 @@ int main(int argc, char *argv[])
             .category = "miscellaneous",
             .subcategory = NULL,
             .version = { 1, 2, 3 },
-            .test_dep = false
+            .test_dep = false,
+            .supported_platforms = PLATFORM_KINDLEHF|PLATFORM_KINDLEPW2
         },
         (struct KPKGTest) {
             .path = "resources/test_kpkg/kpkg2_empty_supported.kpkg",
@@ -424,12 +698,18 @@ int main(int argc, char *argv[])
             .category = "miscellaneous",
             .subcategory = NULL,
             .version = { 1, 2, 3 },
-            .test_dep = false
+            .test_dep = false,
+            .supported_platforms = PLATFORM_ALL
         },
         (struct KPKGTest) {
             .path = "resources/test_kpkg/kpkg2_empty_version.kpkg",
             .load_result = KPKG_VALIDATION_ERROR,
             .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg2_empty.kpkg",
+            .load_result = KPKG_UNKNOWN_FORMAT,
+            .curl_result = KPKG_UNKNOWN_FORMAT
         },
         (struct KPKGTest) {
             .path = "resources/test_kpkg/kpkg2_good.kpkg",
@@ -446,10 +726,61 @@ int main(int argc, char *argv[])
             .test_dep = true,
             .dep_id = "test_dep",
             .dep_min = { 1, 2, 3 },
-            .dep_max = { 4, 5, 6 }
+            .dep_max = { 4, 5, 6 },
+            .supported_platforms = PLATFORM_KINDLEHF|PLATFORM_KINDLEPW2
         },
         (struct KPKGTest) {
             .path = "resources/test_kpkg/kpkg2_malformed_author.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg2_malformed_dependency_maximum_1.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg2_malformed_dependency_maximum_2.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg2_malformed_dependency_maximum_type_1.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg2_malformed_dependency_maximum_type_2.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg2_malformed_dependency_maximum_type_3.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg2_malformed_dependency_minimum_1.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg2_malformed_dependency_minimum_2.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg2_malformed_dependency_minimum_type_1.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg2_malformed_dependency_minimum_type_2.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg2_malformed_dependency_minimum_type_3.kpkg",
             .load_result = KPKG_VALIDATION_ERROR,
             .curl_result = KPKG_VALIDATION_ERROR
         },
@@ -459,12 +790,37 @@ int main(int argc, char *argv[])
             .curl_result = KPKG_VALIDATION_ERROR
         },
         (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg2_malformed_id_short.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
             .path = "resources/test_kpkg/kpkg2_malformed_id.kpkg",
             .load_result = KPKG_VALIDATION_ERROR,
             .curl_result = KPKG_VALIDATION_ERROR
         },
         (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg2_malformed_manifest.kpkg",
+            .load_result = KPKG_UNKNOWN_FORMAT,
+            .curl_result = KPKG_UNKNOWN_FORMAT
+        },
+        (struct KPKGTest) {
             .path = "resources/test_kpkg/kpkg2_malformed_name.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg2_malformed_supported_platform.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg2_malformed_supported_platforms.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg2_malformed_version_1_toobig.kpkg",
             .load_result = KPKG_VALIDATION_ERROR,
             .curl_result = KPKG_VALIDATION_ERROR
         },
@@ -474,7 +830,17 @@ int main(int argc, char *argv[])
             .curl_result = KPKG_VALIDATION_ERROR
         },
         (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg2_malformed_version_2_toobig.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
             .path = "resources/test_kpkg/kpkg2_malformed_version_2.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg2_malformed_version_3_toobig.kpkg",
             .load_result = KPKG_VALIDATION_ERROR,
             .curl_result = KPKG_VALIDATION_ERROR
         },
@@ -524,6 +890,11 @@ int main(int argc, char *argv[])
             .curl_result = KPKG_VALIDATION_ERROR
         },
         (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg2_no_manifest_version.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
+        },
+        (struct KPKGTest) {
             .path = "resources/test_kpkg/kpkg2_no_name.kpkg",
             .load_result = KPKG_VALIDATION_ERROR,
             .curl_result = KPKG_VALIDATION_ERROR
@@ -540,7 +911,13 @@ int main(int argc, char *argv[])
             .category = "miscellaneous",
             .subcategory = NULL,
             .version = { 1, 2, 3 },
-            .test_dep = false
+            .test_dep = false,
+            .supported_platforms = PLATFORM_ALL
+        },
+        (struct KPKGTest) {
+            .path = "resources/test_kpkg/kpkg2_no_version.kpkg",
+            .load_result = KPKG_VALIDATION_ERROR,
+            .curl_result = KPKG_VALIDATION_ERROR
         },
         (struct KPKGTest) {
             .path = "resources/test_kpkg/kpkg2_str_version.kpkg",
@@ -570,7 +947,8 @@ int main(int argc, char *argv[])
             .category = "book",
             .subcategory = NULL,
             .version = { 1, 2, 3 },
-            .test_dep = false
+            .test_dep = false,
+            .supported_platforms = PLATFORM_KINDLEHF|PLATFORM_KINDLEPW2
         },
         (struct KPKGTest) {
             .path = "resources/test_repo_src/testpackage_4294967295.4294967295.4294967295.kpkg",
@@ -584,7 +962,8 @@ int main(int argc, char *argv[])
             .category = "book",
             .subcategory = NULL,
             .version = { 4294967295, 4294967295, 4294967295 },
-            .test_dep = false
+            .test_dep = false,
+            .supported_platforms = PLATFORM_KINDLEHF|PLATFORM_KINDLEPW2
         },
         (struct KPKGTest) {
             .path = "resources/test_kpkg/kpkg3_00_file_data.kpkg",
@@ -598,7 +977,8 @@ int main(int argc, char *argv[])
             .category = "book",
             .subcategory = NULL,
             .version = { 1, 2, 3 },
-            .test_dep = false
+            .test_dep = false,
+            .supported_platforms = PLATFORM_KINDLEHF|PLATFORM_KINDLEPW2
         },
         (struct KPKGTest) {
             .path = "resources/test_kpkg/kpkg3_00_strings.kpkg",
@@ -625,7 +1005,8 @@ int main(int argc, char *argv[])
             .test_dep = true,
             .dep_id = "nonexistent",
             .dep_min = SEMVER_MIN,
-            .dep_max = SEMVER_MAX
+            .dep_max = SEMVER_MAX,
+            .supported_platforms = PLATFORM_KINDLEHF|PLATFORM_KINDLEPW2
         },
         (struct KPKGTest) {
             .path = "resources/test_kpkg/kpkg3_ff_file_data.kpkg",
@@ -639,7 +1020,8 @@ int main(int argc, char *argv[])
             .category = "book",
             .subcategory = NULL,
             .version = { 1, 2, 3 },
-            .test_dep = false
+            .test_dep = false,
+            .supported_platforms = PLATFORM_KINDLEHF|PLATFORM_KINDLEPW2
         },
         (struct KPKGTest) {
             .path = "resources/test_kpkg/kpkg3_ff_strings.kpkg",
@@ -783,7 +1165,8 @@ int main(int argc, char *argv[])
             .category = "book",
             .subcategory = "subcategory",
             .version = { 1, 0, 0 },
-            .test_dep = false
+            .test_dep = false,
+            .supported_platforms = PLATFORM_KINDLEHF|PLATFORM_KINDLEPW2
         },
         (struct KPKGTest) {
             .path = "resources/test_kpkg/kpkg3_tiny.kpkg",
@@ -821,6 +1204,7 @@ int main(int argc, char *argv[])
             else
             {
                 ASSERT_HD(file->kpkg_version, test.kpkg_version);
+                ASSERT_HD(KPKG_GetSupportedPlatforms(file), test.supported_platforms)
                 ASSERT_HD_STR(KPKG_GetId(file), test.id);
                 ASSERT_HD_STR(KPKG_GetName(file), test.name);
                 ASSERT_HD_STR(KPKG_GetAuthor(file), test.author);

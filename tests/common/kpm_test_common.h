@@ -17,6 +17,7 @@ char *get_path(int argc, char *argv[]);
     uint64_t : "%llu",                  \
     int : "%i",                         \
     uint8_t : "%i",                     \
+    uint16_t : "%i",                    \
     unsigned int : "%u",                \
     char* : "%s",                       \
     char : "%c",                        \

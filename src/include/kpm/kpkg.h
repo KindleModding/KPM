@@ -45,7 +45,7 @@ typedef enum {
 
 // Global types
 typedef enum {
-    PLATFORM_KINDLEANY = 0, /** Any Kindle */
+    PLATFORM_ALL = 0, /** Any platform */
     PLATFORM_KINDLE = 1 << 0, /**< Legacy pre-K5 devices */
     PLATFORM_KINDLE5 = 1 << 1, /**< Legacy Kindle5 devices */
     PLATFORM_KINDLEPW2 = 1 << 2, /**< The Kindle PW2 and onwards on ARMLF firmware */
@@ -125,6 +125,7 @@ typedef struct
 //// General functions
 char *KPKG_ResultStr(KPKG_Result result);
 KPKG_Result KPKG_LoadFile(KPKG_File **file, const char *location, const char *out_path, KPMIO *kpmio);
+uint16_t KPKG_GetSupportedPlatforms(KPKG_File *file);
 char *KPKG_GetId(KPKG_File *file);
 char *KPKG_GetName(KPKG_File *file);
 char *KPKG_GetAuthor(KPKG_File *file);

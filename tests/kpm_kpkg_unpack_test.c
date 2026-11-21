@@ -144,11 +144,51 @@ int main(int argc, char *argv[])
     ASSERT_HD_FILE_HASH("./extracted2/launch.sh", "66eed44e2da648a0d2eb9547ffc51fb49074717d7feac9d0ea04eb4d9985e419");
     ASSERT_HD_FILE_HASH("./extracted2/startup.sh", "cc02635183fa229900c5bd1f1d725f86d1a90a055abadb0f24d93479db50c27d");
     ASSERT_HD_FILE_HASH("./extracted2/uninstall.sh", "ed0541d62fd6b3058b57747667a797bc5c427fd37914607b2072cc92ba381e62");
+
+    FILE *f = fopen("./extracted2/install.sh", "w");
+    fwrite("Hi!", 1, 3, f);
+    fclose(f);
+
+    ASSERT_HD_KPKG(KPKG_Unpack(file, "./extracted2", "./extracted2", &kpmio), KPKG_OK);
+    ASSERT_HD(access("./extracted2/install.sh", R_OK), 0);
+    ASSERT_HD(access("./extracted2/launch.sh", R_OK), 0);
+    ASSERT_HD(access("./extracted2/startup.sh", R_OK), 0);
+    ASSERT_HD(access("./extracted2/uninstall.sh", R_OK), 0);
+    ASSERT_HD_FILE_HASH("./extracted2/install.sh", "0a305882feaa4e5f43cf99593ed663b3248d1ef828ed9742167e2338b3816367");
+    ASSERT_HD_FILE_HASH("./extracted2/launch.sh", "66eed44e2da648a0d2eb9547ffc51fb49074717d7feac9d0ea04eb4d9985e419");
+    ASSERT_HD_FILE_HASH("./extracted2/startup.sh", "cc02635183fa229900c5bd1f1d725f86d1a90a055abadb0f24d93479db50c27d");
+    ASSERT_HD_FILE_HASH("./extracted2/uninstall.sh", "ed0541d62fd6b3058b57747667a797bc5c427fd37914607b2072cc92ba381e62");
     KPKG_CloseFile(file);
 
+    rmdir_r("./extracted");
+    kpkg_location = asprintf_hd("file://%s/%s", cur_path, "resources/test_kpkg/kpkg3_hash_mismatch.kpkg");
+    ASSERT_HD_KPKG(KPKG_LoadFile(&file, kpkg_location, "./tmp.bin", &kpmio), KPKG_OK);
+    free(kpkg_location);
+    ASSERT_HD_KPKG(KPKG_Unpack(file, "./extracted", NULL, &kpmio), KPKG_HASH_ERROR);
+    KPKG_CloseFile(file);
 
+    rmdir_r("./extracted");
+    kpkg_location = asprintf_hd("%s/%s", cur_path, "resources/test_kpkg/kpkg3_hash_mismatch.kpkg");
+    ASSERT_HD_KPKG(KPKG_LoadFile(&file, kpkg_location, "./tmp.bin", &kpmio), KPKG_OK);
+    free(kpkg_location);
+    ASSERT_HD_KPKG(KPKG_Unpack(file, "./extracted", NULL, &kpmio), KPKG_HASH_ERROR);
+    KPKG_CloseFile(file);
 
+    remove("./extracted2/startup.sh");
 
+    rmdir_r("./extracted");
+    kpkg_location = asprintf_hd("file://%s/%s", cur_path, "resources/test_kpkg/kpkg3_hash_mismatch.kpkg");
+    ASSERT_HD_KPKG(KPKG_LoadFile(&file, kpkg_location, "./tmp.bin", &kpmio), KPKG_OK);
+    free(kpkg_location);
+    ASSERT_HD_KPKG(KPKG_Unpack(file, "./extracted", "./extracted2", &kpmio), KPKG_HASH_ERROR);
+    KPKG_CloseFile(file);
+
+    rmdir_r("./extracted");
+    kpkg_location = asprintf_hd("%s/%s", cur_path, "resources/test_kpkg/kpkg3_hash_mismatch.kpkg");
+    ASSERT_HD_KPKG(KPKG_LoadFile(&file, kpkg_location, "./tmp.bin", &kpmio), KPKG_OK);
+    free(kpkg_location);
+    ASSERT_HD_KPKG(KPKG_Unpack(file, "./extracted", "./extracted2", &kpmio), KPKG_HASH_ERROR);
+    KPKG_CloseFile(file);
 
     free(cur_path);
     return 0;
