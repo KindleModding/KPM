@@ -282,7 +282,7 @@ bool index_package(KPM *kpm, uint32_t repository_version, char *repository_id, c
             cJSON_GetObjectItem(package, "icon") &&
             !cJSON_IsNull(cJSON_GetObjectItem(package, "icon")) &&
             (
-                (!cJSON_IsString(cJSON_GetObjectItem(package, "icon"))) ||
+                !cJSON_IsString(cJSON_GetObjectItem(package, "icon")) ||
                 strlen(cJSON_GetStringValue(cJSON_GetObjectItem(package, "icon"))) < 1
             )
         ) ||
@@ -290,7 +290,7 @@ bool index_package(KPM *kpm, uint32_t repository_version, char *repository_id, c
             cJSON_GetObjectItem(package, "changelog") &&
             !cJSON_IsNull(cJSON_GetObjectItem(package, "changelog")) &&
             (
-                (!cJSON_IsString(cJSON_GetObjectItem(package, "changelog"))) ||
+                !cJSON_IsString(cJSON_GetObjectItem(package, "changelog")) ||
                 strlen(cJSON_GetStringValue(cJSON_GetObjectItem(package, "changelog"))) < 1
             )
         )

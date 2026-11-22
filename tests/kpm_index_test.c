@@ -75,10 +75,14 @@ int main(int argc, char *argv[])
     "resources/bad_repo_manifests/bad_v3_artifact_missing_digest.json",
     "resources/bad_repo_manifests/bad_v3_artifact_missing_install_size.json",
     "resources/bad_repo_manifests/bad_v3_artifact_missing_url.json",
+    "resources/bad_repo_manifests/bad_v3_package_invalid_changelog.json",
+    "resources/bad_repo_manifests/bad_v3_package_invalid_icon.json",
     "resources/bad_repo_manifests/bad_v3_package_malformed_category.json",
     "resources/bad_repo_manifests/bad_v3_package_malformed_subcategory.json",
     "resources/bad_repo_manifests/bad_v3_package_missing_category.json",
     "resources/bad_repo_manifests/bad_v3_package_no_category.json",
+    "resources/bad_repo_manifests/bad_v3_package_short_changelog.json",
+    "resources/bad_repo_manifests/bad_v3_package_short_icon.json",
     "resources/bad_repo_manifests/bad_v3_v2_artifact.json",
     "resources/bad_repo_manifests/bad_v3_v2_dependency.json",
     "resources/bad_repo_manifests/bad_v3_v2_package.json",
@@ -222,7 +226,7 @@ int main(int argc, char *argv[])
     ASSERT_HD_STR(packages[0].author, "Test Author");
     ASSERT_HD_STR(packages[0].description, "Test Package Description");
     ASSERT_HD_STR(packages[0].icon, "test.png");
-    ASSERT_HD(packages[0].changelog, NULL);
+    ASSERT_HD_STR(packages[0].changelog, "changelog.md");
     ASSERT_HD(KPM_ListPackageArtifacts(kpm, "testrepov3", packages[0].id, &artifact_count, NULL), KPM_OK);
     ASSERT_HD(KPM_ListPackageArtifacts(kpm, "testrepov3", packages[0].id, &artifact_count, &artifacts), KPM_OK);
     ASSERT_HD(artifact_count, 1);

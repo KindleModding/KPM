@@ -11,6 +11,7 @@
             "category": "miscellaneous",
             "subcategory": "game",
             "icon": "test.png",
+            "changelog": "changelog.md",
             "artifacts": {
                 "packages/test/artifacts/test_0.2.0_kindlehf-kindlepw2_compat.kpkg": {
                     "installed_size": 1024,
@@ -40,6 +41,7 @@
             "description": "Test Package Description",
             "category": "miscellaneous",
             "icon": "test.png",
+            "changelog": "changelog.md",
             "artifacts": {
                 "packages/test/artifacts/test2_0.2.0_kindlehf-kindlepw2_compat.kpkg": {
                     "installed_size": 1024,

@@ -38,13 +38,12 @@
             "name": "Test Package",
             "author": "Test Author",
             "description": "Test Package Description",
-            "category": "miscellaneous",
             "subcategory": "game",
             "icon": "test.png",
             "artifacts": {
                 "packages/test/artifacts/test_0.2.0_kindlehf-kindlepw2_compat.kpkg": {
                     "installed_size": 1024,
-                    "digest": 1024,
+                    "digest": "2e7d221c96fa73a85172ac4440fdf2bbbada6b0b3400cbf5eac07741a4680e5a",
                     "version": [
                         0,
                         2,
