@@ -71,6 +71,7 @@ typedef struct
     char *category; /**< The category of the package */
     char *subcategory; /**< The subcategory of the package, may be NULL */
     char *icon; /**< The package icon */
+    char *changelog; /**< The package changelog */
 } KPM_IndexedPackage;
 
 /**

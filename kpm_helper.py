@@ -503,6 +503,7 @@ class RepoPackage:
     category: str
     subcategory: str|None
     icon: str|None
+    changelog: str|None
     artifacts: list[RepoArtifact]
 
     def encode_obj(self):
@@ -516,6 +517,8 @@ class RepoPackage:
             encoded["subcategory"] = self.subcategory
         if (self.icon):
             encoded["icon"] = self.icon
+        if (self.changelog):
+            encoded["changelog"] = self.changelog
         encoded["artifacts"] = {}
 
         for artifact in self.artifacts:
@@ -550,6 +553,7 @@ class Repo:
         logging.debug(f"Updating package metadata for {package_id}")
         repo_package = None
         for package in self.packages:
+            package: RepoPackage
             if package.id == package_id:
                 repo_package = package
         if repo_package is None:
@@ -569,13 +573,22 @@ class Repo:
             artifact_path = artifact_path[1:]
 
         with open(os.path.join(self.repo_path, artifact_path), 'rb') as file:
+            package: Package
             package, _, _, _ = Package.read_header(file)
 
             package_path = os.path.join(self.repo_path, "packages", repo_package.id)
+
+            repo_package.icon = None
             if os.path.exists(os.path.join(package_path, "icon.png")):
                 os.remove(os.path.join(package_path, "icon.png"))
             if Package.try_unpack(file, package_path, "icon.png"):
                 repo_package.icon = f"/packages/{repo_package.id}/icon.png"
+
+            repo_package.changelog = None
+            if os.path.exists(os.path.join(package_path, "changelog.md")):
+                os.remove(os.path.join(package_path, "changelog.md"))
+            if Package.try_unpack(file, package_path, "changelog.md"):
+                repo_package.changelog = f"/packages/{repo_package.id}/changelog.md"
 
         repo_package.name = package.name
         repo_package.author = package.author
@@ -608,6 +621,7 @@ class Repo:
                 package.description,
                 package.category,
                 package.subcategory,
+                None,
                 None,
                 []
             ))
@@ -684,6 +698,7 @@ class Repo:
                     data["packages"][package_id]["category"],
                     data["packages"][package_id].get("subcategory", None),
                     data["packages"][package_id].get("icon", None),
+                    data["packages"][package_id].get("changelog", None),
                     [
                         RepoArtifact(
                             url,

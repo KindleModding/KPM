@@ -16,6 +16,7 @@ void KPM_FreeIndexedPackage(KPM_IndexedPackage *package)
     free(package->subcategory);
     free(package->author);
     free(package->icon);
+    free(package->changelog);
 
     package->repository = NULL;
     package->id = NULL;
@@ -25,6 +26,7 @@ void KPM_FreeIndexedPackage(KPM_IndexedPackage *package)
     package->subcategory = NULL;
     package->author = NULL;
     package->icon = NULL;
+    package->changelog = NULL;
 }
 
 void KPM_FreeIndexedPackageList(size_t package_count, KPM_IndexedPackage *packages)
@@ -45,16 +47,17 @@ KPM_Result KPM_GetPackage(KPM *kpm, const char *repository, const char *id, KPM_
     package->subcategory = NULL;
     package->author = NULL;
     package->icon = NULL;
+    package->changelog = NULL;
 
     sqlite3_stmt *statement;
     if (repository == NULL)
     {
-        const char *zSQL = "SELECT repository, id, name, author, description, category, subcategory, icon FROM packages WHERE id=? LIMIT 1;";
+        const char *zSQL = "SELECT repository, id, name, author, description, category, subcategory, icon, changelog FROM packages WHERE id=? LIMIT 1;";
         sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
         sqlite3_bind_text(statement, 1, id, -1, SQLITE_STATIC);
     }
     else {
-        const char *zSQL = "SELECT repository, id, name, author, description, category, subcategory, icon FROM packages WHERE repository=? AND id=? LIMIT 1;";
+        const char *zSQL = "SELECT repository, id, name, author, description, category, subcategory, icon, changelog FROM packages WHERE repository=? AND id=? LIMIT 1;";
         sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
         sqlite3_bind_text(statement, 1, repository, -1, SQLITE_STATIC);
         sqlite3_bind_text(statement, 2, id, -1, SQLITE_STATIC);
@@ -72,6 +75,8 @@ KPM_Result KPM_GetPackage(KPM *kpm, const char *repository, const char *id, KPM_
             package->subcategory = strdup((const char*) sqlite3_column_text(statement, 6));
         if (sqlite3_column_type(statement, 7) != SQLITE_NULL)
             package->icon = strdup((const char*) sqlite3_column_text(statement, 7));
+        if (sqlite3_column_type(statement, 8) != SQLITE_NULL)
+            package->changelog = strdup((const char*) sqlite3_column_text(statement, 8));
     } else {
         sqlite3_finalize(statement);
         return KPM_SQLITE_ERROR;
@@ -87,7 +92,7 @@ KPM_Result KPM_GetPackages(KPM *kpm, const char *id, size_t *package_count, KPM_
     if (packages != NULL)
         *packages = NULL;
 
-    const char *zSQL = "SELECT (SELECT COUNT() FROM packages WHERE id=?), repository, id, name, author, description, category, subcategory, icon FROM packages WHERE id=?;";
+    const char *zSQL = "SELECT (SELECT COUNT() FROM packages WHERE id=?), repository, id, name, author, description, category, subcategory, icon, changelog FROM packages WHERE id=?;";
     sqlite3_stmt *statement;
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
     sqlite3_bind_text(statement, 1, id, -1, SQLITE_STATIC);
@@ -118,6 +123,10 @@ KPM_Result KPM_GetPackages(KPM *kpm, const char *id, size_t *package_count, KPM_
                 (*packages)[i].icon = strdup((const char*) sqlite3_column_text(statement, 8));
             else
                 (*packages)[i].icon = NULL;
+            if (sqlite3_column_type(statement, 9) != SQLITE_NULL)
+                (*packages)[i].changelog = strdup((const char*) sqlite3_column_text(statement, 9));
+            else
+                (*packages)[i].changelog = NULL;
         }
     }
 
@@ -139,7 +148,7 @@ KPM_Result KPM_SearchPackages(KPM *kpm, const char *query, size_t *package_count
 
     char *paddedQuery = asprintf_hd("%%%s%%", query);    
 
-    const char *zSQL = "SELECT (SELECT COUNT() FROM packages WHERE id LIKE ? OR name LIKE ?), repository, id, name, author, description, category, subcategory, icon FROM packages WHERE id LIKE ? OR name LIKE ?;";
+    const char *zSQL = "SELECT (SELECT COUNT() FROM packages WHERE id LIKE ? OR name LIKE ?), repository, id, name, author, description, category, subcategory, icon, changelog FROM packages WHERE id LIKE ? OR name LIKE ?;";
     sqlite3_stmt *statement;
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
     sqlite3_bind_text(statement, 1, paddedQuery, -1, SQLITE_STATIC);
@@ -172,6 +181,10 @@ KPM_Result KPM_SearchPackages(KPM *kpm, const char *query, size_t *package_count
                 (*packages)[i].icon = strdup((const char*) sqlite3_column_text(statement, 8));
             else
                 (*packages)[i].icon = NULL;
+            if (sqlite3_column_type(statement, 9) != SQLITE_NULL)
+                (*packages)[i].changelog = strdup((const char*) sqlite3_column_text(statement, 9));
+            else
+                (*packages)[i].changelog = NULL;
         }
     }
 

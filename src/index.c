@@ -277,6 +277,22 @@ bool index_package(KPM *kpm, uint32_t repository_version, char *repository_id, c
                 cJSON_GetObjectItem(package, "category") != NULL ||
                 cJSON_GetObjectItem(package, "subcategory") != NULL
             )
+        ) ||
+        (
+            cJSON_GetObjectItem(package, "icon") &&
+            !cJSON_IsNull(cJSON_GetObjectItem(package, "icon")) &&
+            (
+                (!cJSON_IsString(cJSON_GetObjectItem(package, "icon"))) ||
+                strlen(cJSON_GetStringValue(cJSON_GetObjectItem(package, "icon"))) < 1
+            )
+        ) ||
+        (
+            cJSON_GetObjectItem(package, "changelog") &&
+            !cJSON_IsNull(cJSON_GetObjectItem(package, "changelog")) &&
+            (
+                (!cJSON_IsString(cJSON_GetObjectItem(package, "changelog"))) ||
+                strlen(cJSON_GetStringValue(cJSON_GetObjectItem(package, "changelog"))) < 1
+            )
         )
     )
     {
@@ -302,7 +318,7 @@ bool index_package(KPM *kpm, uint32_t repository_version, char *repository_id, c
         subcategory = cJSON_GetStringValue(cJSON_GetObjectItem(package, "subcategory"));
 
     // INSERT that package INTO the DATABASE (deltarune reference???)
-    const char *zSQL = "INSERT INTO packages (repository, id, name, author, description, category, subcategory, icon) VALUES (?, ?, ?, ?, ?, ?, ?, ?);";
+    const char *zSQL = "INSERT INTO packages (repository, id, name, author, description, category, subcategory, icon, changelog) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);";
     sqlite3_stmt *statement;
     sqlite3_prepare_v2(kpm->db, zSQL, -1, &statement, NULL);
     sqlite3_bind_text(statement, 1, repository_id, -1, SQLITE_STATIC);
@@ -321,6 +337,11 @@ bool index_package(KPM *kpm, uint32_t repository_version, char *repository_id, c
         sqlite3_bind_text(statement, 8, cJSON_GetStringValue(cJSON_GetObjectItem(package, "icon")), -1, SQLITE_STATIC);
     else
         sqlite3_bind_null(statement, 8);
+
+    if (cJSON_GetObjectItem(package, "changelog"))
+        sqlite3_bind_text(statement, 9, cJSON_GetStringValue(cJSON_GetObjectItem(package, "changelog")), -1, SQLITE_STATIC);
+    else
+        sqlite3_bind_null(statement, 9);
 
     if (sqlite3_step(statement) != SQLITE_DONE)
     {

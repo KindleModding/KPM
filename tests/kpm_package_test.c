@@ -22,6 +22,7 @@ int main(int argc, char *argv[])
     ASSERT_HD_STR(package.category, "book");
     ASSERT_HD(package.subcategory, NULL);
     ASSERT_HD(package.icon, NULL);
+    ASSERT_HD(package.changelog, NULL);
     KPM_FreeIndexedPackage(&package);
 
     ASSERT_HD(KPM_GetPackage(kpm, "testrepo2", "testsearch", &package), KPM_OK);
@@ -33,6 +34,7 @@ int main(int argc, char *argv[])
     ASSERT_HD_STR(package.category, "book");
     ASSERT_HD(package.subcategory, NULL);
     ASSERT_HD(package.icon, NULL);
+    ASSERT_HD(package.changelog, NULL);
     KPM_FreeIndexedPackage(&package);
 
     ASSERT_HD(KPM_GetPackage(kpm, NULL, "testsearch", &package), KPM_OK);
@@ -48,6 +50,7 @@ int main(int argc, char *argv[])
     ASSERT_HD_STR(package.category, "book");
     ASSERT_HD(package.subcategory, NULL);
     ASSERT_HD(package.icon, NULL);
+    ASSERT_HD(package.changelog, NULL);
     KPM_FreeIndexedPackage(&package);
 
     ASSERT_HD(KPM_GetPackage(kpm, NULL, "test_subcat_icon", &package), KPM_OK);
@@ -59,6 +62,7 @@ int main(int argc, char *argv[])
     ASSERT_HD_STR(package.category, "book");
     ASSERT_HD_STR(package.subcategory, "subcategory");
     ASSERT_HD_STR(package.icon, "/packages/test_subcat_icon/icon.png");
+    ASSERT_HD(package.changelog, NULL);
     KPM_FreeIndexedPackage(&package);
 
     size_t package_count;
@@ -75,6 +79,7 @@ int main(int argc, char *argv[])
     ASSERT_HD_STR(packages[0].category, "book");
     ASSERT_HD_STR(packages[0].subcategory, "subcategory");
     ASSERT_HD_STR(packages[0].icon, "/packages/test_subcat_icon/icon.png");
+    ASSERT_HD(package.changelog, NULL);
     KPM_FreeIndexedPackageList(package_count, packages);
 
     ASSERT_HD(KPM_GetPackages(kpm, "package_does_not_exist", &package_count, NULL), KPM_OK);
@@ -94,6 +99,7 @@ int main(int argc, char *argv[])
     ASSERT_HD_STR(packages[0].category, "book");
     ASSERT_HD(packages[0].subcategory, NULL);
     ASSERT_HD(packages[0].icon, NULL);
+    ASSERT_HD(package.changelog, NULL);
     ASSERT_HD_STR(packages[0].id, packages[1].id);
     ASSERT_HD_STR(packages[0].name, packages[1].name);
     ASSERT_HD_STR(packages[0].author, packages[1].author);
@@ -101,6 +107,7 @@ int main(int argc, char *argv[])
     ASSERT_HD_STR(packages[0].category, packages[1].category);
     ASSERT_HD(packages[0].subcategory, packages[1].subcategory);
     ASSERT_HD(packages[0].icon, packages[1].icon);
+    ASSERT_HD(package.changelog, NULL);
     KPM_FreeIndexedPackageList(package_count, packages);
 
     ASSERT_HD(KPM_SearchPackages(kpm, "estsearch", &package_count, NULL), KPM_OK);
@@ -121,6 +128,7 @@ int main(int argc, char *argv[])
     ASSERT_HD_STR(packages[0].category, "book");
     ASSERT_HD(packages[0].subcategory, NULL);
     ASSERT_HD(packages[0].icon, NULL);
+    ASSERT_HD(package.changelog, NULL);
     ASSERT_HD_STR(packages[0].id, packages[1].id);
     ASSERT_HD_STR(packages[0].name, packages[1].name);
     ASSERT_HD_STR(packages[0].author, packages[1].author);
@@ -128,6 +136,7 @@ int main(int argc, char *argv[])
     ASSERT_HD_STR(packages[0].category, packages[1].category);
     ASSERT_HD(packages[0].subcategory, packages[1].subcategory);
     ASSERT_HD(packages[0].icon, packages[1].icon);
+    ASSERT_HD(package.changelog, NULL);
     KPM_FreeIndexedPackageList(package_count, packages);
 
     ASSERT_HD(KPM_SearchPackages(kpm, "testsearch Name", &package_count, NULL), KPM_OK);
@@ -147,6 +156,7 @@ int main(int argc, char *argv[])
     ASSERT_HD_STR(packages[0].description, "testsearch Description");
     ASSERT_HD_STR(packages[0].category, "book");
     ASSERT_HD(packages[0].subcategory, NULL);
+    ASSERT_HD(package.changelog, NULL);
     ASSERT_HD(packages[0].icon, NULL);
     ASSERT_HD_STR(packages[0].id, packages[1].id);
     ASSERT_HD_STR(packages[0].name, packages[1].name);
@@ -155,6 +165,7 @@ int main(int argc, char *argv[])
     ASSERT_HD_STR(packages[0].category, packages[1].category);
     ASSERT_HD(packages[0].subcategory, packages[1].subcategory);
     ASSERT_HD(packages[0].icon, packages[1].icon);
+    ASSERT_HD(package.changelog, NULL);
     KPM_FreeIndexedPackageList(package_count, packages);
 
     ASSERT_HD(KPM_SearchPackages(kpm, "test_subcat_icon", &package_count, NULL), KPM_OK);
@@ -169,6 +180,7 @@ int main(int argc, char *argv[])
     ASSERT_HD_STR(packages[0].category, "book");
     ASSERT_HD_STR(packages[0].subcategory, "subcategory");
     ASSERT_HD_STR(packages[0].icon, "/packages/test_subcat_icon/icon.png");
+    ASSERT_HD(package.changelog, NULL);
     KPM_FreeIndexedPackageList(package_count, packages);
 
     ASSERT_HD(KPM_SearchPackages(kpm, "package_does_not_exist", &package_count, NULL), KPM_OK);

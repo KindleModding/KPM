@@ -63,6 +63,7 @@ void create_tables(sqlite3 *db)
             category TEXT NOT NULL,
             subcategory TEXT,
             icon TEXT,
+            changelog TEXT,
             PRIMARY KEY (repository, id)
         ) STRICT;
     )", NULL, NULL, NULL);
@@ -150,12 +151,13 @@ void KPM_MigrateDB(sqlite3 *db)
     case 1:
         sqlite3_exec(db, "ALTER TABLE artifacts ADD COLUMN installed_size DEFAULT NULL;", NULL, NULL, NULL); // For KPKG3+ the installed size of the artifact
         sqlite3_exec(db, "ALTER TABLE artifacts ADD COLUMN digest TEXT DEFAULT NULL;", NULL, NULL, NULL); // For KPKG3+ the digest of the package header
-        sqlite3_exec(db, "ALTER TABLE packages ADD COLUMN category TEXT DEFAULT 'miscellaneous';", NULL, NULL, NULL); // For KPKG3+ the package icon
-        sqlite3_exec(db, "ALTER TABLE packages ADD COLUMN subcategory TEXT DEFAULT NULL;", NULL, NULL, NULL); // For KPKG3+ the package icon
-        sqlite3_exec(db, "ALTER TABLE packages ADD COLUMN icon TEXT DEFAULT NULL;", NULL, NULL, NULL); // For KPKG3+ the package icon
+        sqlite3_exec(db, "ALTER TABLE packages ADD COLUMN category TEXT DEFAULT 'miscellaneous';", NULL, NULL, NULL);
+        sqlite3_exec(db, "ALTER TABLE packages ADD COLUMN subcategory TEXT DEFAULT NULL;", NULL, NULL, NULL);
+        sqlite3_exec(db, "ALTER TABLE packages ADD COLUMN icon TEXT DEFAULT NULL;", NULL, NULL, NULL);
+        sqlite3_exec(db, "ALTER TABLE packages ADD COLUMN changelog TEXT DEFAULT NULL;", NULL, NULL, NULL);
         sqlite3_exec(db, "ALTER TABLE installed_packages ADD COLUMN category TEXT DEFAULT 'miscellaneous';", NULL, NULL, NULL); // For KPKG3+ the package category
         sqlite3_exec(db, "ALTER TABLE installed_packages ADD COLUMN subcategory TEXT DEFAULT NULL;", NULL, NULL, NULL); // For KPKG3+ the package subcategory
-        sqlite3_exec(db, "ALTER TABLE installed_packages ADD COLUMN installed_size INTEGER DEFAULT NULL;", NULL, NULL, NULL); // For KPKG3+ the package icon
+        sqlite3_exec(db, "ALTER TABLE installed_packages ADD COLUMN installed_size INTEGER DEFAULT NULL;", NULL, NULL, NULL);
 
         // Update constraints
         sqlite3_exec(db, "PRAGMA foreign_keys=off;", NULL, NULL, NULL);
@@ -170,7 +172,7 @@ void KPM_MigrateDB(sqlite3 *db)
         create_tables(db);
         sqlite3_exec(db, "INSERT INTO kpm_meta SELECT (key, value) FROM old_kpm_meta;", NULL, NULL, NULL);
         sqlite3_exec(db, "INSERT INTO repositories SELECT (id, url, name, description) FROM old_repositories;", NULL, NULL, NULL);
-        sqlite3_exec(db, "INSERT INTO packages SELECT (repository, id, name, author, description, category, subcategory, icon) FROM old_packages;", NULL, NULL, NULL);
+        sqlite3_exec(db, "INSERT INTO packages SELECT (repository, id, name, author, description, category, subcategory, icon, changelog) FROM old_packages;", NULL, NULL, NULL);
         sqlite3_exec(db, "INSERT INTO artifacts SELECT (repository, id, url, installed_size, digest, version_major, version_minor, version_patch) FROM old_artifacts;", NULL, NULL, NULL);
         sqlite3_exec(db, "INSERT INTO artifact_dependencies SELECT (artifact_repository, artifact_id, artifact_url, id, min_version_major, min_version_minor, min_version_patch, max_version_major, max_version_minor, max_version_patch) FROM old_artifact_dependencies;", NULL, NULL, NULL);
         sqlite3_exec(db, "INSERT INTO installed_packages SELECT (id, repository, name, author, description, category, subcategory, installed_size, version_major, version_minor, version_patch) FROM old_installed_packages;", NULL, NULL, NULL);

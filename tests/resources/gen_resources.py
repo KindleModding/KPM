@@ -9,7 +9,7 @@ generate_repo2 = []
 
 # Define our packages
 class Generatable:
-    def __init__(self, id: str, version: Version, dependencies: dict[str, Dependency] = None, category: str = "book", subcategory: str|None = None, icon: bool = False):
+    def __init__(self, id: str, version: Version, dependencies: dict[str, Dependency] = None, category: str = "book", subcategory: str|None = None, icon: bool = False, changelog: bool = False):
         self.id: str = id
         self.version: Version = version
         self.dependencies: dict[str, Dependency] = {}
@@ -18,6 +18,7 @@ class Generatable:
         self.category = category
         self.subcategory = subcategory
         self.icon = icon
+        self.changelog = changelog
 
     def add_dependency(self, generatable: Generatable, min: Version|None = None, max: Version|None = None):
         self.dependencies[generatable.id] = Dependency(min, max)
@@ -112,6 +113,9 @@ def add_to_repo(gen: Generatable, repo: Repo):
     if gen.icon:
         with open(os.path.join(package_dir, "icon.png"), 'w') as file:
             file.write("ICON!")
+    if gen.changelog:
+        with open(os.path.join(package_dir, "changelog.md"), 'w') as file:
+            file.write("CHANGELOG!")
 
     out_pkg_path = os.path.join(src_dir, f"{gen.id}_{gen.version}.kpkg")
     with open(out_pkg_path, 'w+b') as file:

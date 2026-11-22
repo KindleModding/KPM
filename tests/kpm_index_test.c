@@ -178,6 +178,7 @@ int main(int argc, char *argv[])
     ASSERT_HD_STR(packages[0].author, "Test Author");
     ASSERT_HD_STR(packages[0].description, "Test Package Description");
     ASSERT_HD(packages[0].icon, NULL);
+    ASSERT_HD(packages[0].changelog, NULL);
     ASSERT_HD(KPM_ListPackageArtifacts(kpm, "testrepov1", packages[0].id, &artifact_count, NULL), KPM_OK);
     ASSERT_HD(KPM_ListPackageArtifacts(kpm, "testrepov1", packages[0].id, &artifact_count, &artifacts), KPM_OK);
     ASSERT_HD(artifact_count, 1);
@@ -199,6 +200,7 @@ int main(int argc, char *argv[])
     ASSERT_HD_STR(packages[0].author, "Test Author");
     ASSERT_HD_STR(packages[0].description, "Test Package Description");
     ASSERT_HD(packages[0].icon, NULL);
+    ASSERT_HD(packages[0].changelog, NULL);
     ASSERT_HD(KPM_ListPackageArtifacts(kpm, "testrepov2", packages[0].id, &artifact_count, NULL), KPM_OK);
     ASSERT_HD(KPM_ListPackageArtifacts(kpm, "testrepov2", packages[0].id, &artifact_count, &artifacts), KPM_OK);
     ASSERT_HD(artifact_count, 1);
@@ -220,6 +222,7 @@ int main(int argc, char *argv[])
     ASSERT_HD_STR(packages[0].author, "Test Author");
     ASSERT_HD_STR(packages[0].description, "Test Package Description");
     ASSERT_HD_STR(packages[0].icon, "test.png");
+    ASSERT_HD(packages[0].changelog, NULL);
     ASSERT_HD(KPM_ListPackageArtifacts(kpm, "testrepov3", packages[0].id, &artifact_count, NULL), KPM_OK);
     ASSERT_HD(KPM_ListPackageArtifacts(kpm, "testrepov3", packages[0].id, &artifact_count, &artifacts), KPM_OK);
     ASSERT_HD(artifact_count, 1);

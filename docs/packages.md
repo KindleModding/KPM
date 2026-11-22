@@ -25,6 +25,7 @@ An example valid package's contents:
 ```
 .
 ├── icon.png
+├── changelog.md
 ├── install.sh
 ├── launch.sh
 ├── manifest.json
@@ -44,6 +45,7 @@ The following file/folder names are reserved at the top-level of the archive and
 - `startup.sh`
 ### Misc
 - `icon.png` - If present, must be a png image, recommended to be a full-colour 256x256 image under 1MB
+- `changelog.md` - If present, must be a markdown file that describes changes in every version of the package, does not support inline HTML
 ### Special Folders
 - `rootfs/`
 

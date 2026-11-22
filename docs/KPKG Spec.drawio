@@ -1,6 +1,6 @@
 <mxfile host="app.diagrams.net">
   <diagram name="Page-1" id="9rtM6annv6j0TtzBnsRT">
-    <mxGraphModel dx="1585" dy="463" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+    <mxGraphModel dx="2138" dy="811" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -104,7 +104,7 @@
           <mxGeometry height="40" width="40" x="1020" y="320" as="geometry" />
         </mxCell>
         <mxCell id="N2nTVU4Ex5qT0vqb23A_-64" parent="1" style="text;html=1;whiteSpace=wrap;overflow=hidden;rounded=0;" value="&lt;h1 style=&quot;margin-top: 0px;&quot;&gt;KPM V3 Package Format&lt;/h1&gt;&lt;div&gt;The KPM v3 package format is designed to offer an efficient, fast to parse format for signed packages with the ability to perform differential upgrades.&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Requirements&lt;/div&gt;&lt;div&gt;- KPM packages should be self contained as a single file&lt;/div&gt;&lt;div&gt;- KPM packages must be servable from static hosting&lt;/div&gt;&lt;div&gt;- KPM packages should allow for differential updates&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Checksums use SHA-256 algorithm&lt;/div&gt;" vertex="1">
-          <mxGeometry height="200" width="320" x="-320" y="40" as="geometry" />
+          <mxGeometry height="286.25" width="320" x="-320" y="40" as="geometry" />
         </mxCell>
         <mxCell id="N2nTVU4Ex5qT0vqb23A_-65" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="KPKG" vertex="1">
           <mxGeometry height="40" width="160" x="240" y="200" as="geometry" />

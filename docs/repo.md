@@ -30,7 +30,8 @@ This repository format is supported from KPM `v2.0.0` and above.
       "name": "Package 1",
       "author": "example package",
       "description": "This is an example package",
-      "icon": "/icons/package1.png",
+      "icon": "/packages/package1/icon.png",
+      "changelog": "/packages/package1/changelog.md",
       "artifacts": {
         "packages/package1/artifacts/package1_2026.3.0_kindlehf.kpkg": {
           "installed_size": 1232,
@@ -119,10 +120,13 @@ Each package is stored on the `packages` object, the `key` is the package id, an
 | `author`      | The human-readable author name, must not be empty or `null`         |
 | `description` | The human-readable package description, must not be empty or `null` |
 | `icon`        | A URL to the package's icon*, may be omitted or `null`              |
+| `changelog`   | A URL to the package's changelog, may be omitted or `null`          |
 | `artifacts`   | An object storing package artifacts, must contain at least one item |
 
 > *Package icon should be a relative URL rather than an absolute one. Package icons should be hosted under the same domain as the package artifacts.
 > The presence of a package icon and the package metadata values are determined by the latest artifact
+
+> Changelog files are in markdown format, they do not support inline HTML
 
 ## Artifacts
 Artifacts are stored in the `artifacts` object of packages.  
