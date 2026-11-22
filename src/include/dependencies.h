@@ -10,7 +10,7 @@ typedef int NodeIdx;
 
 create_array_h(NodeIdx)
 
-#define NodeIdxArray_ForEach(array, current) NodeIdx current; for (int i = 0; current = array->items[i], i < array->count; i++)
+#define NodeIdxArray_ForEachIndex(array, i, current) NodeIdx current; for (int i = 0; i < array->count && (current = array->items[i], 1); i++)
 
 struct NodeIdxHashmapBucket {
     char *key;
@@ -98,8 +98,7 @@ typedef struct {
 } TraversedNode;
 
 create_array_h(TraversedNode);
-#define TraversedNodeArray_ForEach(array, current) for (int i = 0; current = array->items[i], i < array->count; i++)
-#define TraversedNodeArray_ForEachIndex(array, i, current) for (int i = 0; current = array->items[i], i < array->count; i++)
+#define TraversedNodeArray_ForEachIndex(array, i, current) for (int i = 0; i < array->count && (current = array->items[i], 1); i++)
 int TraversedNodeArray_FindFirstByNodeIdx(TraversedNodeArray *array, size_t node_idx);
 
 typedef struct {
