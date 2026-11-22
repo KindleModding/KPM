@@ -21,6 +21,6 @@ typedef struct
 } Operation;
 
 create_array_h(Operation);
-#define OperationArray_ForEach(array, current) for(int i=0; current = array->items[i], i < OperationArray_Size(array); i++)
+#define OperationArray_ForEachIndex(array, i, current) for(int i=0; i < OperationArray_Size(array) && (current = array->items[i], 1); i++)
 
 #endif

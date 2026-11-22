@@ -185,6 +185,8 @@ DependencyGraph *DepGraph_Create(int count)
     graph->nodeCount = 0;
     graph->nodes = NULL;
     graph->allocated = 0;
+    graph->depmap = NodeIdxHashmap_Create(32);
+    graph->targetmap = NodeIdxHashmap_Create(32);
 
     if (count != 0)
     {
@@ -230,6 +232,8 @@ void DepGraph_FreeGraph(DependencyGraph *graph)
         DepGraph_FreeNode(&graph->nodes[i]);
     }
 
+    NodeIdxHashmap_Free(&graph->depmap);
+    NodeIdxHashmap_Free(&graph->targetmap);
     free(graph->nodes);
     free(graph);
 }
@@ -256,18 +260,16 @@ void DepGraph_Extend(DependencyGraph *graph, int allocate)
 NodeIdx DepGraph_AddNode(DependencyGraph *graph, DepGraph_Node node)
 {
     if (graph->nodeCount == graph->allocated)
-    {
         DepGraph_Extend(graph, graph->allocated/2 + 1); // ~1.5x growth factor
-    }
 
     graph->nodes[graph->nodeCount++] = node;
 
     if (graph->nodes->gt.type == GT_DEPENDENCY)
-        NodeIdxHashmap_AddNode(graph->depmap, node.gt.dependency.id, graph->nodeCount-1);
+        NodeIdxHashmap_AddNode(graph->depmap, DepGraph_GetTargetId(node.gt), graph->nodeCount-1);
     else if (graph->nodes->gt.type == GT_INSTALL_TARGET)
-        NodeIdxHashmap_AddNode(graph->depmap, KPM_GetInstallTargetId(node.gt.target), graph->nodeCount-1);
+        NodeIdxHashmap_AddNode(graph->depmap, DepGraph_GetTargetId(node.gt), graph->nodeCount-1);
     else
-        NodeIdxHashmap_AddNode(graph->depmap, node.gt.installed.id, graph->nodeCount-1);
+        NodeIdxHashmap_AddNode(graph->depmap, DepGraph_GetTargetId(node.gt), graph->nodeCount-1);
 
     return graph->nodeCount-1;
 }
@@ -316,9 +318,6 @@ void DepGraph_AddDepTarget(DependencyGraph *graph, NodeIdx dep_node_idx, NodeIdx
     DepGraph_Node target_node = graph->nodes[target_node_idx];
     assert(graph->nodes[dep_node_idx].gt.type == GT_DEPENDENCY);
     assert(target_node.gt.type == GT_INSTALL_TARGET || target_node.gt.type == GT_INSTALLED);
-
-    graph->nodes[dep_node_idx].connected->count++;
-    graph->nodes[dep_node_idx].connected->items = realloc(graph->nodes[dep_node_idx].connected, graph->nodes[dep_node_idx].connected->count * sizeof(size_t));
     
     NodeIdx insertionIndex = graph->nodes[dep_node_idx].connected->count-1;
     while (insertionIndex > 0)
@@ -334,7 +333,7 @@ void DepGraph_AddDepTarget(DependencyGraph *graph, NodeIdx dep_node_idx, NodeIdx
             break; // Insert here
     }
     
-    NodeIdxArray_Insert(graph->nodes[dep_node_idx].connected, 0, target_node_idx);
+    NodeIdxArray_Insert(graph->nodes[dep_node_idx].connected, insertionIndex, target_node_idx);
 }
 
 /**
@@ -372,77 +371,67 @@ void strcat_hd(char *dest, char *src, size_t *length, bool dry)
 
 void node2str(DependencyGraph *graph, NodeIdx index, char **output, bool declaration)
 {
-    DepGraph_Node node = graph->nodes[index];
-    if (declaration)
-    {
-        if (node.gt.type == GT_INSTALL_TARGET)
-        {
-            if (node.gt.target.type == INSTALL_ARTIFACT)
-            {
-                *output = asprintf_hd(
-                    "%i[\"ART\n%s\n%s\n%u.%u.%u\n(P:%i)\"]",
-                    index,
-                    node.gt.target.artifact.repository,
-                    node.gt.target.artifact.id,
-                    node.gt.target.artifact.version.major,
-                    node.gt.target.artifact.version.minor,
-                    node.gt.target.artifact.version.patch,
-                    node.gt.priority
-                );
-            }
-            else
-            {
-                *output = asprintf_hd(
-                    "%i[\"FILE\n(NO REPO)\n%s\n%u.%u.%u\n(P:%i)\"]",
-                    index,
-                    KPKG_GetId(node.gt.target.file),
-                    KPKG_GetVersion(node.gt.target.file).major,
-                    KPKG_GetVersion(node.gt.target.file).minor,
-                    KPKG_GetVersion(node.gt.target.file).patch,
-                    node.gt.priority
-                );
-            }
-            return;
-        }
-
-        if (node.gt.type == GT_INSTALLED)
-        {
-            if (node.gt.target.type == INSTALL_ARTIFACT)
-            {
-                *output = asprintf_hd(
-                    "%i[\"INST\n%s\n%s\n%u.%u.%u\n(P:%i)\"]",
-                    index,
-                    node.gt.installed.repository,
-                    node.gt.installed.id,
-                    node.gt.installed.version.major,
-                    node.gt.installed.version.minor,
-                    node.gt.installed.version.patch,
-                    node.gt.priority
-                );
-            }
-            return;
-        }
-
-        if (node.gt.type == GT_DEPENDENCY)
-        {
-            *output = asprintf_hd(
-                "%i([\"%s\n%u.%u.%u to %u.%u.%u\"])",
-                index,
-                node.gt.dependency.id,
-                node.gt.dependency.min_version.major,
-                node.gt.dependency.min_version.minor,
-                node.gt.dependency.min_version.patch,
-                node.gt.dependency.max_version.major,
-                node.gt.dependency.max_version.minor,
-                node.gt.dependency.max_version.patch
-            );
-            return;
-        }
-    }
-    else 
+    if (!declaration)
     {
         *output = asprintf_hd("%i", index);
         return;
+    }
+    
+    DepGraph_Node node = graph->nodes[index];
+    switch (node.gt.type) {
+    case GT_DEPENDENCY:
+        *output = asprintf_hd(
+            "%i([\"%s\n%u.%u.%u to %u.%u.%u\"])",
+            index,
+            node.gt.dependency.id,
+            node.gt.dependency.min_version.major,
+            node.gt.dependency.min_version.minor,
+            node.gt.dependency.min_version.patch,
+            node.gt.dependency.max_version.major,
+            node.gt.dependency.max_version.minor,
+            node.gt.dependency.max_version.patch
+        );
+        break;
+    case GT_INSTALL_TARGET:
+        if (node.gt.target.type == INSTALL_ARTIFACT)
+        {
+            *output = asprintf_hd(
+                "%i[\"ART\n%s\n%s\n%u.%u.%u\n(P:%i)\"]",
+                index,
+                node.gt.target.artifact.repository,
+                node.gt.target.artifact.id,
+                node.gt.target.artifact.version.major,
+                node.gt.target.artifact.version.minor,
+                node.gt.target.artifact.version.patch,
+                node.gt.priority
+            );
+        }
+        else
+        {
+            *output = asprintf_hd(
+                "%i[\"FILE\n(NO REPO)\n%s\n%u.%u.%u\n(P:%i)\"]",
+                index,
+                KPKG_GetId(node.gt.target.file),
+                KPKG_GetVersion(node.gt.target.file).major,
+                KPKG_GetVersion(node.gt.target.file).minor,
+                KPKG_GetVersion(node.gt.target.file).patch,
+                node.gt.priority
+            );
+        }
+        break;
+    case GT_INSTALLED:
+        *output = asprintf_hd(
+            "%i[\"INST\n%s\n%s\n%u.%u.%u\n(P:%i)\n(D:%i)\"]",
+            index,
+            node.gt.installed.repository,
+            node.gt.installed.id,
+            node.gt.installed.version.major,
+            node.gt.installed.version.minor,
+            node.gt.installed.version.patch,
+            node.gt.priority,
+            node.gt.installed.installed_as_dependency
+        );
+        break;
     }
 }
 
@@ -460,7 +449,7 @@ int Internal_RenderGraph(DependencyGraph *graph, char *output, bool dry)
         strcat_hd(output, "\n", &outputLength, dry);
         free(nodeName);
 
-        NodeIdxArray_ForEach(graph->nodes[i].connected, connected_idx)
+        NodeIdxArray_ForEachIndex(graph->nodes[i].connected, j, connected_idx)
         {
             char *connectedName = NULL;
             node2str(graph, i, &nodeName, false);
@@ -527,7 +516,7 @@ NodeIdx DepGraph_FindDependency(DependencyGraph *graph, KPM_Dependency dep)
 {
     NodeIdxArray *deps_found_array;
     NodeIdxHashmap_Get(graph->depmap, dep.id, &deps_found_array);
-    NodeIdxArray_ForEach(deps_found_array, idx)
+    NodeIdxArray_ForEachIndex(deps_found_array, i, idx)
     {
         DepGraph_Node node = graph->nodes[idx];
         assert(node.gt.type == GT_DEPENDENCY);
@@ -547,7 +536,7 @@ NodeIdx Internal_FindTargetInGraph(DependencyGraph *graph, DepGraph_Target gt)
 {
     NodeIdxArray *targets_found_array;
     NodeIdxHashmap_Get(graph->targetmap, DepGraph_GetTargetId(gt), &targets_found_array);
-    NodeIdxArray_ForEach(targets_found_array, idx)
+    NodeIdxArray_ForEachIndex(targets_found_array, i, idx)
     {
         DepGraph_Node node = graph->nodes[idx];
         assert(node.gt.type != GT_DEPENDENCY);
@@ -565,7 +554,7 @@ NodeIdx Internal_FindArtifactInGraph(DependencyGraph *graph, KPM_Artifact artifa
 {
     NodeIdxArray *targets_found_array;
     NodeIdxHashmap_Get(graph->targetmap, artifact.id, &targets_found_array);
-    NodeIdxArray_ForEach(targets_found_array, idx)
+    NodeIdxArray_ForEachIndex(targets_found_array, i, idx)
     {
         DepGraph_Node node = graph->nodes[idx];
         assert(node.gt.type != GT_DEPENDENCY);
@@ -586,7 +575,7 @@ void Internal_AddExistingTargetsToDependency(DependencyGraph *graph, NodeIdx dep
 
     NodeIdxArray *targets_found_array;
     NodeIdxHashmap_Get(graph->targetmap, dep.id, &targets_found_array);
-    NodeIdxArray_ForEach(targets_found_array, target_idx)
+    NodeIdxArray_ForEachIndex(targets_found_array, i, target_idx)
     {
         DepGraph_Node node = graph->nodes[target_idx];
         assert(node.gt.type != GT_DEPENDENCY);
@@ -614,7 +603,7 @@ void DepGraph_AddTargetToExistingDependencies(DependencyGraph *graph, NodeIdx ta
 
     NodeIdxArray *dep_node_ids;
     NodeIdxHashmap_Get(graph->depmap, DepGraph_GetTargetId(target_node.gt), &dep_node_ids);
-    NodeIdxArray_ForEach(dep_node_ids, dep_idx)
+    NodeIdxArray_ForEachIndex(dep_node_ids, i, dep_idx)
     {
         DepGraph_Node dep_node = graph->nodes[dep_idx];
 
@@ -835,7 +824,7 @@ Resolver_State *Resolver_Resolve(DependencyGraph *graph, NodeIdx root, KPMIO *kp
             // Check if an existing resolution for this dependency id exists
             NodeIdx picked_target_idx = NODE_NULL;
             TraversedNode traversed;
-            TraversedNodeArray_ForEach(state->traversed_nodes, traversed)
+            TraversedNodeArray_ForEachIndex(state->traversed_nodes, i, traversed)
             {
                 DepGraph_Node traversed_node = state->graph->nodes[traversed.node_idx];
                 if (traversed_node.gt.type == GT_DEPENDENCY)

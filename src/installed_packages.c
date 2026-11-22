@@ -10,12 +10,16 @@ void KPM_FreeInstalledPackage(KPM_InstalledPackage *package)
     free(package->name);
     free(package->author);
     free(package->description);
+    free(package->category);
+    free(package->subcategory);
     
     package->id = NULL;
     package->repository = NULL;
     package->name = NULL;
     package->author = NULL;
     package->description = NULL;
+    package->category = NULL;
+    package->subcategory = NULL;
 }
 
 void KPM_FreeInstalledPackageList(size_t package_count, KPM_InstalledPackage *packages)

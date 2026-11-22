@@ -272,7 +272,7 @@ KPM_Result AddInstalledPackagesToGraph(KPM *kpm, DependencyGraph *graph, NodeIdx
 bool DownloadOperationFiles(KPM *kpm, OperationArray *operations, KPMIO *kpmio)
 {
     Operation operation;
-    OperationArray_ForEach(operations, operation)
+    OperationArray_ForEachIndex(operations, i, operation)
     {
         if (operation.type == OP_UNINSTALL)
             continue;
@@ -381,7 +381,7 @@ KPM_Result KPM_InstallPackages(KPM *kpm, size_t target_count, KPM_InstallTarget 
         kpmio->log(KPM_VERBOSITY_ERROR, "Could not resolve graph.");
         kpmio->log(KPM_VERBOSITY_DEBUG, "Dumping state:");
         TraversedNode current;
-        TraversedNodeArray_ForEach(state->traversed_nodes, current)
+        TraversedNodeArray_ForEachIndex(state->traversed_nodes, i, current)
         {
             kpmio->log(KPM_VERBOSITY_DEBUG, "%i, %i", current.node_idx, current.parent_traversed_idx);
         }
@@ -460,7 +460,7 @@ KPM_Result KPM_InstallPackages(KPM *kpm, size_t target_count, KPM_InstallTarget 
         KPM_InstalledPackage installed_package = installed_packages[i];
         bool do_uninstall = true;
         TraversedNode current;
-        TraversedNodeArray_ForEach(state->traversed_nodes, current)
+        TraversedNodeArray_ForEachIndex(state->traversed_nodes, j, current)
         {
             if (!strcmp(installed_package.id, DepGraph_GetTargetId(state->graph->nodes[current.node_idx].gt)))
             {
@@ -488,7 +488,7 @@ KPM_Result KPM_InstallPackages(KPM *kpm, size_t target_count, KPM_InstallTarget 
     if (installing > 0)
     {
         kpmio->log(KPM_VERBOSITY_INFO, "Installing %i new packages.", installing);
-        OperationArray_ForEach(operations, current_operation)
+        OperationArray_ForEachIndex(operations, i, current_operation)
         {
             if (current_operation.type != OP_INSTALL)
                 continue;
@@ -499,7 +499,7 @@ KPM_Result KPM_InstallPackages(KPM *kpm, size_t target_count, KPM_InstallTarget 
     if (reinstalling > 0)
     {
         kpmio->log(KPM_VERBOSITY_INFO, "Reinstalling %i packages.", reinstalling);
-        OperationArray_ForEach(operations, current_operation)
+        OperationArray_ForEachIndex(operations, i, current_operation)
         {
             if (current_operation.type != OP_REINSTALL)
                 continue;
@@ -510,7 +510,7 @@ KPM_Result KPM_InstallPackages(KPM *kpm, size_t target_count, KPM_InstallTarget 
     if (upgrading > 0)
     {
         kpmio->log(KPM_VERBOSITY_INFO, "Upgrading %i packages.", upgrading);
-        OperationArray_ForEach(operations, current_operation)
+        OperationArray_ForEachIndex(operations, i, current_operation)
         {
             if (current_operation.type != OP_UPGRADE)
                 continue;
@@ -521,7 +521,7 @@ KPM_Result KPM_InstallPackages(KPM *kpm, size_t target_count, KPM_InstallTarget 
     if (downgrading > 0)
     {
         kpmio->log(KPM_VERBOSITY_INFO, "Downgrading %i packages.", downgrading);
-        OperationArray_ForEach(operations, current_operation)
+        OperationArray_ForEachIndex(operations, i, current_operation)
         {
             if (current_operation.type != OP_DOWNGRADE)
                 continue;
@@ -532,7 +532,7 @@ KPM_Result KPM_InstallPackages(KPM *kpm, size_t target_count, KPM_InstallTarget 
     if (uninstalling > 0)
     {
         kpmio->log(KPM_VERBOSITY_INFO, "Uninstalling %i packages.", uninstalling);
-        OperationArray_ForEach(operations, current_operation)
+        OperationArray_ForEachIndex(operations, i, current_operation)
         {
             if (current_operation.type != OP_UNINSTALL)
                 continue;
