@@ -82,3 +82,21 @@ test(
     executable('kpm_kpkg_unpack_test', files('kpm_kpkg_unpack_test.c') + all_test_files, dependencies: [kpm_dep,libcrypto_dep], include_directories: all_test_includes),
     is_parallel: false
 )
+
+test(
+    'KPM Nodeidx Array Test',
+    executable('kpm_nodeidx_array_test', files('kpm_nodeidx_array_test.c') + all_test_files, dependencies: [kpm_dep,libcrypto_dep], include_directories: all_test_includes),
+    is_parallel: false
+)
+
+test(
+    'KPM NodeIdx Hashmap Test',
+    executable('kpm_nodeidx_hashmap_test', files('kpm_nodeidx_hashmap_test.c') + all_test_files, dependencies: [kpm_dep,libcrypto_dep], include_directories: all_test_includes),
+    is_parallel: false
+)
+
+test(
+    'KPM Traversed Node Array Test',
+    executable('kpm_traversednode_array_test', files('kpm_traversednode_array_test.c') + all_test_files, dependencies: [kpm_dep,libcrypto_dep], include_directories: all_test_includes),
+    is_parallel: false
+)
