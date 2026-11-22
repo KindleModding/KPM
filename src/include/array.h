@@ -63,9 +63,15 @@
                                                                                                             \
     void type##Array_Insert(type##Array *array, size_t index, type item)                                    \
     {                                                                                                       \
+        if (index >= array->count)                                                                          \
+        {                                                                                                   \
+            type##Array_Add(array, item);                                                                   \
+            return;                                                                                         \
+        }                                                                                                   \
+                                                                                                            \
         if (++array->count > array->alloc)                                                                  \
             array->items = realloc(array->items, sizeof(type) * (array->alloc = array->alloc * 1.5 + 1));   \
-        memcpy(array->items + index + 1, array->items + index, array->count - index);                       \
+        memmove(array->items + index + 1, array->items + index, sizeof(type) * (array->count - 1 - index)); \
         array->items[index] = item;                                                                         \
     }                                                                                                       \
                                                                                                             \
