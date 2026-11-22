@@ -542,7 +542,7 @@ KPM_Result KPM_InstallPackages(KPM *kpm, size_t target_count, KPM_InstallTarget 
 
     if (!kpmio->getInput("Proceed?"))
     {
-        OperationArray_Free(operations);
+        OperationArray_Free(&operations);
         Resolver_FreeState(state);
         return KPM_ABORTED;
     }
@@ -550,7 +550,7 @@ KPM_Result KPM_InstallPackages(KPM *kpm, size_t target_count, KPM_InstallTarget 
     kpmio->log(KPM_VERBOSITY_DEBUG, "Downloading operation data");
     DownloadOperationFiles(kpm, operations, kpmio);
 
-    OperationArray_Free(operations);
+    OperationArray_Free(&operations);
     Resolver_FreeState(state);
     return KPM_OK;
 }

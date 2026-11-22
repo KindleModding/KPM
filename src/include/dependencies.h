@@ -11,7 +11,6 @@ typedef int NodeIdx;
 create_array_h(NodeIdx)
 
 #define NodeIdxArray_ForEach(array, current) NodeIdx current; for (int i = 0; current = array->items[i], i < array->count; i++)
-#define NodeIdxArray_ForEachIndex(array, i, current) NodeIdx current; for (int i = 0; current = array->items[i], i < array->count; i++)
 
 struct NodeIdxHashmapBucket {
     char *key;
@@ -20,15 +19,17 @@ struct NodeIdxHashmapBucket {
 };
 
 typedef struct {
-    int bucket_count;
+    size_t bucket_count;
     struct NodeIdxHashmapBucket *buckets;
 } NodeIdxHashmap;
 
-NodeIdxHashmap *NodeIdxHashmap_Create(int size);
-int NodeIdxHashmap_Hash(NodeIdxHashmap *NodeIdxHashmap, char *key);
+NodeIdxHashmap *NodeIdxHashmap_Create(size_t size);
+size_t NodeIdxHashmap_Hash(NodeIdxHashmap *NodeIdxHashmap, char *key);
 bool NodeIdxHashmap_Get(NodeIdxHashmap *NodeIdxHashmap, char *key, NodeIdxArray **array);
 void NodeIdxHashmap_Remove(NodeIdxHashmap *NodeIdxHashmap, char *key);
 void NodeIdxHashmap_AddNode(NodeIdxHashmap *NodeIdxHashmap, char *key, NodeIdx node);
+void NodeIdxHashmap_FreeBuckets(struct NodeIdxHashmapBucket *bucket);
+void NodeIdxHashmap_Free(NodeIdxHashmap **hashmap);
 
 typedef enum
 {

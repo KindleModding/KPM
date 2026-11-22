@@ -20,7 +20,7 @@
     void type##Array_Insert(type##Array *array, size_t index, type item);   \
     size_t type##Array_FindFirst(type##Array *array, type item);            \
     size_t type##Array_Size(type##Array *array);                            \
-    void type##Array_Free(type##Array *array);                              \
+    void type##Array_Free(type##Array **array);                             \
 
 
 #define create_array_c(type, type_null, eq)                                                                 \
@@ -50,6 +50,7 @@
     void type##Array_Truncate(type##Array *array, size_t size)                                              \
     {                                                                                                       \
         array->alloc = size;                                                                                \
+        array->count = size;                                                                                \
         array->items = realloc(array->items, sizeof(type) * array->alloc);                                  \
     }                                                                                                       \
                                                                                                             \
@@ -63,18 +64,17 @@
     void type##Array_Insert(type##Array *array, size_t index, type item)                                    \
     {                                                                                                       \
         if (++array->count > array->alloc)                                                                  \
-            array->alloc = array->alloc * 1.5 + 1;                                                          \
-        array->items = realloc(array->items, array->alloc);                                                 \
+            array->items = realloc(array->items, sizeof(type) * (array->alloc = array->alloc * 1.5 + 1));   \
         memcpy(array->items + index + 1, array->items + index, array->count - index);                       \
+        array->items[index] = item;                                                                         \
     }                                                                                                       \
                                                                                                             \
                                                                                                             \
     size_t type##Array_FindFirst(type##Array *array, type item)                                             \
     {                                                                                                       \
-        for (int i=0; i < array->count; i++)                                                                \
+        for (size_t i=0; i < array->count; i++)                                                             \
             if (eq(array->items[i], item))                                                                  \
                 return i;                                                                                   \
-                                                                                                            \
         return -1;                                                                                          \
     }                                                                                                       \
                                                                                                             \
@@ -83,11 +83,13 @@
         return array->count;                                                                                \
     }                                                                                                       \
                                                                                                             \
-    void type##Array_Free(type##Array *array)                                                               \
+    void type##Array_Free(type##Array **array)                                                              \
     {                                                                                                       \
-        free(array->items);                                                                                 \
-        array->count = 0;                                                                                   \
-        array->alloc = 0;                                                                                   \
+        if (!*array)                                                                                         \
+            return;                                                                                         \
+        free((*array)->items);                                                                              \
+        free(*array);                                                                                       \
+        *array = NULL;                                                                                      \
     }                                                                                                       \
 
 

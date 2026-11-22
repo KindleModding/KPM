@@ -17,19 +17,21 @@ bool NodeIdxEq(NodeIdx a, NodeIdx b) { return a == b; }
 create_array_c(NodeIdx, NODE_NULL, NodeIdxEq);
 
 bool TraversedNodeEq(TraversedNode a, TraversedNode b) { return a.node_idx == b.node_idx; }
-create_array_c(TraversedNode, (TraversedNode){}, TraversedNodeEq);
+create_array_c(TraversedNode, (TraversedNode){.node_idx=NODE_NULL}, TraversedNodeEq);
 
 int TraversedNodeArray_FindFirstByNodeIdx(TraversedNodeArray *array, size_t node_idx)
 {
+    if (array->count == 0)
+        return -1;
+
     TraversedNode current;
     TraversedNodeArray_ForEachIndex(array, i, current)
         if (current.node_idx == node_idx)
             return i;
-    
     return -1;
 }
 
-NodeIdxHashmap *NodeIdxHashmap_Create(int size)
+NodeIdxHashmap *NodeIdxHashmap_Create(size_t size)
 {
     assert((size & (size-1)) == 0); // Ensure power of 2
     NodeIdxHashmap *h = malloc(sizeof(NodeIdxHashmap));
@@ -41,19 +43,21 @@ NodeIdxHashmap *NodeIdxHashmap_Create(int size)
     return h;
 }
 
-int NodeIdxHashmap_Hash(NodeIdxHashmap *NodeIdxHashmap, char *key)
+size_t NodeIdxHashmap_Hash(NodeIdxHashmap *NodeIdxHashmap, char *key)
 {
-    int hash = 0;
-    int len = strlen(key);
-    for (int i=0; i < len; i++)
+    size_t hash = 0;
+    size_t len = strlen(key);
+    for (size_t i=0; i < len; i++)
         hash += key[i]; // @TODO: More robust hashing algorithm lol
     return (NodeIdxHashmap->bucket_count - 1) & hash;
 }
 
 bool NodeIdxHashmap_Get(NodeIdxHashmap *NodeIdxHashmap, char *key, NodeIdxArray **array)
 {
-    *array = NULL;
-    int hash = NodeIdxHashmap_Hash(NodeIdxHashmap, key);
+    if (array)
+        *array = NULL;
+    
+    size_t hash = NodeIdxHashmap_Hash(NodeIdxHashmap, key);
     
     for (
         struct NodeIdxHashmapBucket *bucket = NodeIdxHashmap->buckets + hash;
@@ -75,40 +79,13 @@ bool NodeIdxHashmap_Get(NodeIdxHashmap *NodeIdxHashmap, char *key, NodeIdxArray 
     return false;
 }
 
-void NodeIdxHashmap_AddNode(NodeIdxHashmap *NodeIdxHashmap, char *key, NodeIdx idx)
-{
-    int hash = NodeIdxHashmap_Hash(NodeIdxHashmap, key);
-
-    struct NodeIdxHashmapBucket *bucket;
-    for (
-        bucket = NodeIdxHashmap->buckets + hash;
-        bucket->key != NULL;
-        bucket = bucket->pnext
-    )
-    {
-        if (!strcmp(bucket->key, key))
-            break;
-
-        if (!bucket->pnext)
-        {
-            bucket->pnext = malloc(sizeof(struct NodeIdxHashmapBucket));
-            bucket = bucket->pnext;
-            bucket->key = strdup(key);
-            bucket->payload = NodeIdxArray_Create();
-            break;
-        }
-    }
-
-    NodeIdxArray_Add(bucket->payload, idx);
-}
-
 void NodeIdxHashmap_Remove(NodeIdxHashmap *NodeIdxHashmap, char *key)
 {
-    int hash = NodeIdxHashmap_Hash(NodeIdxHashmap, key);
+    size_t hash = NodeIdxHashmap_Hash(NodeIdxHashmap, key);
 
     for (
         struct NodeIdxHashmapBucket *bucket = NodeIdxHashmap->buckets + hash;
-        bucket->key != NULL;
+        bucket != NULL && bucket->key != NULL;
         bucket = bucket->pnext
     )
     {
@@ -116,18 +93,70 @@ void NodeIdxHashmap_Remove(NodeIdxHashmap *NodeIdxHashmap, char *key)
         {
             free(bucket->key);
             bucket->key = NULL;
-            NodeIdxArray_Free(bucket->payload);
+            NodeIdxArray_Free(&bucket->payload);
             if (bucket->pnext)
             {
                 struct NodeIdxHashmapBucket *to_free = bucket->pnext;
-                *bucket = *to_free;
+                memcpy(bucket, to_free, sizeof(struct NodeIdxHashmapBucket));
                 free(to_free);
             }
-        }
-
-        if (!bucket->pnext)
             return;
+        }
     }
+}
+
+void NodeIdxHashmap_AddNode(NodeIdxHashmap *NodeIdxHashmap, char *key, NodeIdx idx)
+{
+    size_t hash = NodeIdxHashmap_Hash(NodeIdxHashmap, key);
+
+    struct NodeIdxHashmapBucket *bucket;
+    for (
+        bucket = NodeIdxHashmap->buckets + hash;
+        bucket->key != NULL && strcmp(bucket->key, key);
+        bucket = bucket->pnext
+    )
+    {
+        if (!bucket->pnext)
+        {
+            bucket->pnext = malloc(sizeof(struct NodeIdxHashmapBucket));
+            bucket = bucket->pnext;
+            bucket->key = NULL;
+            break;
+        }
+    }
+    
+    if (!bucket->key)
+    {
+        bucket->key = strdup(key);
+        bucket->payload = NodeIdxArray_Create();
+        bucket->pnext = NULL;
+    }
+
+    NodeIdxArray_Add(bucket->payload, idx);
+}
+
+void NodeIdxHashmap_FreeBuckets(struct NodeIdxHashmapBucket *bucket)
+{
+    if (!bucket)
+        return;
+    NodeIdxHashmap_FreeBuckets(bucket->pnext);
+    free(bucket->key);
+    NodeIdxArray_Free(&bucket->payload);
+    free(bucket);
+}
+
+void NodeIdxHashmap_Free(NodeIdxHashmap **hashmap)
+{
+    for (size_t i=0; i < (*hashmap)->bucket_count; i++)
+    {
+        NodeIdxHashmap_FreeBuckets((*hashmap)->buckets[i].pnext);
+        free((*hashmap)->buckets[i].key);
+        NodeIdxArray_Free(&(*hashmap)->buckets[i].payload);
+    }
+
+    free((*hashmap)->buckets);
+    free(*hashmap);
+    *hashmap = NULL;
 }
 
 void KPM_FreeDependency(KPM_Dependency *dependency)
@@ -186,7 +215,7 @@ void DepGraph_FreeNode(DepGraph_Node *node)
         break;
     }
     
-    NodeIdxArray_Free(node->connected);
+    NodeIdxArray_Free(&node->connected);
 }
 
 /**
@@ -774,7 +803,7 @@ bool Resolver_Backtrack(Resolver_State *state, NodeIdx dependency_idx, KPMIO *kp
 
 void Resolver_FreeState(Resolver_State *state)
 {
-    TraversedNodeArray_Free(state->traversed_nodes);
+    TraversedNodeArray_Free(&state->traversed_nodes);
     DepGraph_FreeGraph(state->graph);
     free(state);
 }
