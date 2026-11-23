@@ -19,6 +19,19 @@ int main()
     assert(SemVerCmp(
         (SemVer) {
             .major = 1,
+            .minor = 2,
+            .patch = 3
+        },
+        (SemVer) {
+            .major = 1,
+            .minor = 1,
+            .patch = 3
+        }
+    ) > 0);
+
+    assert(SemVerCmp(
+        (SemVer) {
+            .major = 1,
             .minor = 0,
             .patch = 0
         },
@@ -54,6 +67,19 @@ int main()
             .patch = 0
         }
     ) > 0);
+
+    assert(SemVerCmp(
+        (SemVer) {
+            .major = 1,
+            .minor = 1,
+            .patch = 3
+        },
+        (SemVer) {
+            .major = 1,
+            .minor = 2,
+            .patch = 3
+        }
+    ) < 0);
 
     assert(SemVerCmp(
         (SemVer) {
