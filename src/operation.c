@@ -218,7 +218,7 @@ KPM_Result AddInstalledPackagesToGraph(KPM *kpm, DependencyGraph *graph, NodeIdx
             .min_version = SEMVER_MIN,
             .max_version = SEMVER_MAX
         });
-        DepGraph_AddArtifactDep(graph, root_idx, dep_idx);
+        DepGraph_AddTargetDep(graph, root_idx, dep_idx);
 
         NodeIdx idx = DepGraph_CreateInstalledNode(graph, installed_package);
         DepGraph_AddDepTarget(graph, dep_idx, idx);

@@ -264,12 +264,10 @@ NodeIdx DepGraph_AddNode(DependencyGraph *graph, DepGraph_Node node)
 
     graph->nodes[graph->nodeCount++] = node;
 
-    if (graph->nodes->gt.type == GT_DEPENDENCY)
-        NodeIdxHashmap_AddNode(graph->depmap, DepGraph_GetTargetId(node.gt), graph->nodeCount-1);
-    else if (graph->nodes->gt.type == GT_INSTALL_TARGET)
+    if (node.gt.type == GT_DEPENDENCY)
         NodeIdxHashmap_AddNode(graph->depmap, DepGraph_GetTargetId(node.gt), graph->nodeCount-1);
     else
-        NodeIdxHashmap_AddNode(graph->depmap, DepGraph_GetTargetId(node.gt), graph->nodeCount-1);
+        NodeIdxHashmap_AddNode(graph->targetmap, DepGraph_GetTargetId(node.gt), graph->nodeCount-1);
 
     return graph->nodeCount-1;
 }
@@ -307,7 +305,7 @@ char *DepGraph_GetTargetId(DepGraph_Target target)
  * @param firstNodeIndex 
  * @param nextNodeIndex 
  */
-void DepGraph_AddArtifactDep(DependencyGraph *graph, NodeIdx art_node_idx, NodeIdx dep_node_idx)
+void DepGraph_AddTargetDep(DependencyGraph *graph, NodeIdx art_node_idx, NodeIdx dep_node_idx)
 {
     NodeIdxArray_Add(graph->nodes[art_node_idx].connected, dep_node_idx);
 }
@@ -319,10 +317,10 @@ void DepGraph_AddDepTarget(DependencyGraph *graph, NodeIdx dep_node_idx, NodeIdx
     assert(graph->nodes[dep_node_idx].gt.type == GT_DEPENDENCY);
     assert(target_node.gt.type == GT_INSTALL_TARGET || target_node.gt.type == GT_INSTALLED);
     
-    NodeIdx insertionIndex = graph->nodes[dep_node_idx].connected->count-1;
-    while (insertionIndex > 0)
+    NodeIdx insertionIndex = graph->nodes[dep_node_idx].connected->count - 1;
+    for (; insertionIndex > 0; insertionIndex--)
     {
-        DepGraph_Node prev_node = graph->nodes[graph->nodes[dep_node_idx].connected->items[insertionIndex-1]];
+        DepGraph_Node prev_node = graph->nodes[graph->nodes[dep_node_idx].connected->items[insertionIndex - 1]];
         if (prev_node.gt.priority > target_node.gt.priority)
             break; // Insert here
 
@@ -381,7 +379,8 @@ void node2str(DependencyGraph *graph, NodeIdx index, char **output, bool declara
     switch (node.gt.type) {
     case GT_DEPENDENCY:
         *output = asprintf_hd(
-            "%i([\"%s\n%u.%u.%u to %u.%u.%u\"])",
+            "%i([\"(%i)\n%s\n%u.%u.%u to %u.%u.%u\"])",
+            index,
             index,
             node.gt.dependency.id,
             node.gt.dependency.min_version.major,
@@ -396,7 +395,8 @@ void node2str(DependencyGraph *graph, NodeIdx index, char **output, bool declara
         if (node.gt.target.type == INSTALL_ARTIFACT)
         {
             *output = asprintf_hd(
-                "%i[\"ART\n%s\n%s\n%u.%u.%u\n(P:%i)\"]",
+                "%i[\"(%i)\nART\n%s\n%s\n%u.%u.%u\n(P:%i)\"]",
+                index,
                 index,
                 node.gt.target.artifact.repository,
                 node.gt.target.artifact.id,
@@ -409,7 +409,8 @@ void node2str(DependencyGraph *graph, NodeIdx index, char **output, bool declara
         else
         {
             *output = asprintf_hd(
-                "%i[\"FILE\n(NO REPO)\n%s\n%u.%u.%u\n(P:%i)\"]",
+                "%i[\"(%i)\nFILE\n(NO REPO)\n%s\n%u.%u.%u\n(P:%i)\"]",
+                index,
                 index,
                 KPKG_GetId(node.gt.target.file),
                 KPKG_GetVersion(node.gt.target.file).major,
@@ -421,7 +422,8 @@ void node2str(DependencyGraph *graph, NodeIdx index, char **output, bool declara
         break;
     case GT_INSTALLED:
         *output = asprintf_hd(
-            "%i[\"INST\n%s\n%s\n%u.%u.%u\n(P:%i)\n(D:%i)\"]",
+            "%i[\"(%i)\nINST\n%s\n%s\n%u.%u.%u\n(P:%i)\n(D:%i)\"]",
+            index,
             index,
             node.gt.installed.repository,
             node.gt.installed.id,
@@ -532,7 +534,7 @@ NodeIdx DepGraph_FindDependency(DependencyGraph *graph, KPM_Dependency dep)
     return NODE_NULL;
 }
 
-NodeIdx Internal_FindTargetInGraph(DependencyGraph *graph, DepGraph_Target gt)
+NodeIdx DepGraph_FindTargetInGraph(DependencyGraph *graph, DepGraph_Target gt)
 {
     NodeIdxArray *targets_found_array;
     NodeIdxHashmap_Get(graph->targetmap, DepGraph_GetTargetId(gt), &targets_found_array);
@@ -550,7 +552,7 @@ NodeIdx Internal_FindTargetInGraph(DependencyGraph *graph, DepGraph_Target gt)
     return NODE_NULL;
 }
 
-NodeIdx Internal_FindArtifactInGraph(DependencyGraph *graph, KPM_Artifact artifact)
+NodeIdx DepGraph_FindArtifactInGraph(DependencyGraph *graph, KPM_Artifact artifact)
 {
     NodeIdxArray *targets_found_array;
     NodeIdxHashmap_Get(graph->targetmap, artifact.id, &targets_found_array);
@@ -568,7 +570,7 @@ NodeIdx Internal_FindArtifactInGraph(DependencyGraph *graph, KPM_Artifact artifa
     return NODE_NULL;
 }
 
-void Internal_AddExistingTargetsToDependency(DependencyGraph *graph, NodeIdx dep_idx)
+void DepGraph_AddExistingTargetsToDependency(DependencyGraph *graph, NodeIdx dep_idx)
 {
     assert(graph->nodes[dep_idx].gt.type == GT_DEPENDENCY);
     KPM_Dependency dep = graph->nodes[dep_idx].gt.dependency;
@@ -645,7 +647,7 @@ bool DepGraph_FillGraphFromTarget(KPM *kpm, DependencyGraph *graph, NodeIdx targ
         NodeIdx dep_found = DepGraph_FindDependency(graph, dep);
         if (dep_found != NODE_NULL)
         {
-            DepGraph_AddArtifactDep(graph, target_node_id, dep_found);
+            DepGraph_AddTargetDep(graph, target_node_id, dep_found);
             continue;
         }
 
@@ -653,7 +655,7 @@ bool DepGraph_FillGraphFromTarget(KPM *kpm, DependencyGraph *graph, NodeIdx targ
         NodeIdx dep_idx = DepGraph_CreateDependencyNode(graph, dep);
 
         // For each target in the graph that fits, add it to our dependency
-        Internal_AddExistingTargetsToDependency(graph, dep_idx);
+        DepGraph_AddExistingTargetsToDependency(graph, dep_idx);
 
         // Find all artifacts NOT in the graph that satisfy this dependency and recursively add them
         size_t artifact_count;
@@ -667,7 +669,7 @@ bool DepGraph_FillGraphFromTarget(KPM *kpm, DependencyGraph *graph, NodeIdx targ
 
         for (int j = 0; j < artifact_count; j++)
         {            
-            NodeIdx existing_artifact = Internal_FindArtifactInGraph(graph, artifacts[j]);
+            NodeIdx existing_artifact = DepGraph_FindArtifactInGraph(graph, artifacts[j]);
             if (existing_artifact != NODE_NULL)
                 continue;
 
@@ -707,6 +709,13 @@ bool DepGraph_FillGraphFromTarget(KPM *kpm, DependencyGraph *graph, NodeIdx targ
 
     KPM_FreeDependencyList(dep_count, dependencies);
     return true;
+}
+
+void Resolver_FreeState(Resolver_State *state)
+{
+    TraversedNodeArray_Free(&state->traversed_nodes);
+    DepGraph_FreeGraph(state->graph);
+    free(state);
 }
 
 bool Resolver_Next(Resolver_State *state, KPMIO *kpmio)
@@ -788,13 +797,6 @@ bool Resolver_Backtrack(Resolver_State *state, NodeIdx dependency_idx, KPMIO *kp
         });
         return true;
     }
-}
-
-void Resolver_FreeState(Resolver_State *state)
-{
-    TraversedNodeArray_Free(&state->traversed_nodes);
-    DepGraph_FreeGraph(state->graph);
-    free(state);
 }
 
 Resolver_State *Resolver_Resolve(DependencyGraph *graph, NodeIdx root, KPMIO *kpmio)
